@@ -1,0 +1,484 @@
+/*
+    Global Style
+*/
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+#nav-search-container {
+    position: relative;
+    z-index: 999;
+}
+#search-resp {
+    position: absolute;
+    background: grey;
+    background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px); 
+    color: white;
+    top: 46px;
+    left: 0px;
+    width: 195px;
+    //padding-bottom: 15px;
+    border-bottom-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+}
+div.nav-label {
+    //background: repeating-linear-gradient(white,  lightgrey, white 5px); 
+    //color: #343A40;
+    //color: white;
+    color: grey;
+    //font-weight: bold;
+    //text-shadow: 1px 1px black;
+    //text-shadow: -1px 0 lightgrey, 0 1px lightgrey, 1px 0 lightgrey, 0 -1px lightgrey;
+    padding-right: 5px;
+    font-size: 12px;
+    text-align: right;
+}
+a.search-resp {
+    color: #CACACA;
+    font-weight: bold;
+    text-shadow: 1px 1px darkslategrey;
+    padding-left: 5px;
+}
+a.search-resp:hover {
+    text-decoration: none;
+}
+#btnNext {
+    position: absolute;
+    bottom: 0px;
+    left: 0px;
+}
+span.social {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    margin-left: 35px;
+    margin-top: 10px;
+    width: 500px;
+}
+img.icon {
+    width: 20px;
+    height: 20px;
+}
+.vertSpace {
+    height: 15px;
+}
+.menuBtn {
+    height: 100px;
+    width: 110px;
+    background-image: url('../src/img/mobileMenuBtn.png');
+    position: fixed;
+    top: 25px;
+    right: 25px;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    display: none;
+    z-index: 999;
+}
+.contactFormCont {
+    padding: 25px;
+    max-width: 500px;
+}
+.googleMap {
+    padding: 25px;
+    margin-top: 15px;
+}
+#mapouter, #maptwo {
+    box-shadow: 3px 3px 3px rgba(5,55,75,0.7);
+    border: 1px solid rgba(5,55,75,0.8);
+    border-radius: 2px;
+}
+.triangle-down { 
+    width: 0;
+    height: 0;
+    border-left: 15px solid rgba(255,255,255,0);
+    border-right: 15px solid rgba(255,255,255,0);
+    border-top: 25px solid transparent; 
+}
+/*
+    Scanicons
+*/
+.scanicon {
+    height: 25px;
+    width: 25px;
+    cursor: pointer; 
+}
+.scanicon-pointer {
+    background-image: url('../src/img/icons/pointer.png');
+    height: 15px;
+    width: 15px;
+    background-repeat: no-repeat;
+    display: inline-block;
+}
+.scanicon-tablesorter {
+    background-image: url('../src/img/icons/tablesorter.png');
+    height: 25px;
+    width: 25px;
+    background-repeat: no-repeat;
+    display: inline-block;
+}
+.scanicon-trash {
+    background-image: url('../src/img/icons/trash.png');
+    background-repeat: no-repeat;
+    display: inline-block;
+    background-size: cover;
+}
+/*
+    Core Navigation
+*/
+.nav-link {
+    //color: white;
+    font-weight: bold;
+    //text-shadow: 0.1px 0.1px slategrey;
+}
+.help-contents
+{
+    display: none;
+    position: absolute;
+    top: 55px;
+    right: 0px;
+    background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px); 
+    z-index: 999;
+    width: 50%;
+}
+.help-body {
+    padding: 25px;
+    margin: 25px;
+    background: rgba(255, 255, 255, 0.9);
+    overflow-y: scroll;
+    max-height: 85vh;
+}
+.pre {
+    font-family: consolas;
+    padding: 5px;
+    margin-top: 25px;
+    font-size: 12px;
+    text-align: right;
+}
+.bg-custom {
+    //background: rgba(0,0,0,0.9);
+    background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px); 
+}
+.mr-sm-2 {
+    background: rgba(255,255,255,0.9);
+}
+.navbar {
+    //background: orange;
+    // margin-bottom: 0px;
+}
+div.control-center {
+    //background: #343A40;
+    //margin: -15px;
+    padding: 15px;
+    z-index: 999;
+    color: #CACACA;
+    display: none;
+}
+div.toggle-control-center {
+    position: absolute; 
+    bottom: -24px;
+    width: 25px;
+    right: 0px;
+    background: #343A40;
+    color: #CACACA;
+    cursor: pointer;
+}
+/*
+    Auth
+*/
+div.login-nav {
+    //width: 100px;
+    //background: grey;
+    font-size: 12px;
+    padding-right: 15px;
+}
+a.nav-login {
+    color: lightblue;
+}
+.userSymbol {
+    color: white;
+    //font-family: consolas;
+    font-weight: bold;
+    text-shadow: 1px 1px solid grey;
+    background: rgba(255,255,255,0.3);
+    border-radius: 25%;
+    padding: 2px;
+}
+/*
+    Page Style
+*/
+div.rightContent {
+}
+div.leftContent {
+}
+div.insideLeft, div.insideRight {
+    //border: 4px solid rgba(51,122,183); /* this is the <a> default color*/
+    border: 4px solid rgba(42,101,150,1);
+    border-radius: 5px;
+    background: #8c81d6; /* For browsers that do not support gradients */
+    background:
+        -webkit-linear-gradient(left top, #b7b4cc, #8c81d6); /* For Safari 5.1 to 6.0 */
+    background:
+        -o-linear-gradient(bottom right, #b7b4cc, #8c81d6); /* For Opera 11.1 to 12.0 */
+    background:
+        -moz-linear-gradient(bottom right, #b7b4cc, #8c81d6); /* For Firefox 3.6 to 15 */
+    background:
+        linear-gradient(to bottom right, #b7b4cc, #8c81d6); /* Standard syntax */
+    margin-left: 15px;
+    margin-right: 15px;
+    min-height: 500px;
+    min-width: 400px;
+}
+div.pageContent {
+    min-height: 400px;
+}
+h2.heading {
+    font-size: 28px;
+    font-weight: bold;
+    text-shadow: 1px 1px lightblue;
+}
+.basicText {
+    padding: 5px 25px 5px 25px;
+    font-size: 16px;
+}
+a.basic {
+    text-decoration: none;
+    //color: black; /*intended for this to be black, but the anchor blue w/ shadow...*/
+}
+div.infoContainer {
+    max-width: 500px;
+}
+/*
+    Bootstrap-mods
+*/
+.input-default, .textarea-default {
+    background-color: #b7b4cc;
+}
+.btn-default {
+    border: 1px solid lightgrey;
+}
+/*
+    CoreNav
+*/
+div.insideLeftFoot, div.insideRightFoot {
+    //border: 4px solid rgba(51,122,183); /* this is the <a> default color*/
+    border: 4px solid rgba(42,101,150,0);
+    background: rgba(0,0,0,0); /* For browsers that do not support gradients */
+    margin-left: 15px;
+    margin-right: 15px;
+    //min-height: 500px;
+    min-width: 400px;
+}
+/*
+    Wigits
+*/
+/*
+    Test
+*/
+.outsideTest {
+    width: 500px;
+    height: 350px;
+    border: 1px solid transparent;
+    background: -moz-linear-gradient(bottom right,#8c81d6,#b7b4cc);
+    border-radius: 5px;
+}
+.insideTest {
+    width: 489px;
+    height: 339px;
+    border: 1px solid transparent;
+    margin: 5px;
+    background-color: rgba(249,249,249,1);
+    border-radius: 3px;
+}
+/* All Content below is Mobile Content - mv me? */
+/*
+    Global Mobile Style
+*/
+.mobileMenuContent {
+    width: 80vw;
+    height: auto;
+    color: white;
+    font-size: 100px;
+    color: rgba(51,122,183,0.9);
+    text-shadow: 2px 2px lightblue;
+    font-weight: bold;
+    margin-top: 400px;
+}
+div.mobileBlock {
+    height: 200px;
+    padding: 100px;
+}
+a.mobileHeader:hover{
+    text-decoration: none;
+}
+/*
+    Pre-Mobile
+*/
+.testmobile {
+    color: red;
+}
+/* Galaxy S4, S5, Note 4  */
+@media screen
+  and (device-width: 360px)
+  and (device-height: 640px)
+  and (-webkit-device-pixel-ratio: 3),
+  and (device-width: 360px)
+  and (device-height: 640px)
+  and (-webkit-device-pixel-ratio: 3)
+  and (orientation: portrait),
+  and (device-width: 360px)
+  and (device-height: 640px)
+  and (-webkit-device-pixel-ratio: 3)
+  and (orientation: landscape) {
+    body {
+        zoom: 150%;
+    }
+    img.icon {
+        height: 50px;
+        width: 50px;
+    }
+    .testmobile {
+        color: blue;
+    }
+    .pageContent,
+    .leftContent,
+    .rightContent,
+    .basicText {
+        font-size: 42px;
+    }
+    h2.heading {
+        font-size: 58px;
+    }
+    a.navNav {
+        display: none;
+    }
+    .menuBtn {
+        display: block;
+    }
+    div.infoContainer {
+        max-width: 80%;
+    }
+    .input-default {
+        height: 50px;
+        font-size: 38px;
+    }
+    .textarea-default {
+        height: 600px;
+        font-size: 38px;
+    }
+    .contactFormCont {
+        max-width: 80%;
+    }
+    .btn {
+        min-width: 200px;
+        min-height: 75px; 
+        font-size: 38;
+    }
+    label {
+        font-size: 42px;
+    }
+}
+/*
+    @lg-only
+*/
+@media only screen and (min-width: 1170px) {
+    .insideLeft, .insideLeftFoot {
+        float: right; 
+    }
+    .insideRight, .insideRightFoot {
+        float: left; 
+    }
+    div.insideLeft, div.insideRight {
+    }
+}
+/*
+    @all-sizes-except-lg
+*/
+@media only screen and (max-width: 1170px) {
+    span.social {
+        margin-left: auto;
+        margin-right: auto;
+        left: 0;
+        right: 0;
+    }
+}
+/*
+    Navbar
+*/
+.mynav {
+    // margin-bottom: 15px;
+}
+/*
+    UI
+*/
+.backToTop {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    opacity: 0.4;
+    z-index: 999;
+}
+.backToTop:hover {
+    cursor: pointer;
+}
+/*
+    Dont Print
+*/
+
+@media print
+{    
+    .no-print, .no-print *
+    {
+        display: none !important;
+    }
+}
+/*
+    modify jqueryui datepicker theme
+*/ 
+.ui-datepicker {
+    width: 240px;
+    height: auto;
+    //margin: 5px auto 0;
+    font: 9pt Arial, sans-serif;
+    -webkit-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, .5);
+    -moz-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, .5);
+    box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, .5);
+}
+.ui-datepicker-header {
+    font-weight: bold;
+    background: lightgrey;
+    border: 0px solid transparent;
+}
+.ui-datepicker-title {
+  text-align: center;
+}
+.ui-datepicker-prev, .ui-datepicker-next {
+}
+.ui-datepicker td span, .ui-datepicker td a {
+    display: inline-block;
+    font-weight: bold;
+    text-align: center;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    color: #666666;
+    text-shadow: 1px 1px 0px #fff;
+    filter: dropshadow(color=#fff, offx=1, offy=1);
+}
+.ui-datepicker-calendar .ui-state-default {
+    background: #ededed;
+    background: -moz-linear-gradient(top,  #ededed 0%, #dedede 100%);
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#ededed), color-stop(100%,#dedede));
+    background: -webkit-linear-gradient(top,  #ededed 0%,#dedede 100%);
+    background: -o-linear-gradient(top,  #ededed 0%,#dedede 100%);
+    background: -ms-linear-gradient(top,  #ededed 0%,#dedede 100%);
+    background: linear-gradient(top,  #ededed 0%,#dedede 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ededed', endColorstr='#dedede',GradientType=0 );
+    -webkit-box-shadow: inset 1px 1px 0px 0px rgba(250, 250, 250, .5);
+    -moz-box-shadow: inset 1px 1px 0px 0px rgba(250, 250, 250, .5);
+    box-shadow: inset 1px 1px 0px 0px rgba(250, 250, 250, .5);
+}
+.ui-datepicker-unselectable .ui-state-default {
+    background: #f4f4f4;
+    color: #b4b3b3;
+}

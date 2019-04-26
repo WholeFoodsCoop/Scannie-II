@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body>
+Please wait while data is scanned<span id="punct"></span>
+</body>
+</html>
+<script type="text/javascript" src="../../common/bootstrap/jquery.min.js"></script>
+<script>
+var i = 0;
+setInterval('inci()', 1000);
+var inci = function inci() {
+    var elm = $('#punct');
+    var elmTxt = elm.text();
+    if (i == 3) {
+        i = 1;
+            elm.text('.');
+    } else {
+        i++;
+        for (var j = i; j < 4; j++) {
+            elm.text(elmTxt + '.');
+        }
+    }
+}
+</script>
