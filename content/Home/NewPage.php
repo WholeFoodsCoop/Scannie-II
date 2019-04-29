@@ -617,6 +617,7 @@ HTML;
             WHERE m.superID IN (1,13,9,4,8,17,5) 
                 AND default_vendor_id = 0
                 AND p.inUse = 1
+                AND p.numflag & (1 << 19) = 0
             GROUP BY upc;");
         //$pre = $dbc->prepare("select * from products limit 1");
         $res = $dbc->execute($pre);
