@@ -70,6 +70,7 @@ class SCS extends PageLayoutA
     {
 
         $upc = FormLib::get('upc');
+        $upc = scanLib::upcPreparse($upc);
         $queue = FormLib::get('q');
         $qval = FormLib::get('qval');
         $sessionName = $_SESSION['sessionName'];
@@ -249,6 +250,7 @@ HTML;
     private function queueHandler($dbc)
     {
         $upc = FormLib::get('upc');
+        $upc = scanLib::upcPreparse($upc);
         $queue = FormLib::get('queue');
         $qval = FormLib::get('qval');
         $sessionName = $_SESSION['sessionName'];
@@ -401,6 +403,7 @@ HTML;
     private function editHandler($dbc)
     {
         $upc = FormLib::get('upc');
+        $upc = scanLib::upcPreparse($upc);
         $storeID = scanLib::getStoreID();
         $newValue = FormLib::get('newValue');
         $field = FormLib::get('edit');
@@ -489,7 +492,7 @@ HTML;
     {
         $storeID = scanLib::getStoreID();
         $upc = FormLib::get('upc');
-        $upc = scanLib::padUPC($upc);
+        $upc = scanLib::upcPreparse($upc);
         $args = array($upc,$storeID);
         $prep = $dbc->prepare("
             SELECT bl.upc, bl.salePrice, bl.batchID AS bid, p.brand AS pbrand, p.description AS pdesc, pu.brand AS pubrand, p.size, p.special_price, pu.description AS pudesc, b.batchName, f.sections 
@@ -602,7 +605,7 @@ HTML;
             $upc = ltrim($upc, '0');
             $upc = $this->skuToUpc($upc);
         }
-        $upc = scanLib::padUPC($upc);
+        $upc = scanLib::upcPreparse($upc);
         $store = '<i>no store selected</i>';
         $touchicon = "<img class=\"scanicon-pointer\" src=\"../../../common/src/img/icons/pointer.png\"/>";
         $stores = array(1=>'[H]',2=>'[D]');
