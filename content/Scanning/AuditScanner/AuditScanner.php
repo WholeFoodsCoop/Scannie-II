@@ -48,6 +48,7 @@ class AuditScanner extends PageLayoutA
         $action = FormLib::get('action');
         echo $action;
         $upc = FormLib::get('upc');
+        $upc = scanLib::upcPreparse($upc);
 
         if ($action == 'mod-narrow') {
             $this->mod_narrow_handler($upc);
@@ -232,10 +233,7 @@ HTML;
         include(__DIR__.'/../../../common/lib/PriceRounder.php');
         $rounder = new PriceRounder();
         $storeID = scanLib::getStoreID();
-        $upc = scanLib::upcParse($_POST['upc']);
-        // echo $int = scanLib::getSku($_POST['upc'], $dbc);
-        // echo $_POST['upc'];
-        // echo $sku = $_POST['sku'];
+        $upc = scanLib::upcPreparse($_POST['upc']);
 
         $loading .= '
             <div class="progress" id="progressBar">
@@ -565,7 +563,6 @@ HTML;
         $res = $dbc->execute($prep,$args);
         $notes = array();
         while ($row = $dbc->fetchRow($res)) {
-            //echo $row['notes'];
             if (!in_array($row['notes'],$notes)) {
                 $notes[] = $row['notes'];
             }
@@ -620,7 +617,7 @@ HTML;
     private function form_content($dbc)
     {
 
-        $upc = ScanLib::upcParse($_POST['upc']);
+        $upc = ScanLib::upcPreparse($_POST['upc']);
         $ret .= '';
         $ret .= '
             <div align="center">
