@@ -42,7 +42,6 @@ class CoopDealsFile extends PageLayoutA
 
     public function pageContent()
     {
-        include(__DIR__.'/../../config.php');
         $ret = '';
         $dbc = scanLib::getConObj();
 
