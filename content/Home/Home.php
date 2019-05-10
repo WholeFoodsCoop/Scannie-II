@@ -8,6 +8,7 @@ if (!class_exists('SQLManager')) {
 
 class Home extends PageLayoutA
 {
+
     public function preprocess()
     {
         $this->displayFunction = $this->pageContent();
@@ -18,7 +19,6 @@ class Home extends PageLayoutA
     public function pageContent()
     {
         $ret = '';
-        include(__DIR__.'/../../config.php');
         $this->addScript('Home.js');
 
         return <<<HTML
