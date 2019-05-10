@@ -55,7 +55,6 @@ HTML;
     public function body_content()
     {
         $ret = '';
-        include(__DIR__.'/../../config.php');
         $dbc = scanLib::getConObj();
 
         if (!class_exists(LastSoldDates)) {
