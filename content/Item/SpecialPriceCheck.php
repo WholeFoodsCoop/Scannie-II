@@ -81,8 +81,6 @@ HTML;
 
     private function getSales()
     {
-        include(__DIR__.'/../../config.php');
-        $dbc = new SQLManager($SCANHOST, 'pdo_mysql', $SCANDB, $SCANUSER, $SCANPASS);
         $dbc = scanLib::getConObj();
         $prep = $dbc->prepare("
             SELECT bl.salePrice, bl.upc, s.storeID, b.batchID, b.batchName, p.special_price, p.store_id,
@@ -122,7 +120,8 @@ HTML;
     private function checkSales($numstores=2)
     {
         $ret = "";
-        include(__DIR__.'/../../config.php');
+        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
+
         $exceptions = array('0000099012219','0000099103018','0000099110318',
             '0000099111318','0000099112018','0000099120118','0000099120618',
             '0000099121118','0000099121318','0000099011919','0000099012619', 
@@ -191,8 +190,9 @@ HTML;
 
     private function getMissingSales($h,$db,$regNo="",$numstores=2)
     {
-        include(__DIR__.'/../../config.php');
-        $dbc = new SQLManager(${$h}.$regNo, 'pdo_mysql', ${$db}, $SCANUSER, $SCANPASS);
+        $USER = $this->config['SCANUSER'];
+        $PASS = $this->config['SCANPASS'];
+        $dbc = new SQLManager(${$h}.$regNo, 'pdo_mysql', ${$db}, $USER, $PASS);
         try {
             if ($dbc->connections[${$db}] == false) {
                 throw new Exception();

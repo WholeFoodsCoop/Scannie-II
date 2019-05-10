@@ -41,8 +41,8 @@ class CoopDealsReview extends WebDispatch
 
     public function body_content() {
 
-        include(__DIR__.'/../../../../config.php');
         $dbc = ScanLib::getConObj('SCANDB');
+        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
 
         $ret = '';
         $ret .= "

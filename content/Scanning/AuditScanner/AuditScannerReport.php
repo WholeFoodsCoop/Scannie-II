@@ -123,7 +123,6 @@ HTML;
             }
         }
 
-        include(__DIR__.'/../../../config.php');
         foreach ($plus as $upc) {
             $args = array($storeID,$upc);
             $query = $dbc->prepare("

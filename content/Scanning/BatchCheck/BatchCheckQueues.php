@@ -169,7 +169,7 @@ HTML;
 
     private function getTableContents($dbc)
     {
-        include(__DIR__.'/../../../config.php');
+        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
         $option = FormLib::get('option');
         $sessionName = $_SESSION['sessionName'];
         $storeID = $_SESSION['storeID'];
@@ -597,7 +597,6 @@ HTML;
 
     private function view($sessionName,$storeID)
     {
-        include(__DIR__.'/../../../config.php');
         $ret = "";
         $ret .= $this->queueToggle();
         $stores = array(1=>'Hillside',2=>'Denfeld');
@@ -647,8 +646,8 @@ HTML;
         $timestamp = time();
         $this->addScript("SalesChangeQueues.js?time=".$timestamp);
         $this->addScript("batchCheckQueues.js?time=".$timestamp);
-        $this->addScript('http://'.$MY_ROOTDIR.'/common/javascript/tablesorter/js/jquery.tablesorter.min.js');
-        $this->addScript('http://'.$MY_ROOTDIR.'/common/javascript/tablesorter/js/jquery.metadata.js');
+        $this->addScript('../../../common/javascript/tablesorter/js/jquery.tablesorter.min.js');
+        $this->addScript('../../../common/javascript/tablesorter/js/jquery.metadata.js');
 
         return <<<HTML
 $ret

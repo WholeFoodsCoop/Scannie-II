@@ -37,8 +37,6 @@ class AuditScanner extends PageLayoutA
     public function preprocess()
     {
 
-        include(__DIR__.'/../../../config.php');
-
         $username = scanLib::getUser();
         $dbc = scanLib::getConObj();
         if (!$username) {
@@ -65,9 +63,9 @@ class AuditScanner extends PageLayoutA
             $note = $_GET['note'];
             $error = $this->notedata_handler($dbc,$note,$username);
             if (!$error) {
-                header('location: http://'.$MY_ROOTDIR.'/content/Scanning/AuditScanner/AuditScanner.php?success=true');
+                header('location: AuditScanner.php?success=true');
             } else {
-                header('location: http://'.$MY_ROOTDIR.'/content/Scanning/AuditScanner/AuditScanner.php?success=false');
+                header('location: AuditScanner.php?success=false');
             }
         }
 
@@ -197,6 +195,7 @@ HTML;
     {
 
         $ret = '';
+        $MY_ROOTDIR = $this->config['MY_ROOTDIR'];
         $dbc = scanLib::getConObj('SCANALTDB');
         $p = $dbc->prepare("SELECT scanBeep FROM ScannieConfig WHERE session_id = ?");
         $r = $dbc->execute($p, session_id());
@@ -229,7 +228,6 @@ HTML;
             }
         }
 
-        include(__DIR__.'/../../../config.php');
         include(__DIR__.'/../../../common/lib/PriceRounder.php');
         $rounder = new PriceRounder();
         $storeID = scanLib::getStoreID();
@@ -640,7 +638,6 @@ HTML;
     {
 
         $ret = '';
-        include(__DIR__.'/../../../config.php');
         $dbc = scanLib::getConObj('SCANALTDB');
         $argsA = array($data['upc'],$username,$storeID);
         $prepA = $dbc->prepare("SELECT * FROM AuditScanner WHERE upc = ? AND username = ? AND store_id = ? LIMIT 1");
@@ -885,7 +882,6 @@ HTML;
 
     private function mobile_menu($upc)
     {
-        include(__DIR__.'/../../../config.php');
         $ret = '';
         //$ret .= '<a href="../misc/mobile.php"><button class="btn-mobile">M</button></a>';
         $ret .= '<a href="#" id="btn-action"><button class="btn-action">A</button></a>';

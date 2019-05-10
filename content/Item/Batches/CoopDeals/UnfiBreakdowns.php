@@ -15,7 +15,6 @@ class UnfiBreakdowns extends WebDispatch
     
     public function body_content()
     {        
-        include(__DIR__.'/../../../../config.php');
         include('../../../../common/lib/PriceRounder.php');
         $rounder = new PriceRounder();
         $bdData = array();

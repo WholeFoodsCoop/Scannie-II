@@ -197,7 +197,7 @@ class SCS extends PageLayoutA
 
     private function loginView($dbc)
     {
-        include(__DIR__.'/../../../config.php');
+        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
         $storeID = scanLib::getStoreID();
         $sessions = ''; 
         $args = array($storeID);
@@ -784,7 +784,7 @@ JAVASCRIPT;
 
     public function cssContent()
     {
-        include(__DIR__.'/../../../config.php');
+        $MY_ROOTDIR = $this->config['MY_ROOTDIR'];
         $css = <<<HTML
 body {
     font-family: Arial, Helvetica, sans-serif;
@@ -1163,7 +1163,6 @@ HTML;
 
     private function skuToUpc($upc)
     {
-        include(__DIR__.'/../../../config.php');
         $dbc = scanLib::getConObj(); 
         $queryStr = 'SELECT upc
             FROM is4c_op.vendorItems

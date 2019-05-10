@@ -13,7 +13,6 @@ class BatchCheckChat extends PageLayoutA
 
     public function preprocess()
     {
-        include(__DIR__.'/../../../config.php');
         $dbc = scanLib::getConObj(); 
         if (FormLib::get('sendMsg', false)) {
             $this->sendMsgHandler($dbc);

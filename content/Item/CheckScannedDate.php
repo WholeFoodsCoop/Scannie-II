@@ -57,7 +57,6 @@ HTML;
     public function pageContent()
     {
         $ret = '';
-        include(__DIR__.'/../config.php');
         $dbc = scanLib::getConObj();
 
         $qnames = array();

@@ -43,7 +43,6 @@ class CheckUnfiWhs extends PageLayoutA
     public function pageContent()
     {
         $ret = '';
-        include(__DIR__.'/../config.php');
         $dbc = scanLib::getConObj('SCANALTDB');
 
         $sku = FormLib::get('sku');

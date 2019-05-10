@@ -31,7 +31,6 @@ class BasicsScan extends PageLayoutA
 
     public function body_content()
     {
-        include(__DIR__.'/../../../config.php');
         $username = scanLib::getUser();
         $storeID = scanLib::getStoreID();
         $storename = scanLib::getStoreName($storeID);

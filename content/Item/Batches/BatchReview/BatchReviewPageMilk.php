@@ -36,7 +36,6 @@ class BatchReviewPageMilk extends PageLayoutA
     public function body_content() 
     {
         
-        include(__DIR__.'/../../../../config.php');
         include(__DIR__.'/../../../../common/lib/PriceRounder.php');
         $dbc = scanLib::getConObj();
         $curPage = basename($_SERVER['PHP_SELF']);

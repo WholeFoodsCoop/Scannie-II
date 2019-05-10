@@ -36,7 +36,6 @@ class PendingAction extends PageLayoutA
     public function body_content()
     {
         $ret = '';
-        include(__DIR__.'/../../config.php');
         $dbc = scanLib::getConObj();
 
         $ret .= '<div class="container">';

@@ -36,8 +36,8 @@ class LastSoldDates extends PageLayoutA
 
     private function last_sold_check_list($dbc)
     {
+        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
         $ret = "";
-        include(__DIR__.'/../../config.php');
         $ret .= '
             <div style="height: 25px;"></div>
             <form method="get">
@@ -125,7 +125,6 @@ class LastSoldDates extends PageLayoutA
     {
         $ret = '';
         $item = array ( array() );
-        include(__DIR__.'/../config.php');
         $dbc = scanlib::getConObj();
 
         if ($_GET['paste_list']) {
@@ -139,7 +138,6 @@ class LastSoldDates extends PageLayoutA
 
     public function getDates()
     {
-        include(__DIR__.'/../config.php');
         $ret = '';
         $item = array ( array() );
         $dbc = scanlib::getConObj();

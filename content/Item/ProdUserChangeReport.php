@@ -26,14 +26,13 @@ if (!class_exists('SQLManager')) {
 class ProdUserChangeReport extends WebDispatch 
 {
     
-    protected $title = "Product Changes by Date & User";
+    protected $title = "Products Updated By User";
     protected $description = "[Product Changes by D&U] Find products 
         modified by user for a given timespan.";
     
     public function body_content()
     {           
         $ret = '';
-        include(__DIR__.'/../../config.php');
         $dbc = ScanLib::getConObj();
         
         $ret .= "<h4>".$this->title."</h4>";
@@ -42,33 +41,35 @@ class ProdUserChangeReport extends WebDispatch
         $todate = FormLib::get('todate');
         $userid = FormLib::get('user');
         
-        $args = array($fromdate,$todate,$userid);
-        $query = $dbc->prepare("
-            select pu.* 
-            from prodUpdate as pu
-                left join products as p on pu.upc=p.upc
-            where pu.modified between ? and ?
-                and pu.user = ?
-            group by pu.upc 
-            order by pu.modified
-        ");
-        $result = $dbc->execute($query,$args);
-        $upcs = array();
-        while ($row = $dbc->fetchRow($result)) {
-            $upcs[] = $row['upc'];
+        if (FormLib::get('submit') !== false) {
+            $args = array($fromdate,$todate,$userid);
+            $query = $dbc->prepare("
+                select pu.* 
+                from prodUpdate as pu
+                    left join products as p on pu.upc=p.upc
+                where pu.modified between ? and ?
+                    and pu.user = ?
+                group by pu.upc 
+                order by pu.modified
+            ");
+            $result = $dbc->execute($query,$args);
+            $upcs = array();
+            while ($row = $dbc->fetchRow($result)) {
+                $upcs[] = $row['upc'];
+            }
+            if ($dbc->error()) echo $dbc->error();
+            
+            $ret .= '<strong>'.count($upcs).'</strong> products were updated from 
+                '.$fromdate.' to '.$todate.' by this user. <br />';
+            $ret .= '<textarea rows=10 columns=5 class="form-control">';
+            foreach ($upcs as $upc) {
+                $ret .= $upc . "\r\n";
+            }
+            $ret .= '</textarea><br />';
+            $ret .= '<a href="http://'.$HOST.'/git/fannie/item/AdvancedItemSearch.php" target="_BLANK">
+                Advanced Search</a><br />';
+            
         }
-        if ($dbc->error()) echo $dbc->error();
-        
-        $ret .= '<strong>'.count($upcs).'</strong> products were updated from 
-            '.$fromdate.' to '.$todate.' by this user. <br />';
-        $ret .= '<textarea rows=25 columns=10>';
-        foreach ($upcs as $upc) {
-            $ret .= $upc . "\r\n";
-        }
-        $ret .= '</textarea><br />';
-        $ret .= '<a href="http://'.$HTTP_HOST.'/git/fannie/item/AdvancedItemSearch.php" target="_BLANK">
-            Advanced Search</a><br />';
-        
         
         return "<div class=\"container-fluid\" style=\"margin-top: 25px;\">".$ret."</div>";
     }
@@ -96,7 +97,7 @@ class ProdUserChangeReport extends WebDispatch
         $ret .= '</select>&nbsp;';
         $ret .= '<input type="text" class="form-control" name="fromdate" id="fromdate" value="'.FormLib::get('fromdate').'" placeholder="date from">&nbsp;';
         $ret .= '<input type="text" class="form-control" name="todate" id="todate" value="'.FormLib::get('todate').'" placeholder="date to ">&nbsp;';
-        $ret .= '<button class="btn btn-default" type="submit">Submit</button>';
+        $ret .= '<input class="btn btn-default" type="submit" name="submit" value="Submit" />';
         $ret .= '</form>';
         $ret .= '<br />';
 

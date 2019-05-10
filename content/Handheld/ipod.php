@@ -30,7 +30,7 @@ class ipod extends WebDispatch
 
     public function body_content()
     {
-        include(__DIR__.'/../../config.php');
+        $MY_ROOTDIR = $this->config['MY_ROOTDIR'];
         $ret = '';
         
         $url = "http://$MY_ROOTDIR/content/Scanning/BatchCheck/SCS.php";

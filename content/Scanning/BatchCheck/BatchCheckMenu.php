@@ -13,7 +13,6 @@ class BatchCheckMenu extends PageLayoutA
 
     public function preprocess()
     {
-        include(__DIR__.'/../../../config.php');
         $dbc = scanLib::getConObj(); 
         if (FormLib::get('deleteSession', false)) {
             $this->displayFunction = $this->deleteSessionHandler();

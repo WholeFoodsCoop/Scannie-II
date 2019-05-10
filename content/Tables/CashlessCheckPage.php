@@ -37,7 +37,6 @@ class CashlessCheckPage extends PageLayoutA
     {           
         $ret = '';
         $dbc = scanLib::getConObj('SCANTRANSDB');
-        include(__DIR__.'/../../config.php');
         
         if ($_GET['store_id']) {
             $_SESSION['store_id'] = $_GET['store_id'];

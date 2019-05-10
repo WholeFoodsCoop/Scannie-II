@@ -32,6 +32,7 @@ class NewPage extends PageLayoutA
     protected $title = "";
     protected $description = "[] .";
     protected $ui = TRUE;
+    protected $ALTDB = "";
 
     public function preprocess()
     {
@@ -42,7 +43,8 @@ class NewPage extends PageLayoutA
 
     public function pageContent()
     {
-        include(__DIR__.'/../../config.php');
+        $SCANALTDB = $this->config['SCANALTDB'];
+        $this->ALTDB = $SCANALTDB;
         $ret = '';
         $dbc = scanLib::getConObj();
         $data = "";
@@ -169,7 +171,6 @@ HTML;
         }
         
         $ret = "";
-
         $ret .= "<div class='count $alert'>$pcount</div>";
         $ret .= "<div class='desc'>" . $data['desc'] . "</div>";
         return $ret;
@@ -239,7 +240,7 @@ HTML;
     private function getProdInfo($dbc,$data)
     {
         $ret = '';
-        include(__DIR__.'/../../config.php');
+        $FANNIE_SERVE_DIR = $this->config['FANNIE_SERVE_DIR'];
         $fields = array(
             'super_name',
             'description',
@@ -375,9 +376,11 @@ HTML;
             FROM products AS p
                 RIGHT JOIN MasterSuperDepts AS m ON p.department = m.dept_ID
             WHERE inUse=1
-                AND upc NOT IN (0001440035017,0085068400634,0000000000114,0000000001092,
-                    0000000001108,0065801012014,0000000003361,0000000001138,0000000000114,
-                    0000000001101,0000000001997,0000000005005,0000009999904, 0085303600660)
+                AND upc NOT IN (
+                    SELECT upc FROM {$this->ALTDB}.doNotTrack 
+                    WHERE method = 'badPriceCheck'   
+                        AND page = 'NewPage'
+                )
                 AND (normal_price = 0 OR normal_price > 99.99 OR normal_price < cost)
                 AND last_sold is not NULL
                 AND p.price_rule_id = 0

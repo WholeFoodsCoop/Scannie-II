@@ -36,9 +36,9 @@ class BatchSaleReviewPage extends PageLayoutA
     
     public function body_content() 
     {
-        include(__DIR__.'/../../../../config.php');
         $dbc = scanLib::getConObj();
         $curPage = basename($_SERVER['PHP_SELF']);
+        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
         
         $id = $_GET['id'];
         $batchname = "";
@@ -54,7 +54,7 @@ class BatchSaleReviewPage extends PageLayoutA
         include('BatchReviewLinks.php');
         $ret .= $this->form_content($id, $batchname);
         
-        $ret .= '<a href="http://'.$FANNIEROOT_DIR.'/batches/newbatch/EditBatchPage.php?id=' 
+        $ret .= '<a href="http://'.$FANNIE_ROOTDIR.'/batches/newbatch/EditBatchPage.php?id=' 
             . $id . '" target="_blank"><span class="text-primary no-print">View Batch</span></a>';
         $nextBatch = $_SERVER['PHP_SELF'] . '?id=' . ($id + 1);
         $prevBatch = $_SERVER['PHP_SELF'] . '?id=' . ($id - 1);

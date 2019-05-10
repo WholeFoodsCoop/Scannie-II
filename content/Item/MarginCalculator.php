@@ -37,8 +37,6 @@ class MarginCalculator extends WebDispatch
     {           
     
         $ret = "";
-        
-        include(__DIR__.'/../../config.php');
         include(__DIR__.'/../../common/lib/PriceRounder.php');
         $rounder = new PriceRounder();
         
@@ -48,21 +46,42 @@ class MarginCalculator extends WebDispatch
 
         $dept_marg = FormLib::get('dept_margin', false);
         $cost = FormLib::get('cost');
+        $markup = FormLib::get('markup');
+        $adj_markup = ($markup > 1) ? $markup * 0.01 : $markup;
+
         if ($dept_marg != false) $_SESSION['dept_margin'] = $dept_marg;
         
         $ret .= '
             <form method="get">
             <div class="container-fluid" style="margin-top: 15px;">
-                <div class="form-group">
-                    <label class="small">Cost</label>
-                    <input class="form-control form-control-sm" name="cost" value="'.$cost.'" autofocus>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="form-group">
+                            <label class="small">Cost</label>
+                            <input class="form-control form-control-sm" name="cost" value="'.$cost.'" autofocus>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="form-group">
+                            <label class="small">% Markup</label>
+                            <input class="form-control form-control-sm" name="markup" value="'.$markup.'">
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="small">Margin</label>
-                    <input class="form-control form-control-sm" name="dept_margin" value="'.$dept_marg.'">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="form-group">
+                            <label class="small">Margin</label>
+                            <input class="form-control form-control-sm" name="dept_margin" value="'.$dept_marg.'">
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="form-group">
+                            <label class="small">&nbsp;</label>
+                            <div align="right"><button class="btn btn-sm">Submit</button>&nbsp;&nbsp;</div>
+                        </div>
+                    </div>
                 </div>
-                <div align="right"><button class="btn btn-sm">Submit</button>&nbsp;&nbsp;</div>
-            </div>
             </form>
         ';
         $ret .= "<div class='container-fluid'>";
@@ -70,7 +89,8 @@ class MarginCalculator extends WebDispatch
 
         //  Find SRP
         $dept_marg *= .01;
-        $srp = $cost / (1 - $dept_marg);
+        $adjCost = ($adj_markup > 0) ? ($cost * $adj_markup) + $cost : $cost;
+        $srp = $adjCost / (1 - $dept_marg);
         $round_srp = $rounder->round($srp);
         $ret .= "<tr><td>Raw SRP</td><td>" . sprintf('%.3f', $srp) . "</tr>";
         $ret .= "<tr><td>Rounded SRP</td><td><strong class='success'>" . $round_srp . "</strong></tr>";
@@ -92,7 +112,7 @@ class MarginCalculator extends WebDispatch
     {
         return <<<JAVASCRIPT
 $(window).resize(function(){
-    window.resizeTo(300, 400);
+    window.resizeTo(300, 450);
 });
 JAVASCRIPT;
     }
@@ -105,6 +125,9 @@ body, html {
 }
 .input-group-addon {
     width: 70px;
+}
+.btn-sm {
+    border: 1px solid lightgrey;
 }
 //.form-control {
 //    padding-bottom:5px;
