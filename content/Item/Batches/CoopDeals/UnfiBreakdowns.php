@@ -9,149 +9,108 @@ class UnfiBreakdowns extends WebDispatch
 {
 
     protected $title = 'UNFI Breakdowns Page';
-    protected $description = '[UNFI Breakdowns] Find break-down products missing in 
-        sales batches.';
-    protected $ui = TRUE;
+    protected $description = '[UNFI Breakdowns] Find product relatives 
+        missing from sales batches.';
     
     public function body_content()
     {        
-        include('../../../../common/lib/PriceRounder.php');
-        $rounder = new PriceRounder();
-        $bdData = array();
-        $bdData = $this->getBreakdownList();
-        $start = $_GET['start'];
-        $end = $_GET['end'];
-        $finderUpc = $_GET['upc'];
-        $finderUpc = scanLib::padUpc($finderUpc);
-        if (isset($bdData[$finderUpc])) {
-            $returnUpc = $bdData[$finderUpc];
-        } else {
-            $keys = array_keys($bdData,$finderUpc);
-            foreach ($keys as $key) {
-                $returnUpc = $key;
-            }
-        }
-        
-        $ret = '<div class="container-fluid">';
-        $ret .= "<p>
-                <a href='CoopDealsReview.php'>Coop Deals Review Page (QA)</a> | 
-                Breakdown Items
-            </p>
-        ";
+        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
+        $start = FormLib::get('start');
+        $end = FormLib::get('end');
+        if ($end == '') $end = $start;
+        $ret .= "<p> <a href='CoopDealsReview.php'>
+            Coop Deals Review Page (QA)</a> | Breakdown Items </p> ";
         $ret .=  self::form_content();
-        
-        $start = $_GET['start'];
-        
-        if ($_GET['end']) {
-            $end = $_GET['end'];
-        } else {
-            $end = $_GET['start'];
-        }
-        
-        $dbc = ScanLib::getConObj('SCANALTDB');
-        $prep = $dbc->prepare("
-            SELECT parent, child, size
-            FROM UnfiBreakdowns AS u 
-        ");
-        $res = $dbc->execute($prep);
-        $parents = array();
-        $children = array();
-        $size = array();
-        while ($row = $dbc->fetchRow($res)) {
-            $parents[] = $row['parent'];
-            $children[] = $row['child'];
-            $size[$row['parent']] = $row['size']; //size is saved only to parent UPCs
-        }
-        if ($dbc->error()) $ret .=  $dbc->error() . '<br>';
-        
+        $dbc = ScanLib::getConObj();
+        $upcs = array();
+        $skus = array();
         $args = array($start,$end);
         $prep = $dbc->prepare("
             SELECT 
                 bl.upc, 
                 bl.salePrice,
                 bl.batchID,
-                p.description
-            FROM is4c_op.batchList AS bl
-                LEFT JOIN is4c_op.batches AS b ON bl.batchID=b.batchID
-                LEFT JOIN is4c_op.products AS p ON bl.upc=p.upc
-            WHERE b.batchID >= {$start}
-                AND b.batchID <= {$end}
+                p.description,
+                p.brand,
+                v.sku,
+                p.inUse
+            FROM batchList AS bl
+                LEFT JOIN batches AS b ON bl.batchID=b.batchID
+                LEFT JOIN products AS p ON bl.upc=p.upc
+                LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
+            WHERE b.batchID >= ?
+                AND b.batchID <= ?
         ");
-        $res = $dbc->execute($prep);
+        $res = $dbc->execute($prep, $args);
         $batchList = array();
         $batchListUpcs = array();
         $batchIDs = array();
         while ($row = $dbc->fetchRow($res)) {
-           $batchList[$row['upc']] = $row['salePrice'];
-           $bathListUpcs[] = $row['upc'];
-           $batchIDs[$row['upc']] = $row['batchID'];
-           $batchDesc[$row['upc']] = $row['description'];
+           $upcs[$row['upc']]['saleprice'] = $row['salePrice'];
+           $upcs[$row['upc']]['batchID'] = $row['batchID'];
+           $upcs[$row['upc']]['description'] = $row['description'];
+           $upcs[$row['upc']]['brand'] = $row['brand'];
+           $skus[$row['sku']] = null;
         }
-        if ($er = $dbc->error()) {
-            $ret .= '<div class="alert alert-danger" style="max-width: 400px;">'.$er.'</div>';
-        }
-        
-        $ret .=  "<p style='width:350px'>If there are UPCs listed below, they should be added to the following batches. 
-            You may want to double check the prices suggested by this page.</p>";
-        
-        $ret .=  '<table class="table table-striped table-condensed small" style="width:250px;border:2px solid lightgrey">
-                    <th></ht><th>Add UPC to Batch</th><th>batchID</th><th>saleprice</th>';
 
-        $prices = array();
-        foreach ($batchList as $upc => $salePrice) {
-            //  GET Child
-            if (in_array($upc,$parents) && !in_array($upc,$child)) {
-                $curSize = $size[$upc];
-                $price = ($salePrice / $curSize);
-                $prices[] = $price;
-                //$price = (!is_infinite($price)) ? $rounder->round($price) : "?";
-                $batch = '<a href="http://'.$FANNIE_ROOTDIR.'/batches/newbatch/EditBatchPage.php?id=' . $batchIDs[$upc] . '" target="_blank">' . $batchIDs[$upc] . '</a>';
-                if ($curSize > 0.01) {
-                    while ($price*$curSize < $salePrice) {
-                        $price++;
-                    }
-                }                
-                $childKey = array_keys($parents,$upc);
-                foreach ($childKey as $value) $child = $children[$value];
-                $child = str_pad($child, 13, 0, STR_PAD_LEFT);
-                if (!in_array($child,$bathListUpcs)) {
-                    $ret .=  sprintf('<tr><td>child</td><td>%s</td><td>%s</td><td>%0.2f</td></tr>',$child,$batch,$price);
-                }                
+        $key = '
+            <div class="row"><div class="col-lg-4">
+            <table class="table table-bordered table-condensed table-sm small"><thead></thead>
+            <tbody>
+                <tr><td class="alert-success">&nbsp;</td><td>Item found in batch</td></tr>
+                <tr><td class="alert-danger">&nbsp;</td><td>Item missing from batch</td></tr>
+            </tbody></table></div></div>';
+        $table =  '<table class="table table-condensed table-bordered table-sm small">
+            <thead><tr>
+                <th>SKU</th>
+                <th>UPC</th>
+                <th>batchID</th>
+                <th>Brand</th>
+                <th>Description</th>
+                <th>SSP</th>
+            </tr></thead><tbody>';
+        foreach ($skus as $sku => $na) {
+            $args = array($sku);
+            $prep = $dbc->prepare("SELECT sku, upc, isPrimary, multiplier
+                FROM VendorAliases WHERE sku = ?");
+            $res = $dbc->execute($prep, $args);
+            while ($row = $dbc->fetchRow($res)) {
+                $is_primary = $row['isPrimary'];
+                $multiplier = $row['multiplier'];
+                $upc = $row['upc'];
+                $saleprice = $upcs[$upc]['saleprice'];
+                $batchID = $upcs[$upc]['batchID'];
+                $bid_link = "<a href=\"http://$FANNIE_ROOTDIR/batches/newbatch/EditBatchPage.php?id=$batchID\" target=\"_blank\">$batchID</a>";
+                $class = (array_key_exists($upc, $upcs)) ? 'alert-success' : 'alert-danger';
+                $table .= sprintf("<tr class=\"%s\" data-sku=\"%s\" data-type=\"%s\" data-multiplier=\"%s\" data-saleprice=\"%s\" data-batchID=\"%s\"><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class=\"ssp\">%s</td>",
+                    $class,
+                    $sku,
+                    $is_primary,
+                    $multiplier,
+                    $saleprice,
+                    $upcs[$upc]['batchID'],
+                    $sku,
+                    $upc,
+                    $bid_link,
+                    $upcs[$upc]['brand'],
+                    $upcs[$upc]['description'],
+                    $upcs[$upc]['saleprice']
+                );
             }
-            
-            //  GET Parent
-            if (in_array($upc,$children)) {
-                $parentKey = array_keys($children,$upc);
-                foreach ($parentKey as $value) $parent = $parents[$value];
-                $parent = str_pad($parent,13,0,STR_PAD_LEFT);
-                $curSize = $size[$parent];
-                $price = ($salePrice * $curSize);
-                $prices[] = $price;
-                //$price = ($price != 0) ? $rounder->round($price) : "?";
-                $batch = '<a href="http://'.$FANNIE_ROOTDIR.'/batches/newbatch/EditBatchPage.php?id=' . $batchIDs[$upc] . '" target="_blank">' . $batchIDs[$upc] . '</a>';
-                while ($price > $salePrice*$curSize) {
-                    $price--;
-                }
-                if (!in_array($parent,$bathListUpcs)) {
-                    $ret .=  sprintf('<tr><td>parent</td><td>%s</td><td>%s</td><td>%0.2f</td></tr>',$parent,$batch,$price);
-                }
-            }
-            
         }
-        //var_dump($prices);
-        $ret .=  '</table>';
-        $ret .= '</div>';
+        $table .= "</tbody></table>";
         
         return <<<HTML
-$ret
+<div class="container-fluid"> $ret $key $table </div>
 HTML;
     }
     
     private function form_content()
     {
 		
-		$id1 = $_GET['start'];
-		$id2 = $_GET['end'];
+        $id1 = FormLib::get('start');
+        $id2 = FormLib::get('end');
+        if ($id2 == '') $id2 = $id1;
 		
         return '
             <form method="get"> 
@@ -162,48 +121,38 @@ HTML;
         ';
     }
 
-    private function getBreakdownList()
-    {
-        $dbc = scanLib::getConObj('SCANALTDB');
-        $prep = $dbc->prepare("SELECT * FROM UnfiBreakdowns");
-        $res = $dbc->execute($prep);
-        $data = array();
-        while ($row = $dbc->fetchRow($res)) {
-            //echo scanLib::padUpc($row['child']).'<br/>';
-            $parent = scanLib::padUpc($row['parent']);
-            $child = scanLib::padUpc($row['child']);
-            $data[$parent] = $child;
-        }
-
-        return $data;
-    }
-
     public function javascriptContent()
     {
-        return <<<HTML
-$(function(){
+        return <<<JAVASCRIPT
+$('tr').each(function(){
+    var sku = $(this).attr('data-sku');
+    var type = $(this).attr('data-type');
+    var batchID = $(this).attr('data-batchID');
+    var ssp = null;
+    if (batchID == '') {
+        var oppo_type = (type == 1) ? 0 : 1;
+        oppo_type = parseInt(oppo_type, 10);
+        var saleprice = $("[data-type='"+oppo_type+"'][data-sku='"+sku+"']").attr('data-saleprice');
+        var cur_bid = $("[data-type='"+oppo_type+"'][data-sku='"+sku+"']").attr('data-batchID');
+        var multiplier = $(this).attr('data-multiplier');
+        saleprice = parseFloat(saleprice);
+        multiplier = parseFloat(multiplier);
+        var ssp = saleprice * multiplier;
+        $(this).find('td:last').text(ssp.toFixed(2));
+        $(this).find('td:eq(2)').text(cur_bid);
+    }
 });
-
-$('#finderSubmit').on('click',function(){
-    //document.forms['bdFinder'].submit();
-});
-HTML;
+JAVASCRIPT;
     }
 
-    public function cssContent()
+    public function helpContent()
     {
-        return <<<HTML
-#bdFinder {
-    border: 2px solid lightgrey;
-    border-radius: 3px;
-    padding: 25px;
-    box-shadow: 1px 1px grey;
-    background: white;
-}
-label {
-    font-size: 12px;
-}
-HTML;
+        return "
+            <h5>Find Coop Deals Breakdown Items</h5>
+            <p>Enter a single batch ID or range of ID's to find all breakdown items within.</p>
+            <li>Green rows are items that were found in the batch and should not need to be adjusted.</li>
+            <li>Red rows are relatives of items found in batches that need to be added to the batch</li>
+        ";
     }
     
 }
