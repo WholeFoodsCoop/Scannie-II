@@ -34,6 +34,8 @@ function fancyButtons()
         var r = confirm("Pressing OK will clear all notes from this queue.");
         if (r == true) {
             $("#clearNotesForm").submit();
+        } else {
+            return false;
         }
         event.stopPropagation();
     });
@@ -41,6 +43,8 @@ function fancyButtons()
         var r = confirm("Pressing OK will delete all data from this queue.");
         if (r == true) {
             $("#clearAllForm").submit();
+        } else {
+            return false;
         }
         event.stopPropagation();
     });
@@ -48,6 +52,8 @@ function fancyButtons()
         var r = confirm("Pressing OK will update product data from Fannie.");
         if (r == true) {
             $("#updateForm").submit();
+        } else {
+            return false;
         }
         event.stopPropagation();
     });
