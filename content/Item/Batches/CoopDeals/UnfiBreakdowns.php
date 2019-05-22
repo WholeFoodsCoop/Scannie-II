@@ -60,7 +60,7 @@ class UnfiBreakdowns extends WebDispatch
                 <tr><td class="alert-success">&nbsp;</td><td>Item found in batch</td></tr>
                 <tr><td class="alert-danger">&nbsp;</td><td>Item missing from batch</td></tr>
             </tbody></table></div></div>';
-        $table =  '<table class="table table-condensed table-bordered table-sm small">
+        $table =  '<table class="table table-condensed table-bordered table-sm small" id="break_table">
             <thead><tr>
                 <th>SKU</th>
                 <th>UPC</th>
@@ -124,22 +124,26 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
+var i = 0;
 $('tr').each(function(){
-    var sku = $(this).attr('data-sku');
-    var type = $(this).attr('data-type');
-    var batchID = $(this).attr('data-batchID');
-    var ssp = null;
-    if (batchID == '') {
-        var oppo_type = (type == 1) ? 0 : 1;
-        oppo_type = parseInt(oppo_type, 10);
-        var saleprice = $("[data-type='"+oppo_type+"'][data-sku='"+sku+"']").attr('data-saleprice');
-        var cur_bid = $("[data-type='"+oppo_type+"'][data-sku='"+sku+"']").attr('data-batchID');
-        var multiplier = $(this).attr('data-multiplier');
-        saleprice = parseFloat(saleprice);
-        multiplier = parseFloat(multiplier);
-        var ssp = saleprice * multiplier;
-        $(this).find('td:last').text(ssp.toFixed(2));
-        $(this).find('td:eq(2)').text(cur_bid);
+    var tableID = $(this).closest('table').attr('id');
+    if (tableID == 'break_table') {
+        var sku = $(this).attr('data-sku');
+        var type = $(this).attr('data-type');
+        var batchID = $(this).attr('data-batchID');
+        var ssp = null;
+        if (batchID == '') {
+            var oppo_type = (type == 1) ? 0 : 1;
+            oppo_type = parseInt(oppo_type, 10);
+            var saleprice = $("[data-type='"+oppo_type+"'][data-sku='"+sku+"']").attr('data-saleprice');
+            var cur_bid = $("[data-type='"+oppo_type+"'][data-sku='"+sku+"']").attr('data-batchID');
+            var multiplier = $(this).attr('data-multiplier');
+            saleprice = parseFloat(saleprice);
+            multiplier = parseFloat(multiplier);
+            var ssp = saleprice * multiplier;
+            $(this).find('td:last').text(ssp.toFixed(2));
+            $(this).find('td:eq(2)').text(cur_bid);
+        }
     }
 });
 JAVASCRIPT;
