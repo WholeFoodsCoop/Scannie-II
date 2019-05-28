@@ -216,3 +216,32 @@ $('.edit-btn').click(function(){
         });
     }
 });
+
+$('.update-section').change(function(){
+    var mapID = $(this).attr('data-mapID');
+    var upc = $('#upc').val();
+    var floor_section = $(this).val();
+    $.ajax({
+        type: 'post',
+        data: 'mapID='+mapID+'&floor_section='+floor_section+'&upc='+upc,
+        success: function(response)
+        {
+            $('#floor-section-edit').hide();
+            alert('success');
+        }
+    });
+});
+
+$('.scanicon-trash').click(function(){
+    var mapID = $(this).attr('data-mapID');
+    $.ajax({
+        type: 'post',
+        data: 'mapID='+mapID+'&delete_mapID=true',
+        success: function(response)
+        {
+            $('#floor-section-edit').hide();
+            alert('success');
+        }
+    });
+
+});

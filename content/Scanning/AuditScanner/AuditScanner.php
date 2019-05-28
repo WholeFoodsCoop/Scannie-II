@@ -57,7 +57,13 @@ class AuditScanner extends PageLayoutA
         } elseif ($action == 'mod-edit') {
             $this->mod_edit_handler($upc);
             die();
-        }
+        } elseif (FormLib::get('delete_mapID', false) !== false) {
+            $this->delete_mapID_handler();
+            die();
+        } elseif (FormLib::get('mapID', false) !== false) {
+            $this->mapID_handler();
+            die();
+        } 
 
         if (isset($_GET['note'])) {
             $note = $_GET['note'];
@@ -69,6 +75,47 @@ class AuditScanner extends PageLayoutA
             }
         }
 
+    }
+
+    private function delete_mapID_handler()
+    {
+        $dbc = scanLib::getConObj();
+        $mapID = FormLib::get('mapID');
+
+        $prep = $dbc->prepare("DELETE FROM FloorSectionProductMap 
+            WHERE floorSectionProductMapID = ?");
+        $res = $dbc->execute($prep, array($mapID));
+
+        return false;
+    }
+
+    private function mapID_handler()
+    {
+        $dbc = scanLib::getConObj();
+        $mapID = FormLib::get('mapID');
+        $upc = FormLib::get('upc');
+        $floor_section = FormLib::get('floor_section');
+
+        if ($mapID != 'create_new_mapID') {
+            $args = array($floor_section, $mapID);
+            $prep = $dbc->prepare("UPDATE FloorSectionProductMap 
+                SET floorSectionID = ? WHERE floorSectionProductMapID = ?");
+            $res = $dbc->execute($prep, $args);
+        } else {
+            $getmaxP = $dbc->prepare("SELECT MAX(floorSectionProductMapID) + 1 AS maxid
+                FROM FloorSectionProductMap");
+            $getmaxR = $dbc->execute($getmaxP);
+            $row = $dbc->fetchRow($getmaxR);
+            $maxid = $row['maxid'];
+
+            $args = array($maxid, $upc, $floor_section);
+            $prep = $dbc->prepare("INSERT INTO FloorSectionProductMap
+                (floorSectionProductMapID, upc, floorSectionID)
+                VALUES (?, ?, ?)");
+            $res = $dbc->execute($prep, $args);
+        }
+
+        return false;
     }
 
     private function mod_edit_handler($upc)
@@ -196,6 +243,7 @@ HTML;
 
         $ret = '';
         $MY_ROOTDIR = $this->config['MY_ROOTDIR'];
+        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
         $dbc = scanLib::getConObj('SCANALTDB');
         $p = $dbc->prepare("SELECT scanBeep FROM ScannieConfig WHERE session_id = ?");
         $r = $dbc->execute($p, session_id());
@@ -319,6 +367,7 @@ HTML;
                 pu.brand AS signbrand,
                 v.shippingMarkup,
                 v.discountRate,
+                fslv.sections AS locations,
                 case when pu.narrow=1 then '<span class=\'badge badge-warning\'>Flagged Narrow</span>' else NULL end as narrow
             FROM products AS p
                 LEFT JOIN productUser AS pu ON p.upc = pu.upc
@@ -330,6 +379,7 @@ HTML;
                 LEFT JOIN vendorDepartments AS vd
                     ON vd.vendorID = p.default_vendor_id
                         AND vd.deptID = vi.vendorDept
+                LEFT JOIN FloorSectionsListView AS fslv ON p.upc=fslv.upc AND p.store_id=fslv.storeID
             WHERE p.store_id = ?
                 AND p.upc = ?
             LIMIT 1
@@ -354,6 +404,7 @@ HTML;
             $narrow = $row['narrow'];
             $markup = $row['shippingMarkup'];
             $discount = $row['discountRate'];
+            $locations = $row['locations'];
             // Hillside multiplier = 3, Denfeld = 7
             $weekPar = $row['auto_par'] * $multiplier;
             $ret .= '<input type="hidden" id="auto_par_value" value="'.$weekPar.'"/>';
@@ -475,6 +526,10 @@ HTML;
                     </div>
                     <div class="row">
                         <div class="col-12 info" ><span class="sm-label">DEPT: </span> '.$dept.' </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 info" ><span class="sm-label">LOCATIONS: </span> <span 
+                            onclick="$(\'#floor-section-edit\').show();">'.$locations.'</span> </div>
                     </div>'
                 ;
 
@@ -597,7 +652,7 @@ HTML;
         $timestamp = time();
         $this->addScript('auditScanner.js?unique='.$timestamp);
         $ret .= "<input type='hidden' id='isOnSale' name='isOnSale' value=$isOnSale/>";
-        $hiddenContent = $this->hiddenContent();
+        $hiddenContent = $this->hiddenContent($upc);
 
         return $ret.$hiddenContent;
     }
@@ -684,6 +739,39 @@ HTML;
     public function cssContent()
     {
         return <<<HTML
+.scanicon-trash {
+    position: absolute;
+    right: 15px;
+}
+.sections {
+    background: rgba(253, 227, 167, 0.8);
+    color: black;
+    margin: 10px;
+    padding: 10px;
+}
+#add-floor-section {
+    background: rgba(200, 247, 197, 0.8);
+    color: black;
+    margin: 10px;
+    padding: 10px;
+}
+#floor-section-edit {
+    position: fixed; 
+    top:0px;
+    left:0px;
+    background: rgba(255,255,255,0.5);
+    margin: 15px;
+    width: 90%;
+    height: 95%;
+    display: none;
+}
+#floor-section-edit-close {
+    position: fixed;
+    top:15px;
+    right:25px;
+    color: black;
+    text-shadow: 1px 1px lightgrey;
+}
 .grey {
     color: grey;
 }
@@ -938,8 +1026,57 @@ HTML;
 
     }
 
-    private function hiddenContent()
+    private function getFloorSectionSelect($sections, $cur_section, $mapID, $upc)
     {
+        $select = "<select data-mapID=\"$mapID\" data-upc=\"$upc\" class=\"update-section\">";
+        $cur = '';
+        foreach ($sections as $fsID => $name) {
+            $cur = ($cur_section == $fsID) ? 'selected' : '';
+            $select .= "<option value=\"$fsID\" $cur>$name</option>"; 
+        }
+        $select .= "</select>";
+
+        return $select;
+    }
+
+    private function hiddenContent($upc)
+    {
+        //$upc = FormLib::get('upc');
+        $storeID = scanLib::getStoreID();
+        $dbc = scanLib::getConObj();
+
+        $prep = $dbc->prepare("SELECT floorSectionID, name FROM FloorSections 
+            WHERE storeID = ? ORDER BY name;");
+        $res = $dbc->execute($prep, array($storeID));
+        $sections_list = array();
+        while ($row = $dbc->fetchRow($res)) {
+            $fsID = $row['floorSectionID'];
+            $name = $row['name'];
+            $sections_list[$fsID] = $name;
+        }
+
+        $prep = $dbc->prepare("SELECT m.*, f.name, f.floorSectionID
+            FROM FloorSectionProductMap AS m
+                RIGHT JOIN FloorSections AS f ON m.floorSectionID=f.floorSectionID
+                WHERE upc = ?
+                    AND f.storeID = ?;");
+        $res = $dbc->execute($prep, array($upc, $storeID));
+        $sections = "<div style=\"color: black; font-weight: bold; text-shadow: 1px 1px lightgrey\">In Section(s)</div>";
+        while ($row = $dbc->fetchRow($res)) {
+            $fsID = $row['floorSectionID'];
+            $mapID = $row['floorSectionProductMapID'];
+            $name = $row['name'];
+            $sections .= "<div id=\"sm_$mapID\" class=\"sections\">";
+            $sections .= "<span data-mapID=\"$mapID\" class=\"scanicon scanicon-trash btn btn-default\">&nbsp;</span>";
+            $sections .= $this->getFloorSectionSelect($sections_list, $fsID, $mapID, $upc);
+
+            $sections .= "</div>";
+        }
+        $sections .= "<div style=\"color: black; font-weight: bold; text-shadow: 1px 1px lightgrey\">Add Section</div>";
+        $sections .= "<div id=\"add-floor-section\">";
+        $sections .= $this->getFloorSectionSelect($sections_list, $fsID, 'create_new_mapID', $upc);
+        $sections .= "</div>";
+
         return <<<HTML
 <div id="menu-action" style="margin-top: -10px">
     <ul class="menu-list">
@@ -955,6 +1092,11 @@ HTML;
         </li>
         <li class="menu-list menu-exit" id="exit-action-menu">Exit Menu</li>
     </ul>
+</div>
+<div id="floor-section-edit">
+    <div id="floor-section-edit-close" onclick="$('#floor-section-edit').hide();">X</div>
+    $select
+    $sections
 </div>
 HTML;
     }
