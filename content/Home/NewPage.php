@@ -44,6 +44,7 @@ class NewPage extends PageLayoutA
     public function pageContent()
     {
         $SCANALTDB = $this->config['SCANALTDB'];
+        $MY_ROOTDIR = $this->config['MY_ROOTDIR'];
         $this->ALTDB = $SCANALTDB;
         $ret = '';
         $dbc = scanLib::getConObj();
@@ -407,7 +408,7 @@ HTML;
         $dontCheck = array(0, 5, 6, 40, 52, 103, 104, 105, 107, 109, 111, 112, 123, 160, 184, 
             194, 195, 234, 237, 245, 247, 248, 250, 256, 265, 324, 549, 550, 666, 759, 799, 800, 
             852, 868, 869, 918, 919, 920, 958, 983, 984, 985, 917, 154, 155, 193, 197, 198, 199,
-            211, 228, 189, 190, 262, 1);
+            211, 228, 189, 190, 262, 1, 290);
         $p = $dbc->prepare("SELECT upc, brand, description, normal_price FROM products WHERE upc < 1000 AND scale = 0 GROUP BY upc;");
         $r = $dbc->execute($p);
         $cols = array('upc', 'brand', 'description', 'normal_price');
@@ -621,6 +622,11 @@ HTML;
                 AND default_vendor_id = 0
                 AND p.inUse = 1
                 AND p.numflag & (1 << 19) = 0
+                AND upc NOT IN (
+                    SELECT upc FROM {$this->ALTDB}.doNotTrack 
+                    WHERE method = 'getProdMissingVendor'   
+                        AND page = 'NewPage'
+                )
             GROUP BY upc;");
         //$pre = $dbc->prepare("select * from products limit 1");
         $res = $dbc->execute($pre);
