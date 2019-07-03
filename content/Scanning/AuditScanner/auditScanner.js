@@ -198,22 +198,27 @@ $('.edit-btn').click(function(){
     var column = $(this).attr('data-column');
     var c = confirm('Edit '+column+'?');
     var upc = $('#upc').val();
+    var brand1 = $('#brand1_v').text();
+    var description1 = $('#description1_v').text();
+    var size = $('#size_v').text();
+    var brand2 = $('#brand2_v').text();
+    var description2 = $('#description2_v').text();
     if (c == true) {
-        var newtext = prompt('Enter new '+column);
-        $.ajax({
-            type: 'post',
-            url: 'AuditScanner.php',
-            data: 'upc='+upc+'&action=mod-edit&newtext='+newtext+'&table='+table+'&column='+column,
-            success: function(resp)
-            {
-                alert('Success!');
-                $('#menu-action').hide();
-            },
-            error: function(resp)
-            {
-                alert('Action Failed');
-            }
-        });
+        var newtext = prompt('Enter new '+column, eval(column));
+        if (newtext != null) {
+            $.ajax({
+                type: 'post',
+                url: 'AuditScanner.php',
+                data: 'upc='+upc+'&action=mod-edit&newtext='+newtext+'&table='+table+'&column='+column,
+                success: function(resp)
+                {
+                },
+                error: function(resp)
+                {
+                }
+            });
+        }
+        $('#counter').trigger('click');
     }
 });
 

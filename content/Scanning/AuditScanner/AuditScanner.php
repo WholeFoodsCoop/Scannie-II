@@ -124,6 +124,7 @@ class AuditScanner extends PageLayoutA
         $table = FormLib::get('table');
         $column = FormLib::get('column');
         $newtext = FormLib::get('newtext');
+        $column = preg_replace('/[0-9]+/', '', $column);
 
         $args = array($newtext, $upc);
         $query = "UPDATE $table SET $column = ? WHERE upc = ?";
@@ -368,7 +369,8 @@ HTML;
                 v.shippingMarkup,
                 v.discountRate,
                 fslv.sections AS locations,
-                case when pu.narrow=1 then '<span class=\'badge badge-warning\'>Flagged Narrow</span>' else NULL end as narrow
+                CASE when pu.narrow=1 THEN '<span class=\'badge badge-warning\'>Flagged Narrow</span>' ELSE NULL end as narrow,
+                CASE when p.size is not null THEN p.size ELSE vi.size END AS size
             FROM products AS p
                 LEFT JOIN productUser AS pu ON p.upc = pu.upc
                 LEFT JOIN departments AS d ON p.department=d.dept_no
@@ -380,6 +382,7 @@ HTML;
                     ON vd.vendorID = p.default_vendor_id
                         AND vd.deptID = vi.vendorDept
                 LEFT JOIN FloorSectionsListView AS fslv ON p.upc=fslv.upc AND p.store_id=fslv.storeID
+                INNER JOIN woodshed_no_replicate.AuditScanner AS auds ON p.upc=auds.upc
             WHERE p.store_id = ?
                 AND p.upc = ?
             LIMIT 1
@@ -387,6 +390,7 @@ HTML;
         $result = $dbc->execute($query,$args);
         $multiplier = ($storeID == 1) ? 3 : 7;
         while ($row = $dbc->fetchRow($result)) {
+            $note = $row['note'];
             $cost = $row['cost'];
             $price = $row['normal_price'];
             $desc = $row['description'];
@@ -405,6 +409,7 @@ HTML;
             $markup = $row['shippingMarkup'];
             $discount = $row['discountRate'];
             $locations = $row['locations'];
+            $size = $row['size'];
             // Hillside multiplier = 3, Denfeld = 7
             $weekPar = $row['auto_par'] * $multiplier;
             $ret .= '<input type="hidden" id="auto_par_value" value="'.$weekPar.'"/>';
@@ -516,10 +521,10 @@ HTML;
                     </div>
                     <br />
                     <div class="row">
-                        <div class="col-12 info" >'.$desc.' </div>
+                        <div class="col-12 info" ><span id="description1_v">'.$desc.'</span></div>
                     </div>
                     <div class="row">
-                        <div class="col-12 info" ><span class="sm-label">BRAND: </span> '.$brand.' </div>
+                        <div class="col-12 info" ><span class="sm-label">BRAND: </span> <span id="brand1_v">'.$brand.'</span></div>
                     </div>
                     <div class="row">
                         <div class="col-12 info" ><span class="sm-label">VENDOR: </span> '.$vendor.' </div>
@@ -530,6 +535,7 @@ HTML;
                     <div class="row">
                         <div class="col-12 info" ><span class="sm-label">LOCATIONS: </span> <span 
                             onclick="$(\'#floor-section-edit\').show();">'.$locations.'</span> </div>
+                        <div class="col-12 info" ><span class="sm-label">SIZE: </span><span id="size_v">'.$size.'</spa></span> </div>
                     </div>'
                 ;
 
@@ -548,10 +554,10 @@ HTML;
                         <div class="col-12" > &nbsp;</div>
                     </div>
                     <div class="row">
-                        <div class="col-12 info" ><span class="sm-label">SIGN: </span> '.$signDesc.' </div>
+                        <div class="col-12 info" ><span class="sm-label sign-label">SIGN: </span> <span id="description2_v">'.$signDesc.'</span></div>
                     </div>
                     <div class="row">
-                        <div class="col-12 info" ><span class="sm-label">S.BRAND: </span> '.$signBrand.' </div>
+                        <div class="col-12 info" ><span class="sm-label sign-label">S.BRAND: </span> <span id="brand2_v">'.$signBrand.'</span></div>
                     </div>
                     <div class="row">
                         <div class="col-12 info" >
@@ -652,7 +658,7 @@ HTML;
         $timestamp = time();
         $this->addScript('auditScanner.js?unique='.$timestamp);
         $ret .= "<input type='hidden' id='isOnSale' name='isOnSale' value=$isOnSale/>";
-        $hiddenContent = $this->hiddenContent($upc);
+        $hiddenContent = $this->hiddenContent($upc, $narrow, $inUse);
 
         return $ret.$hiddenContent;
     }
@@ -925,6 +931,9 @@ background-color: #fceded;
 font-size: 10px;
 color: rgba(255,255,255,0.6);
 }
+.sign-label {
+    color: purple;
+}
 .text-tiny {
 font-size: 8px;
 color: #6f6f80;
@@ -1039,7 +1048,7 @@ HTML;
         return $select;
     }
 
-    private function hiddenContent($upc)
+    private function hiddenContent($upc, $narrow, $inUse)
     {
         //$upc = FormLib::get('upc');
         $storeID = scanLib::getStoreID();
@@ -1076,17 +1085,19 @@ HTML;
         $sections .= "<div id=\"add-floor-section\">";
         $sections .= $this->getFloorSectionSelect($sections_list, $fsID, 'create_new_mapID', $upc);
         $sections .= "</div>";
+        $inUse = ($inUse == 1) ? '(is in use)' : '(not in use)';
+        $narrow = (strpos($narrow, 'Flagged') !== false) ? '(is narrow)' : '(is not narrow)';
 
         return <<<HTML
 <div id="menu-action" style="margin-top: -10px">
     <ul class="menu-list">
-        <li class="menu-list" id="mod-narrow">change <b>narrow</b> status</li>
-        <li class="menu-list" id="mod-in-use">change <b>in-use</b> status</li>
-        <li class="menu-list edit-btn" data-table="products" data-column="brand"><span class="grey">Edit</span> POS-Brand</li>
-        <li class="menu-list edit-btn" data-table="products" data-column="description"><span class="grey">Edit</span> POS-Description</li>
+        <li class="menu-list" id="mod-narrow">change <b>narrow</b> status $narrow</li>
+        <li class="menu-list" id="mod-in-use">change <b>in-use</b> status $inUse</li>
+        <li class="menu-list edit-btn" data-table="products" data-column="brand1"><span class="grey">Edit</span> POS-Brand</li>
+        <li class="menu-list edit-btn" data-table="products" data-column="description1"><span class="grey">Edit</span> POS-Description</li>
         <li class="menu-list edit-btn" data-table="products" data-column="size"><span class="grey">Edit</span> POS-Size</li>
-        <li class="menu-list edit-btn" data-table="productUser" data-column="brand"><span class="grey">Edit</span> SIGN-Brand</li>
-        <li class="menu-list edit-btn" data-table="productUser" data-column="description"><span class="grey">Edit</span> SIGN-Description</li>
+        <li class="menu-list edit-btn" data-table="productUser" data-column="brand2"><span class="grey">Edit</span> <span class="sign-label">SIGN</span>-Brand</li>
+        <li class="menu-list edit-btn" data-table="productUser" data-column="description2"><span class="grey">Edit</span> <span class="sign-label">SIGN</span>-Description</li>
         <li class="menu-list" data-table="productUser" data-column="description">
             <a href="../../">Scannie Menu</a>
         </li>
