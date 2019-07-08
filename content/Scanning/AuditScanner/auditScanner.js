@@ -27,6 +27,20 @@ function queue(store_id)
     })
 }
 
+function queueNote()
+{
+    var username = $('#username').val();
+    var upc = $('#upc').val();
+    var note = $('#note').val();
+    $.ajax({
+        type: 'post', 
+        data: 'upc='+upc+'&note='+note+'&username='+username,
+        success: function(response) {
+            $('#counter').trigger('click');
+        }
+    });
+}
+
 $( "button" ).click(function() {
   var text = $( this ).text();
   $( "note" ).val( text );
@@ -111,7 +125,8 @@ $(document).ready( function() {
 
 function formSubmitter()
 {
-    $('#my-form').submit();
+    //$('#my-form').submit();
+    $('#counter').trigger('click');
 }
 
 function updateModalOnload()
@@ -166,7 +181,7 @@ $('#mod-narrow').click(function(){
         success: function(resp)
         {
             alert('Success!');
-            $('#menu-action').hide();
+            $('#counter').trigger('click');
         },
         error: function(resp)
         {
@@ -184,7 +199,8 @@ $('#mod-in-use').click(function(){
         success: function(resp)
         {
             alert("Success\n"+resp);
-            $('#menu-action').hide();
+            //$('#menu-action').hide();
+            $('#counter').trigger('click');
         },
         error: function(resp)
         {
@@ -248,5 +264,22 @@ $('.scanicon-trash').click(function(){
             alert('success');
         }
     });
+});
 
+$('#upc').keydown(function(e){
+    if (e.keyCode == 13) {
+        e.preventDefault();
+        $('#counter').trigger('click');
+    }
+});
+
+$('#note').keydown(function(e){
+    if (e.keyCode == 13) {
+        e.preventDefault();
+        queueNote();
+        //$('#counter').trigger('click');
+    }
+});
+$('#submit-note').click(function(){
+    queueNote();
 });

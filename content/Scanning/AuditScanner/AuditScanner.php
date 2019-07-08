@@ -65,9 +65,8 @@ class AuditScanner extends PageLayoutA
             die();
         } 
 
-        if (isset($_GET['note'])) {
-            $note = $_GET['note'];
-            $error = $this->notedata_handler($dbc,$note,$username);
+        if (isset($_POST['note'])) {
+            $error = $this->notedata_handler($dbc);
             if (!$error) {
                 header('location: AuditScanner.php?success=true');
             } else {
@@ -214,11 +213,13 @@ class AuditScanner extends PageLayoutA
 HTML;
     }
 
-    private function notedata_handler($dbc,$note,$username)
+    private function notedata_handler($dbc)
     {
         $ret = '';
-        $upc = ScanLib::upcParse($_GET['upc']);
-        //echo $upc;
+        //$upc = ScanLib::upcParse($_GET['upc']);
+        $upc = FormLib::get('upc');
+        $note = FormLib::get('note');
+        $username = FormLib::get('username');
         $args = array($note,$upc,$username);
         $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScanner
             SET notes = ? WHERE upc = ? AND username = ?;");
@@ -234,8 +235,9 @@ HTML;
             $error = 2;
 
         }
+        //echo $error;
 
-        return $error;
+        return false;
 
     }
 
@@ -280,7 +282,7 @@ HTML;
         include(__DIR__.'/../../../common/lib/PriceRounder.php');
         $rounder = new PriceRounder();
         $storeID = scanLib::getStoreID();
-        $upc = scanLib::upcPreparse($_POST['upc']);
+        $upc = scanLib::upcPreparse(FormLib::get('upc'));
 
         $loading .= '
             <div class="progress" id="progressBar">
@@ -312,7 +314,7 @@ HTML;
                 AND b.batchType <> 4
                 ;");
         $saleQres = $dbc->execute($saleQuery,$saleQueryArgs);
-        //$batchList = array( 'price' => array(), 'batchID' => array(), 'batchName' => array() );
+        $batchList = array(  );
         while ($row = $dbc->fetchRow($saleQres)) {
             $batchList['price'][] = $row['salePrice'];
             $batchList['batchID'][] = $row['batchID'];
@@ -382,7 +384,6 @@ HTML;
                     ON vd.vendorID = p.default_vendor_id
                         AND vd.deptID = vi.vendorDept
                 LEFT JOIN FloorSectionsListView AS fslv ON p.upc=fslv.upc AND p.store_id=fslv.storeID
-                INNER JOIN woodshed_no_replicate.AuditScanner AS auds ON p.upc=auds.upc
             WHERE p.store_id = ?
                 AND p.upc = ?
             LIMIT 1
@@ -390,7 +391,6 @@ HTML;
         $result = $dbc->execute($query,$args);
         $multiplier = ($storeID == 1) ? 3 : 7;
         while ($row = $dbc->fetchRow($result)) {
-            $note = $row['note'];
             $cost = $row['cost'];
             $price = $row['normal_price'];
             $desc = $row['description'];
@@ -426,6 +426,16 @@ HTML;
             }
         }
         if ($dbc->error()) echo $dbc->error();
+        $args = array($upc, $username);
+        $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScanner WHERE upc = ?
+            AND username = ?");
+        $res = $dbc->execute($prep, $args);
+        $notes = "";
+        while ($row = $dbc->fetchRow($res)) {
+            $notes = $row['notes'];
+        }
+        if ($er = $dbc->error()) echo $er;
+
         $margin = ($price - $adjcost) / $price;
         $rSrp = $adjcost / (1 - $dMargin);
         $srp = $rounder->round($rSrp);
@@ -551,9 +561,6 @@ HTML;
 
                 $ret .= '
                     <div class="row">
-                        <div class="col-12" > &nbsp;</div>
-                    </div>
-                    <div class="row">
                         <div class="col-12 info" ><span class="sm-label sign-label">SIGN: </span> <span id="description2_v">'.$signDesc.'</span></div>
                     </div>
                     <div class="row">
@@ -567,9 +574,15 @@ HTML;
                             </button>
                             '.$narrow.'
                         </div>
+                    </div>';
+                if (strlen($notes) > 0) {
+                $ret .= '
+                    <div class="row">
+                        <div class="col-12" ><span class="badge badge-secondary">Notes:</span> '.$notes.'</div>
                     </div>
-
-
+                    ';
+                };
+                $ret .= '
                         <div class="collapse" id="sale-info">
                             <div class="row">
                                 <div class="col-12 info">
@@ -586,8 +599,8 @@ HTML;
                         <!-- <div class="col-4  clear btn btn-warning" onClick="queue('.$storeID.'); return false;">Print</div> -->
                         <div class="col-4 clear">
                             <form method="get" type="hidden">
-                            <button class="btn btn-warning" onClick="alert(\''.$upc.' queued to print\'); return true;" type="submit"
-                                style="width: 100%;">Print
+                            <!-- <button class="btn btn-warning" onClick="alert(\''.$upc.' queued to print\'); return true;" type="submit"
+                                style="width: 100%;">Print-->
                             </button>
                             <input type="hidden" name="note" value="Print Tag" />
                             <input type="hidden" id="upc" name="upc" value="'.$upc.'" />
@@ -634,7 +647,7 @@ HTML;
                     <form method="get" name="notepad" class=" " >
                         <input type="text" name="note" id="note" class="form-control" style="max-width: 90%; "><br />
                         <input type="hidden" name="upc" value="'.$upc.'">
-                        <button type="submit" class="btn btn-danger" onClick="$("#notepad").collapse("hide"); return false;">Submit Note</button>
+                        <span type="" class="btn btn-danger" id="submit-note">Submit Note</span>
                     </form>
         ';
 
@@ -659,6 +672,10 @@ HTML;
         $this->addScript('auditScanner.js?unique='.$timestamp);
         $ret .= "<input type='hidden' id='isOnSale' name='isOnSale' value=$isOnSale/>";
         $hiddenContent = $this->hiddenContent($upc, $narrow, $inUse);
+
+        $ret .= "<input type=\"hidden\" id=\"username\" value=\"$username\"/>
+            <input type=\"hidden\" id=\"storeID\" value=\"$storeID\"/> 
+        ";
 
         return $ret.$hiddenContent;
     }
