@@ -221,6 +221,7 @@ $('.edit-btn').click(function(){
     var description2 = $('#description2_v').text();
     if (c == true) {
         var newtext = prompt('Enter new '+column, eval(column));
+        newtext = encodeURIComponent(newtext);
         if (newtext != null) {
             $.ajax({
                 type: 'post',
