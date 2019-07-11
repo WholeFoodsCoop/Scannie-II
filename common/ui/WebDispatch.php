@@ -14,6 +14,7 @@ class WebDispatch
     protected $deviceType = '';
     protected $starttime = NULL;
     protected $loadtime = NULL;
+    protected $config;
 
     function __construct() {}
 
@@ -73,9 +74,8 @@ class WebDispatch
         // re-rout client to loggin page if user not logged in. 
         if ( WebDispatch::is_session_started() === FALSE ) {
             ini_set('session.gc_maxlifetime', 3600);
-            session_set_cookie_params(3600);
+            //session_set_cookie_params(3600);
             session_start(); // ready to go!
-            session_start();
             $now = time();
             if (isset($_SESSION['discard_after']) && $now > $_SESSION['discard_after']) {
                 session_unset();
@@ -92,6 +92,12 @@ class WebDispatch
         $dbc->execute($p, $a);
         //echo $dbc->error();
         $hostname = $_SERVER['HTTP_HOST'];
+        if (isset($_COOKIE["user_type"])) {
+            $_SESSION["user_type"] = $_COOKIE["user_type"];
+        }
+        if (isset($_COOKIE["user_name"])) {
+            $_SESSION["user_name"] = $_COOKIE["user_name"];
+        }
         if ($this->must_authenticate == true) {
             if (!isset($_SESSION['user_type'])) $_SESSION['user_type'] = null;
                 $userType = $_SESSION['user_type'];
