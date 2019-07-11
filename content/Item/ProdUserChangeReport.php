@@ -40,6 +40,7 @@ class ProdUserChangeReport extends WebDispatch
         $fromdate = FormLib::get('fromdate');
         $todate = FormLib::get('todate');
         $userid = FormLib::get('user');
+        $FAN_DIR = $this->config['FANNIE_ROOTDIR'];
         
         if (FormLib::get('submit') !== false) {
             $args = array($fromdate,$todate,$userid);
@@ -66,7 +67,7 @@ class ProdUserChangeReport extends WebDispatch
                 $ret .= $upc . "\r\n";
             }
             $ret .= '</textarea><br />';
-            $ret .= '<a href="http://'.$HOST.'/git/fannie/item/AdvancedItemSearch.php" target="_BLANK">
+            $ret .= '<a href="http://'.$FAN_DIR.'/item/AdvancedItemSearch.php" target="_BLANK">
                 Advanced Search</a><br />';
             
         }
