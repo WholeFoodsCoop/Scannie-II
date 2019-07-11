@@ -15,4 +15,8 @@ HTML;
 
     public function pageContent() {}
 
+    public function preprocess() {
+        return parent::preprocess();
+    }
+
 }
