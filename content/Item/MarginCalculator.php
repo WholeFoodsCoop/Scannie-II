@@ -93,7 +93,7 @@ class MarginCalculator extends PageLayoutA
         $calc2 = "";
         $calc2 .= '
             <form method="get">
-            <div class="container-fluid" style="position: fixed; top: 45px;">
+            <div class="container-fluid" style="position: fixed; top: 56px;">
                 <div class="row">
                     <div class="col-6">
                         <div class="form-group">
