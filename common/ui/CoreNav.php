@@ -50,6 +50,22 @@ JAVASCRIPT;
             </div>
        ';
 
+        if ($user == 'Generic User') {
+            $admin = "";
+        } else {
+            $admin = <<<HTML
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Admin 
+        </a>
+        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Testing/FormHack.php">DBA/</a>
+        </div>
+      </li>
+HTML;
+
+        }
+
         return <<<HTML
 <img class="backToTop collapse no-print" id="backToTop" src="http://$MY_ROOTDIR/common/src/img/upArrow.png" />
 <!--<nav class="navbar navbar-expand-md navbar-dark bg-dark mynav">-->
@@ -75,6 +91,7 @@ JAVASCRIPT;
         <a class="nav-link" href="#">Link</a>
       </li>
       -->
+      $admin
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             Products 
@@ -82,6 +99,7 @@ JAVASCRIPT;
         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/CheckScannedDate.php">Check PLU Queues</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/ProdUserChangeReport.php">Edits by User</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Links/">Links</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/LastSoldDates.php?paste_list=1">Last Sold</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/PendingAction.php">Pending Action</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/Popups.php">Popups</a>
