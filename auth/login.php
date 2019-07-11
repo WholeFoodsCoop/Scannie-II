@@ -66,8 +66,18 @@ class admin
                 $queryB = $dbc->prepare("SELECT name, type FROM ScannieAuth WHERE name = ? ;");
                 $resultB = $dbc->execute($queryB,$curUser);
                 while ($row = $dbc->fetchRow($resultB)) {
-                    $_SESSION['user_type'] = $row['type'];
-                    $_SESSION['user_name'] = $row['name'];
+                    if (!isset($_SESSION['user_type'])) {
+                        $_SESSION['user_type'] = $row['type'];
+                    }
+                    if (!isset($_SESSION['user_name'])) {
+                        $_SESSION['user_name'] = $row['name'];
+                    }
+                    if (!isset($_COOKIE["user_type"])) {
+                        setcookie("user_type", $row['type'], strtotime('+8 hours'));
+                    }
+                    if (!isset($_COOKIE["user_name"])) {
+                        setcookie("user_name", $row['name'], strtotime('+8 hours'));
+                    }
                 }
                 if ($dbc->error()) echo $dbc->error();
                 echo "<br /><br /><div align='center' ><div class='alert alert-success login-resp' style='max-width: 90vw;'>logging in <strong>".$curUser."</strong>, please wait.";

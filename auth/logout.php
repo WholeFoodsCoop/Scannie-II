@@ -20,6 +20,12 @@ class logout
         }
         unset($_SESSION['user_type']);
         unset($_SESSION['user_name']);
+        if (isset($_COOKIE["user_type"])) {
+            setcookie("user_type", null, time() - 3600);
+        }
+        if (isset($_COOKIE["user_name"])) {
+            setcookie("user_name", null, time() - 3600);
+        }
 
         return header('location: http://'.$MY_ROOTDIR.'/auth/login.php');
     }
