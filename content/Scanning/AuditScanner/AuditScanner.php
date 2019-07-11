@@ -204,7 +204,7 @@ class AuditScanner extends PageLayoutA
         $percent = 100*($weekPar/$max);
         $oppo = $max-$percent;
         return <<<HTML
-<div align="center" id="pBar" style="height: 1px;">
+<div align="center" id="pBar" style="height: 1px;" id="auditPar">
     <div class="progress" style="width: 100px; height: 11px;">
         <div class="progress-bar progress-bar-success" role="progressbar" style="width:{$percent}%;"></div>
         <div class="progress-bar progress-bar-default" role="progressbar" style="width:{$oppo}%; "></div>
@@ -216,7 +216,6 @@ HTML;
     private function notedata_handler($dbc)
     {
         $ret = '';
-        //$upc = ScanLib::upcParse($_GET['upc']);
         $upc = FormLib::get('upc');
         $note = FormLib::get('note');
         $username = FormLib::get('username');
@@ -235,7 +234,6 @@ HTML;
             $error = 2;
 
         }
-        //echo $error;
 
         return false;
 
@@ -244,14 +242,23 @@ HTML;
     public function body_content()
     {
 
+        $this->addOnloadCommand("");
         $ret = '';
         $MY_ROOTDIR = $this->config['MY_ROOTDIR'];
         $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
         $dbc = scanLib::getConObj('SCANALTDB');
-        $p = $dbc->prepare("SELECT scanBeep FROM ScannieConfig WHERE session_id = ?");
+        $p = $dbc->prepare("SELECT * FROM ScannieConfig WHERE session_id = ?");
         $r = $dbc->execute($p, session_id());
-        $beep = $dbc->fetchRow($r);
-        $beep = $beep[0];
+        $scannerConfig = array();
+        $cols = array('scanBeep', 'auditPar', 'auditCost', 'auditSrp',
+            'auditProdInfo', 'auditVendorInfo', 'auditSize', 'auditSignInfo',
+            'auditSaleInfo');
+        while ($row = $dbc->fetchRow($r)) {
+            foreach ($cols as $col) {
+                $scannerConfig[$col] = $row[$col];
+            }
+        }
+        $beep = $scannerConfig['scanBeep'];
         if ($beep == true) {
             $this->addOnloadCommand("
                 WebBarcode.Linea.emitTones(
@@ -262,6 +269,12 @@ HTML;
                     ] 
                 );
             ");
+        }
+        foreach ($scannerConfig as $id => $set) {
+            if ($set == false) {
+                $this->addOnloadCommand("$('#$id').hide();");
+                //echo "<div>$(#$id).hide();</div>";
+            }
         }
         $dbc = scanLib::getConObj();
         $username = scanLib::getUser();
@@ -502,7 +515,7 @@ HTML;
         $ret .= '
             <div align="center">
                 <div class="container" align="center">
-                    <div class="row">
+                    <div class="row" id="auditCost">
                         <div class="col-4 info" >
                             <div style="float: left; color: rgba(255,255,255,0.6)">cost</div><br />'.$cost.'<br />
                                 '.$adjCostStr.'
@@ -518,7 +531,7 @@ HTML;
                                 <br /> <span class="text-tiny">target: </span><span style="color: rgba(255,255,255,0.6); text-shadow: 0px  0px 1px white">'.($dMargin*100).'%</span>
                         </div>
                     </div>
-                    <div class="row">
+                    <div class="row" id="auditSrp">
                         <div class="col-4 info" >
                             <div style="float: left; color: rgba(255,255,255,0.6)"> raw </div><br />'.sprintf('%0.2f',$rSrp).'
                         </div>
@@ -530,19 +543,21 @@ HTML;
                         </div>
                     </div>
                     <br />
-                    <div class="row">
-                        <div class="col-12 info" ><span id="description1_v">'.$desc.'</span></div>
+                    <div id="auditProdInfo">
+                        <div class="row">
+                            <div class="col-12 info" ><span id="description1_v">'.$desc.'</span></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 info" ><span class="sm-label">BRAND: </span> <span id="brand1_v">'.$brand.'</span></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 info" ><span class="sm-label">DEPT: </span> '.$dept.' </div>
+                        </div>
                     </div>
-                    <div class="row">
-                        <div class="col-12 info" ><span class="sm-label">BRAND: </span> <span id="brand1_v">'.$brand.'</span></div>
-                    </div>
-                    <div class="row">
+                    <div class="row" id="auditVendorInfo">
                         <div class="col-12 info" ><span class="sm-label">VENDOR: </span> '.$vendor.' </div>
                     </div>
-                    <div class="row">
-                        <div class="col-12 info" ><span class="sm-label">DEPT: </span> '.$dept.' </div>
-                    </div>
-                    <div class="row">
+                    <div class="row" id="auditLocations">
                         <div class="col-12 info" ><span class="sm-label">LOCATIONS: </span> <span 
                             onclick="$(\'#floor-section-edit\').show();">'.$locations.'</span> </div>
                         <div class="col-12 info" ><span class="sm-label">SIZE: </span><span id="size_v">'.$size.'</spa></span> </div>
@@ -560,19 +575,21 @@ HTML;
                 }
 
                 $ret .= '
-                    <div class="row">
-                        <div class="col-12 info" ><span class="sm-label sign-label">SIGN: </span> <span id="description2_v">'.$signDesc.'</span></div>
+                    <div id="auditSignInfo">
+                        <div class="row">
+                            <div class="col-12 info" ><span class="sm-label sign-label">SIGN: </span> <span id="description2_v">'.$signDesc.'</span></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 info" ><span class="sm-label sign-label">S.BRAND: </span> <span id="brand2_v">'.$signBrand.'</span></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 info" >'.$narrow.'</div>
+                        </div>
                     </div>
-                    <div class="row">
-                        <div class="col-12 info" ><span class="sm-label sign-label">S.BRAND: </span> <span id="brand2_v">'.$signBrand.'</span></div>
-                    </div>
-                    <div class="row">
+                    <div class="row" id="auditSaleInfo">
                         <div class="col-12 info" >
-                            <button data-toggle="collapse" data-target="#sale-info" class="btn btn-clear btn-xs">
                                 <span class="text-'.$saleButtonClass.'" style="font-weight: bold; ">'.$saleStatus.' </span>
                                 <span class="caret text-'.$saleButtonClass.'"></span>
-                            </button>
-                            '.$narrow.'
                         </div>
                     </div>';
                 if (strlen($notes) > 0) {
@@ -583,7 +600,7 @@ HTML;
                     ';
                 };
                 $ret .= '
-                        <div class="collapse" id="sale-info">
+                        <div class="" id="sale-info">
                             <div class="row">
                                 <div class="col-12 info">
                                     '.$saleInfoStr.'
@@ -599,9 +616,7 @@ HTML;
                         <!-- <div class="col-4  clear btn btn-warning" onClick="queue('.$storeID.'); return false;">Print</div> -->
                         <div class="col-4 clear">
                             <form method="get" type="hidden">
-                            <!-- <button class="btn btn-warning" onClick="alert(\''.$upc.' queued to print\'); return true;" type="submit"
-                                style="width: 100%;">Print-->
-                            </button>
+                            <a href="../ScannerSettings.php" class="btn btn-info" style="width: 100%;">Config</a>
                             <input type="hidden" name="note" value="Print Tag" />
                             <input type="hidden" id="upc" name="upc" value="'.$upc.'" />
                         </div>
@@ -693,7 +708,7 @@ HTML;
     private function form_content($dbc)
     {
 
-        $upc = ScanLib::upcPreparse($_POST['upc']);
+        $upc = ScanLib::upcPreparse(FormLib::get('upc'));
         $ret .= '';
         $ret .= '
             <div align="center">
@@ -997,7 +1012,6 @@ HTML;
     private function mobile_menu($upc)
     {
         $ret = '';
-        //$ret .= '<a href="../misc/mobile.php"><button class="btn-mobile">M</button></a>';
         $ret .= '<a href="#" id="btn-action"><button class="btn-action">A</button></a>';
         $ret .= '
             <div class="modal" tabindex="-1" role="dialog" id="keypad">
@@ -1067,7 +1081,6 @@ HTML;
 
     private function hiddenContent($upc, $narrow, $inUse)
     {
-        //$upc = FormLib::get('upc');
         $storeID = scanLib::getStoreID();
         $dbc = scanLib::getConObj();
 
