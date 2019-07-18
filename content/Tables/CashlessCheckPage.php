@@ -37,6 +37,7 @@ class CashlessCheckPage extends PageLayoutA
     {           
         $ret = '';
         $dbc = scanLib::getConObj('SCANTRANSDB');
+        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
         
         if ($_GET['store_id']) {
             $_SESSION['store_id'] = $_GET['store_id'];
@@ -238,7 +239,7 @@ class CashlessCheckPage extends PageLayoutA
                 }
                 $transNo = $row['empNo'].'-'.$lane.'-'.$row['transNo'];
                 $transDate = $row['requestDatetime'];
-                $tCheckPath = '<a href="http://' . $FANNIEROOT_DIR.
+                $tCheckPath = '<a href="http://' . $FANNIE_ROOTDIR.
                     '/admin/LookupReceipt/RenderReceiptPage.php?date='.$transDate.'&receipt='.$transNo.
                     '" target="_BLANK">' . $transNo . '</a>';
                 $ret .= '<tr>';
