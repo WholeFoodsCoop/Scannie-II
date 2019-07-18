@@ -15,7 +15,7 @@ function queue(store_id)
         data: 'upc='+upcB+'&store_id='+store_id,
         error: function(xhr, status, error)
         {
-            alert('error:' + status + ':' + error + ':' + xhr.responseText)
+            //alert('error:' + status + ':' + error + ':' + xhr.responseText)
         },
         success: function(response)
         {
@@ -180,7 +180,6 @@ $('#mod-narrow').click(function(){
         data: 'upc='+upc+'&action=mod-narrow',
         success: function(resp)
         {
-            alert('Success!');
             $('#counter').trigger('click');
         },
         error: function(resp)
@@ -198,8 +197,6 @@ $('#mod-in-use').click(function(){
         data: 'upc='+upc+'&action=mod-in-use',
         success: function(resp)
         {
-            alert("Success\n"+resp);
-            //$('#menu-action').hide();
             $('#counter').trigger('click');
         },
         error: function(resp)
@@ -249,7 +246,7 @@ $('.update-section').change(function(){
         success: function(response)
         {
             $('#floor-section-edit').hide();
-            alert('success');
+            $('#counter').trigger('click');
         }
     });
 });
@@ -262,7 +259,7 @@ $('.scanicon-trash').click(function(){
         success: function(response)
         {
             $('#floor-section-edit').hide();
-            alert('success');
+            $('#counter').trigger('click');
         }
     });
 });
@@ -278,9 +275,9 @@ $('#note').keydown(function(e){
     if (e.keyCode == 13) {
         e.preventDefault();
         queueNote();
-        //$('#counter').trigger('click');
     }
 });
 $('#submit-note').click(function(){
     queueNote();
 });
+
