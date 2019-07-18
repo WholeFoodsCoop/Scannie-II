@@ -273,7 +273,6 @@ HTML;
         foreach ($scannerConfig as $id => $set) {
             if ($set == false) {
                 $this->addOnloadCommand("$('#$id').hide();");
-                //echo "<div>$(#$id).hide();</div>";
             }
         }
         $dbc = scanLib::getConObj();
@@ -512,6 +511,8 @@ HTML;
         } else {
             $adjCostStr = '&nbsp;';
         }
+        $touchicon = "<img class=\"scanicon-pointer\" src=\"../../../common/src/img/icons/pointer-light.png\"
+            style=\"margin-left: 20px; margin-top: -5px;\"/>";
         $ret .= '
             <div align="center">
                 <div class="container" align="center">
@@ -559,7 +560,7 @@ HTML;
                     </div>
                     <div class="row" id="auditLocations">
                         <div class="col-12 info" ><span class="sm-label">LOCATIONS: </span> <span 
-                            onclick="$(\'#floor-section-edit\').show();">'.$locations.'</span> </div>
+                            onclick="$(\'#floor-section-edit\').show();">'.$locations.$touchicon.'</span></div>
                         <div class="col-12 info" ><span class="sm-label">SIZE: </span><span id="size_v">'.$size.'</spa></span> </div>
                     </div>'
                 ;
