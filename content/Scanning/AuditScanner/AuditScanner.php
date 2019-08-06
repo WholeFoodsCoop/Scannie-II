@@ -592,15 +592,7 @@ HTML;
                                 <span class="text-'.$saleButtonClass.'" style="font-weight: bold; ">'.$saleStatus.' </span>
                                 <span class="caret text-'.$saleButtonClass.'"></span>
                         </div>
-                    </div>';
-                if (strlen($notes) > 0) {
-                $ret .= '
-                    <div class="row">
-                        <div class="col-12" ><span class="badge badge-secondary">Notes:</span> '.$notes.'</div>
                     </div>
-                    ';
-                };
-                $ret .= '
                         <div class="" id="sale-info">
                             <div class="row">
                                 <div class="col-12 info">
@@ -608,6 +600,15 @@ HTML;
                                 </div>
                             </div>
                         </div>
+                    ';
+                if (strlen($notes) > 0) {
+                $ret .= '
+                    <div class="row">
+                        <div class="col-12" ><span class="badge badge-secondary alert-danger">Notes:</span> '.$notes.'</div>
+                    </div>
+                    ';
+                };
+                $ret .= '
 
 
 
@@ -623,7 +624,7 @@ HTML;
                         </div>
                         </form>
                         <div class="col-4  clear">
-                            <button class="btn btn-danger" data-toggle="collapse" data-target="#notepad"
+                            <button class="btn btn-danger" onclick="$(\'#notepad\').show();"
                                 style="width: 100%;">Note
                             </button></div>
                         <div class="col-4  clear "><a class="btn btn-success" style="width: 100%" href="http://'.$MY_ROOTDIR.'/content/Scanning/BatchCheck/SCS.php">B.C.</a></div>
@@ -778,6 +779,11 @@ HTML;
     public function cssContent()
     {
         return <<<HTML
+.collapsing {
+    -webkit-transition: none;
+    transition: none;
+    display: none;
+}
 .scanicon-trash {
     position: absolute;
     right: 15px;
