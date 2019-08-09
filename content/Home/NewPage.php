@@ -73,10 +73,10 @@ class NewPage extends PageLayoutA
                 'handler' => self::getVendorList($dbc), 
                 'ranges' => array(0, 1, 99),
             ),
-            array(
-                'handler' => self::getMissingSKU($dbc),
-                'ranges' => array(0, 50, 999999),
-            ),
+            //array(
+            //    'handler' => self::getMissingSKU($dbc),
+            //    'ranges' => array(0, 50, 999999),
+            //),
             array(
                 'handler' => self::getVendorSkuDiscrep($dbc),
                 'ranges' => array(0, 100, 9999),
@@ -340,7 +340,11 @@ HTML;
                     'HONEYDROP',
                     'SO GOOD SO YOU'
                 )
-            AND upc NOT IN (0000000001082, 0001136800238, 0001396436579, 0001396436582, 0002409407062, 0002409407091, 0003963200679, 0004122418310, 0004165252829, 0004973309101, 0004973395011, 0007105300001, 0007105300777, 0007215500005, 0007224821323, 0007224825064, 0007707523050, 0008775412005, 0008775412007, 0063172302830, 0063172302832, 0065428700002, 0065628517035, 0073402790126, 0073402790127, 0073402790414, 0078099900094, 0078099900206, 0078264300010, 0078264300020, 0078264300030, 0078506372236, 0082532515644, 0085055100511, 0085055100516, 0085055100517, 0086170500030, 0086170500032, 0007224821304)
+            AND upc NOT IN (
+                SELECT upc FROM {$this->ALTDB}.doNotTrack 
+                WHERE method = 'getDiscrepancies'   
+                    AND page = 'NewPage'
+            )
             AND numflag & (1 << 19) = 0
             GROUP BY upc
             HAVING MIN({$field}) <> MAX({$field})
@@ -405,18 +409,22 @@ HTML;
     public function getMissingScaleItems($dbc)
     {
         $desc = "Scale-items set to scale = 0";
-        $dontCheck = array(0, 5, 6, 40, 52, 103, 104, 105, 107, 109, 111, 112, 123, 160, 184, 
-            194, 195, 234, 237, 245, 247, 248, 250, 256, 265, 324, 549, 550, 666, 759, 799, 800, 
-            852, 868, 869, 918, 919, 920, 958, 983, 984, 985, 917, 154, 155, 193, 197, 198, 199,
-            211, 228, 189, 190, 262, 1, 290, 307, 311);
-        $p = $dbc->prepare("SELECT upc, brand, description, normal_price FROM products WHERE upc < 1000 AND scale = 0 GROUP BY upc;");
+        $p = $dbc->prepare("
+            SELECT upc, brand, description, normal_price 
+            FROM products 
+            WHERE upc < 1000 
+                AND scale = 0 
+                AND upc NOT IN (
+                    SELECT upc FROM {$this->ALTDB}.doNotTrack 
+                    WHERE method = 'getMissingScaleItems'   
+                        AND page = 'NewPage'
+                )
+            GROUP BY upc;");
         $r = $dbc->execute($p);
         $cols = array('upc', 'brand', 'description', 'normal_price');
         $data = array();
         while ($row = $dbc->fetchRow($r)) {
-            if (!in_array($row['upc'], $dontCheck)) {
-                foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
-            }
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
         }
         if ($er = $dbc->error()) echo "<div class='alert alert-danger'>$er</div>";
 
@@ -458,7 +466,7 @@ HTML;
     {
         $desc = "Products with multiple SKUs by Vendor";
         $p = $dbc->prepare("SELECT vendorID FROM vendors
-            WHERE vendorID NOT IN (1, 2) ;");
+            WHERE vendorID NOT IN (1, 2, 285) ;");
         $r = $dbc->execute($p);
         $vendors = array();
         while ($row = $dbc->fetchRow($r)) {
@@ -656,7 +664,11 @@ HTML;
                 left join MasterSuperDepts AS m ON p.department=m.dept_ID
             WHERE upc not in (select upc from MovementTags where storeID = ?) 
                 AND m.superID IN (1, 4, 5, 9, 13, 17) 
-                AND p.upc NOT IN ('0000000001330','0000000001341','0000000001342')
+                AND upc NOT IN (
+                    SELECT upc FROM {$this->ALTDB}.doNotTrack 
+                    WHERE method = 'getMissingMovementTags'   
+                        AND page = 'NewPage'
+                )
                 AND store_id = ? 
             GROUP by p.upc;
         ");
