@@ -292,7 +292,7 @@ HTML;
 
     public function javascriptContent()
     {
-        return <<<HTML
+        return <<<JAVASCRIPT
 $(document).ready(function() {
     $('#hideBlue').click(function() {
         $('#dataTable').find('td').each(function() {
@@ -344,7 +344,19 @@ $('.clickToAdd').click(function(){
         $('#copyarea').append(upc+'\\n');
     }
 });
-HTML;
+var last_upc = null;
+var upc = null;
+var last_sold_date = null;
+$('tr').each(function(){
+    upc = $(this).find('td:first').text();
+    var sold_date = $(this).find('td:nth-child(2)').find('span').hasClass('text-danger');
+    if (upc == last_upc && sold_date == true && last_sold_date == true) {
+        $(this).find('td:first').trigger('click');
+    }
+    last_upc = $(this).find('td:first').text();
+    last_sold_date = sold_date;
+});
+JAVASCRIPT;
     }
 
     public function css_content()
