@@ -25,7 +25,9 @@
 *   @class scanLib
 *   common methods included in all Scannie pages.
 */
-
+if (!class_exists('SQLManager')) {
+    include_once(__DIR__.'/../sqlconnect/SQLManager.php');
+}
 class scanLib
 {
 
