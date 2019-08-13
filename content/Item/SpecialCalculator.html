@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript">
+function popitup(url) {
+    newwindow=window.open(url,'name','height=400,width=300');
+    if (window.focus) {
+        newwindow.focus()
+    }
+
+    return false;
+}
+var hostname = location.hostname;
+popitup("http://"+hostname+"/Scannie/content/Item/SpecialCalculator.php");
+</script>
+</head>
+<body>
+</body></html>

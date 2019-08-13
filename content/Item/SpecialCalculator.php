@@ -26,7 +26,7 @@ if (!class_exists('PageLayoutA')) {
 if (!class_exists('SQLManager')) {
     include_once(__DIR__.'/../../common/sqlconnect/SQLManager.php');
 }
-class MarginCalculator extends PageLayoutA 
+class SpecialCalculator extends PageLayoutA 
 {
     
     protected $title = "Margin Calculator";
@@ -50,24 +50,18 @@ class MarginCalculator extends PageLayoutA
                 <div class="row">
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small">Cost</label>
-                            <input class="form-control form-control-sm" name="cost" id="cost" value="'.$cost.'" autofocus>
+                            <label class="small">Net Price</label>
+                            <input class="form-control form-control-sm" name="price" id="price" autofocus>
                         </div>
                     </div>
                     <div class="col-4">
                         <div class="form-group">
-                            <label class="small">% Markup</label>
-                            <input class="form-control form-control-sm" name="markup" id="markup" value="'.$markup.'">
+                            <label class="small">% Discount</label>
+                            <input class="form-control form-control-sm" name="discount" id="discount">
                         </div>
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-6">
-                        <div class="form-group">
-                            <label class="small">Margin</label>
-                            <input class="form-control form-control-sm" name="dept_margin" id="margin" value="'.$dept_marg.'">
-                        </div>
-                    </div>
                     <div class="col-4">
                         <div class="form-group">
                             <label class="small">&nbsp;</label>
@@ -79,8 +73,7 @@ class MarginCalculator extends PageLayoutA
         ';
         $ret .= "<div class='container-fluid'>";
         $ret .= "<table class=\"table table-condensed table-small small\" align=\"center\">";
-        $ret .= "<tr><td>Raw SRP</td><td><span id=\"calc1-srp-view\"</tr>";
-        $ret .= "<tr><td>Rounded SRP</td><td><strong class='success'><span id=\"calc1_rounded\"></span><strong></tr>";
+        $ret .= "<tr><td>Original Price</td><td><span id=\"calc1-srp-view\"</tr>";
 
         $ret .= "</table>";
         $ret .= "</div>";
@@ -135,8 +128,8 @@ class MarginCalculator extends PageLayoutA
         
         return <<<HTML
 <div style="padding: 5px;">
-    <a href="#" class="toggle-mode" data-target="calc1" id="toggle-first">Margin</a> | 
-    <a href="#" class="toggle-mode" data-target="calc2">Percent</a>
+    <a href="#" class="toggle-mode" id="toggle-first" data-target="calc1">Find Price</a> | 
+    <a href="#" class="toggle-mode" data-target="calc2">n/a</a>
 </div>
 <div class="mode-view" id="calc1">$ret</div>
 <div class="mode-view" id="calc2">$calc2</div>
@@ -148,24 +141,13 @@ HTML;
     {
         return <<<JAVASCRIPT
 $('#submit-calc1').click(function(){
-    var cost = parseFloat($('#cost').val());
-    var markup = parseFloat($('#markup').val());
-    var margin = parseFloat($('#margin').val());
-    var srp = 0.0;
-    margin *= 0.01;
-    markup *= 0.01;
-    var adj_cost = (markup > 0) ? (cost * markup) + cost : cost;
-    srp = adj_cost / (1 - margin);
-    $('#calc1-srp-view').text(srp.toFixed(3));
-    $.ajax({
-        type: 'post',
-        data: 'srp='+srp+'&round=true',
-        url: 'marginCalcAjax.php',
-        success: function(response)
-        {
-            $('#calc1_rounded').text(response);
-        }
-    });
+    var price = parseFloat($('#price').val());
+    var discount = parseFloat($('#discount').val());
+
+    var og_price = price / (1.0 - (discount * 0.01));
+
+    $('#calc1-srp-view').text(og_price.toFixed(3));
+
 });
 $('#submit-calc2').click(function(){
     var price = $('#normal_price').val();
@@ -212,9 +194,6 @@ JAVASCRIPT;
         return <<<HTML
 body, html {
     overflow-y: hidden;
-}
-a:hover {
-    text-decoration: none;
 }
 .input-group-addon {
     width: 70px;
