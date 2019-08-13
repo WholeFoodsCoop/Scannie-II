@@ -424,8 +424,17 @@ HTML;
             $size = $row['size'];
             // Hillside multiplier = 3, Denfeld = 7
             $weekPar = $row['auto_par'] * $multiplier;
+            $weekPar = round($weekPar, 1);
+            $ret .= " <div class=\"margin-top: 15px;\">&nbsp;</div>";
             $ret .= '<input type="hidden" id="auto_par_value" value="'.$weekPar.'"/>';
-            $ret .= $this->pBar($weekPar,$deptNo,$storeID,$dbc);
+            //$ret .= $this->pBar($weekPar,$deptNo,$storeID,$dbc);
+            $ret .= "
+                <div id=\"auditPar\">
+                    <table class=\"table table-borderless table-sm small\">
+                        <tr><td>PAR</td><td>$weekPar</td><td><i>avg. sold in $multiplier days</i></td></tr>
+                    </table>
+                </div>
+            ";
 
             $adjcost = $cost;
             if ($markup > 0) $adjcost += $cost * $markup;
@@ -779,6 +788,13 @@ HTML;
     public function cssContent()
     {
         return <<<HTML
+tr, td {
+    background: rgba(0, 0, 0, 0.1);
+}
+.table-borderless td,
+.table-borderless th {
+        border: 0;
+}
 .collapsing {
     -webkit-transition: none;
     transition: none;

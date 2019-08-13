@@ -110,16 +110,16 @@ $(document).ready(function(){
     });
 });
 
-function get_auto_par()
-{
-    var par = $('#auto_par_value').val();
-    par = parseFloat(par);
-    par = par.toPrecision(3);
-    $('#auto_par').text('PAR: ');
-    $('#par_val').text(par);
-}
+//function get_auto_par()
+//{
+//    var par = $('#auto_par_value').val();
+//    par = parseFloat(par);
+//    par = par.toPrecision(3);
+//    $('#auto_par').text('PAR: ');
+//    $('#par_val').text(par);
+//}
 $(document).ready( function() {
-   get_auto_par();
+   //get_auto_par();
    updateModalOnload();
 });
 
