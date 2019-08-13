@@ -69,12 +69,14 @@ class UnfiBreakdowns extends WebDispatch
                 <th>Description</th>
                 <th>SSP</th>
             </tr></thead><tbody>';
+        $id = 0;
         foreach ($skus as $sku => $na) {
             $args = array($sku);
             $prep = $dbc->prepare("SELECT sku, upc, isPrimary, multiplier
                 FROM VendorAliases WHERE sku = ?");
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
+                $id++;
                 $is_primary = $row['isPrimary'];
                 $multiplier = $row['multiplier'];
                 $upc = $row['upc'];
@@ -82,7 +84,8 @@ class UnfiBreakdowns extends WebDispatch
                 $batchID = $upcs[$upc]['batchID'];
                 $bid_link = "<a href=\"http://$FANNIE_ROOTDIR/batches/newbatch/EditBatchPage.php?id=$batchID\" target=\"_blank\">$batchID</a>";
                 $class = (array_key_exists($upc, $upcs)) ? 'alert-success' : 'alert-danger';
-                $table .= sprintf("<tr class=\"%s\" data-sku=\"%s\" data-type=\"%s\" data-multiplier=\"%s\" data-saleprice=\"%s\" data-batchID=\"%s\"><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class=\"ssp\">%s</td>",
+                $table .= sprintf("<tr id=\"%s\" class=\"%s\" data-sku=\"%s\" data-type=\"%s\" data-multiplier=\"%s\" data-saleprice=\"%s\" data-batchID=\"%s\"><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class=\"ssp\">%s</td>",
+                    'id'.$id,
                     $class,
                     $sku,
                     $is_primary,
@@ -125,9 +128,11 @@ HTML;
     {
         return <<<JAVASCRIPT
 var i = 0;
+var ssp = null;
 $('tr').each(function(){
     var tableID = $(this).closest('table').attr('id');
     if (tableID == 'break_table') {
+        var tr_id = $(this).attr('id');
         var sku = $(this).attr('data-sku');
         var type = $(this).attr('data-type');
         var batchID = $(this).attr('data-batchID');
@@ -140,9 +145,20 @@ $('tr').each(function(){
             var multiplier = $(this).attr('data-multiplier');
             saleprice = parseFloat(saleprice);
             multiplier = parseFloat(multiplier);
-            var ssp = saleprice * multiplier;
-            $(this).find('td:last').text(ssp.toFixed(2));
+            ssp = saleprice * multiplier;
+
+            $.ajax({
+                type: 'post',
+                data: 'price='+ssp+'&round=true',
+                url: '../../../../common/lib/priceRoundAjax.php',
+                success: function(response, ssp)
+                {
+                    ssp = response;
+                    $('#'+tr_id).find('td:last').text(ssp);
+                }
+            });
             $(this).find('td:eq(2)').text(cur_bid);
+
         }
     }
 });
