@@ -67,6 +67,12 @@ $('#submit').click(function(){
             });
             $.loadScript('tableColumnFilters.js', function(){
             });
+            $('table').each(function(){
+                $(this).addClass('table')
+                    .addClass('table-bordered')
+                    .addClass('table-sm')
+                    .addClass('small');
+            });
         }
     });
 });
