@@ -722,6 +722,12 @@ HTML;
     public function cssContent()
     {
         return <<<HTML
+.loginForm {
+    width: 90vw;
+    margin: 25px;
+    border-radius: 0px;
+    background-color: rgba(255,255,255,0.3);
+}
 textarea {
     margin-left: 25px;
 }
