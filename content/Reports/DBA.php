@@ -19,6 +19,7 @@ class DBA extends PageLayoutA
 
     public function pageContent()
     {
+        //$this->addScript('tableColumnFilters.js');
         return <<<HTML
 <div class="row">
     <div class="col-lg-10">
@@ -44,6 +45,14 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
+jQuery.loadScript = function (url, callback) {
+    jQuery.ajax({
+        url: url,
+        dataType: 'script',
+        success: callback,
+        async: true
+    });
+}
 $('#submit').click(function(){
     var query = $('#query').val();
     $.ajax({
@@ -52,6 +61,12 @@ $('#submit').click(function(){
         url: '../../../git/fannie/reports/DBA/index.php',
         success: function(response) {
             $('#response').html(response);
+            $('th').each(function(){
+                var column_name = $(this).text();
+                $(this).attr('data-column', column_name);
+            });
+            $.loadScript('tableColumnFilters.js', function(){
+            });
         }
     });
 });
@@ -84,7 +99,8 @@ JAVASCRIPT;
     padding: 15px;
 }
 textarea.form-control {
-    font-size: 10px;
+    font-size: 14px;
+    min-height: 250px;
 }
 #response {
     overflow-x: auto;
