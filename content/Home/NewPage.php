@@ -81,6 +81,12 @@ class NewPage extends PageLayoutA
                 'handler' => self::getVendorSkuDiscrep($dbc),
                 'ranges' => array(0, 100, 9999),
             ),
+
+            array(
+                'handler' => self::getAliasMultipleUpcs($dbc),
+                'ranges' => array(0, 5, 9999),
+            ),
+
             array(
                 'handler' => self::getProdsMissingLocation($dbc),
                 'ranges' => array(50, 100, 99999),
@@ -457,6 +463,38 @@ HTML;
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
         }
         if ($er = $dbc->error()) echo "<div class='alert alert-danger'>$er</div>";
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
+    public function getAliasMultipleUpcs($dbc)
+    {
+        $desc = "Products Assigned to Multiple Aliases";
+        $prep_data = array();
+        $p = $dbc->prepare("
+            SELECT v.vendorAliasID, v.upc, v.vendorID, v.sku
+            FROM VendorAliases AS v 
+        ");
+        $r = $dbc->execute($p);
+        $cols = array('vendorAliasID', 'upc', 'vendorID', 'sku');
+        $dm = array();
+        $upcs = array();
+        $multiple_upcs = array();
+        while ($row = $dbc->fetchRow($r)) {
+            $upc = $row['upc'];
+            if (in_array($upc, $upcs)) $multiple_upcs[] = $upc;
+            $upcs[] = $upc;
+            foreach ($cols as $col) $prep_data[$row['vendorAliasID']][$col] = $row[$col];
+            $dm[$row['upc']][] = $row['sku'];
+        }
+        foreach ($prep_data as $sku => $row) {
+            $upc = $row['upc'];
+            $vendorAliasID = $row['vendorAliasID'];
+            if (in_array($upc, $multiple_upcs)) {
+                foreach ($cols as $col) $data[$row['vendorAliasID']][$col] = $row[$col];
+            }
+        }
 
         return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
             'desc'=>$desc);
