@@ -404,7 +404,7 @@ HTML;
                     $ret .=  '<td class="store_id">' . $v . '</td>';
                 } elseif ($column_name == 'notes') {
                     if ($v == NULL) {
-                        $v = 'n/a';
+                        $v = '';
                     }
                     $ret .=  '<td class="notescell">' . $v . '</td>';
                 } elseif ($column_name == 'price' || $column_name == 'srp') {
