@@ -40,6 +40,7 @@ class UnfiBreakdowns extends WebDispatch
                 LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
             WHERE b.batchID >= ?
                 AND b.batchID <= ?
+            GROUP BY bl.upc
         ");
         $res = $dbc->execute($prep, $args);
         $batchList = array();
@@ -62,6 +63,7 @@ class UnfiBreakdowns extends WebDispatch
             </tbody></table></div></div>';
         $table =  '<table class="table table-condensed table-bordered table-sm small" id="break_table">
             <thead><tr>
+                <th></th>
                 <th>SKU</th>
                 <th>UPC</th>
                 <th>batchID</th>
@@ -84,7 +86,7 @@ class UnfiBreakdowns extends WebDispatch
                 $batchID = $upcs[$upc]['batchID'];
                 $bid_link = "<a href=\"http://$FANNIE_ROOTDIR/batches/newbatch/EditBatchPage.php?id=$batchID\" target=\"_blank\">$batchID</a>";
                 $class = (array_key_exists($upc, $upcs)) ? 'alert-success' : 'alert-danger';
-                $table .= sprintf("<tr id=\"%s\" class=\"%s\" data-sku=\"%s\" data-type=\"%s\" data-multiplier=\"%s\" data-saleprice=\"%s\" data-batchID=\"%s\"><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class=\"ssp\">%s</td>",
+                $table .= sprintf("<tr id=\"%s\" class=\"%s\" data-sku=\"%s\" data-type=\"%s\" data-multiplier=\"%s\" data-saleprice=\"%s\" data-batchID=\"%s\"><td style='width: 5px;'></td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td class=\"ssp\">%s</td>",
                     'id'.$id,
                     $class,
                     $sku,
@@ -116,6 +118,7 @@ HTML;
         if ($id2 == '') $id2 = $id1;
 		
         return '
+            <div id="test"></div>
             <form method="get"> 
                 <input type="text" value="'.$id1.'" name="start" placeholder="start batchID" autofocus require>
                 <input type="text" value="'.$id2.'" name="end" placeholder="end batchID (opt).">
@@ -127,8 +130,32 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
+var superArray = function(the_array, name) {
+    this.name = name;
+    this.the_array = the_array;
+    this.max_length = this.the_array.length - 1;
+    this.next = function() {
+        if (this.current >= this.max_length) {
+            return this[this.current = 0];
+        }
+        return this[++this.current];
+    };
+    this.prev = function() {
+        return this[--this.current];
+    };
+    this.current = 0;
+    this.setName = function(name) {
+        this.name = name;
+    }
+    this.getVal = function () {
+        return this.the_array[this.current];
+    };
+};
+var colors = ['#E0BBE4', '#957DAD', '#D291BC', '#FEC8D8',  '#FFDFD3'];
+var colors_array = new superArray(colors, 'a_new_name');
 var i = 0;
 var ssp = null;
+var last_sku = null;
 $('tr').each(function(){
     var tableID = $(this).closest('table').attr('id');
     if (tableID == 'break_table') {
@@ -137,6 +164,12 @@ $('tr').each(function(){
         var type = $(this).attr('data-type');
         var batchID = $(this).attr('data-batchID');
         var ssp = null;
+        if (sku == last_sku) {
+            $(this).find('td:first').css('background', colors_array.getVal());
+            colors_array.next();
+        } else {
+            $(this).find('td:first').css('background', colors_array.getVal());
+        }
         if (batchID == '') {
             var oppo_type = (type == 1) ? 0 : 1;
             oppo_type = parseInt(oppo_type, 10);
@@ -158,8 +191,8 @@ $('tr').each(function(){
                 }
             });
             $(this).find('td:eq(2)').text(cur_bid);
-
         }
+        last_sku = sku;
     }
 });
 JAVASCRIPT;
