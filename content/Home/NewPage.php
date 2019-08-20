@@ -103,7 +103,7 @@ class NewPage extends PageLayoutA
 
         $muData = $this->multiStoreDiscrepCheck($dbc);
         $multi = $this->getReportHeader(array('desc'=>'Discrepancies between stores', 'data'=>$muData['data']), array(5, 10, 999));
-        $multi .= " <button class='btn btn-default btn-collapse' data-target='#tableMulti'>view</button><br/>";
+        $multi .= " <button class='btn-collapse' data-target='#tableMulti'>view</button><br/>";
         $multi .= "<div id='tableMulti' class='table-responsive-lg'>";
         $multi .= "<div class='card'><div class='card-body' style='overflow-x: scroll'>";
         $multi .= $muData['table'] . "</div></div></div>";
@@ -160,6 +160,20 @@ class NewPage extends PageLayoutA
             </div>
         </div>
     </div>
+    <div style="margin-top: 20px;"></div>
+    <div class="card"
+        <div class="card-content">
+            <div class="card-body">
+                <div class="card-title">
+                    Item's listed in the <i>Do Not Track(er)</i>
+                        will not show up in the correlating report.</h4>
+                </div>
+                <div id="doNotTrack"></div>
+                <iframe src="../Admin/DoNotTrack.php" style="width: 100%; height: 800px; border: 1px solid lightgrey;"></iframe>
+            </div>
+        </div>
+    </div>
+    <div style="margin-bottom: 20px;"></div>
 </div>
 HTML;
     }
@@ -189,7 +203,7 @@ HTML;
     public function getTable($data)
     {
         $tid = substr(md5(microtime()),rand(0,26),5);
-        $table = " <button class='btn btn-default btn-collapse' data-target='#table$tid'>view</button><br/>";
+        $table = " <button class='btn-collapse' data-target='#table$tid'>view</button><br/>";
         $table .= "<div id='table$tid'><table class='table table-sm table-bordered tablesorter'><thead>";
         foreach ($data['cols'] as $col) {
             $table .= "<th>$col</th>"; 
@@ -741,6 +755,14 @@ $(document).ready(function(){
     $('.btn-collapse').each(function(){
         $(this).trigger('click');
     });
+    //$.ajax({
+    //    type: 'post',
+    //    data: 'dummyvalue=1',
+    //    url: '../Admin/DoNotTrack.php',
+    //    success: function(response) {
+    //        $('#doNotTrack').html(response);
+    //    }
+    //});
 });
 $('.btn-collapse').click(function(){
     var target = $(this).attr('data-target');
@@ -765,7 +787,11 @@ fieldset {
 .btn-collapse {
     background: rgba(0,0,0,0);
     color: #84B3FF;
-    padding: 0px; }
+    padding: 0px;
+    border-width: 0px 1px 1px 1px;
+    border-color: lightblue;
+    border-style: solid;
+}
 div.list {
     display: inline-block;
     width: 400px;
