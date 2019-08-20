@@ -128,8 +128,8 @@ HTML;
 
         $form = "<div id\"upcForm\">
             <h5>Add UPC</h5> to selected Page & Report
-            <input type=\"text\" name=\"upc\" id=\"upc\">
-            <button id=\"submitUpcForm\">Submit</button>
+            <input type=\"text\" name=\"upc\" id=\"upc\" disabled>
+            <button id=\"submitUpcForm\" disabled>Submit</button>
             </div>";
 
         return <<<HTML
@@ -199,10 +199,19 @@ $('.filter').on('change', function(){
             $(this).closest('tr').show();     
         });
     }
+    var page = $('option:selected', '#filter-pages').text();
+    var method = $('option:selected', '#filter-method').text();
+    if (page == 'by Page' || method == 'by Method') {
+        $('#upc').attr('disabled', true);
+        $('#submitUpcForm').attr('disabled', true);
+    } else {
+        $('#upc').attr('disabled', false);
+        $('#submitUpcForm').attr('disabled', false);
+    }
 });
 $('#submitUpcForm').click(function(){
-    var page = $('option:selected','#filter-pages').attr('value');
-    var method = $('option:selected','#filter-method').attr('value');
+    var page = $('option:selected', '#filter-pages').attr('value');
+    var method = $('option:selected', '#filter-method').attr('value');
     var upc = $('#upc').val();
     $.ajax({
         type: 'post',
