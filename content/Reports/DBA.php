@@ -27,7 +27,7 @@ class DBA extends PageLayoutA
     </div>
     <div class="col-lg-2">
         <div class="form-group">
-            <textarea name="query" id="query" class="form-control" spellcheck="false"></textarea>
+            <textarea name="query" id="query" class="form-control" spellcheck="false" autofocus></textarea>
         </div>
         <div class="form-group">
             <button id="submit" class="form-control btn btn-default">Submit</button>
