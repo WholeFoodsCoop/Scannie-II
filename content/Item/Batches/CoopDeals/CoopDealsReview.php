@@ -244,7 +244,7 @@ HTML;
 
         $ret .='<div class="panel panel-default mypanel">
             <legend class="panel-heading small">Items with HIGH % Deals</legend>';
-        $ret .= '<table class="table table-default table-condensed small table-striped">';
+        $ret .= '<table class="table table-default table-sm small table-striped">';
         foreach ($discount as $upc => $percent) {
             $batchL = '<a href="http://'.$HTTP_HOST.'/git/fannie/batches/newbatch/EditBatchPage.php?id='
 				. $percent['batchID'] .'" target="_blank">' . $percent['batchID'] . '</a>';
@@ -268,9 +268,9 @@ HTML;
         $ret .='<div class="panel panel-default mypanel">
             <legend class="panel-heading small">Items Missing Sign Text
                 <div>
-                    <button type="button" class="btn btn-default btn-xs"
+                    <button type="button" class="btn btn-default btn-sm"
                         onClick="hideNoSales(); return false;">Hide <i>no sales</i> items</button>
-                    <button type="button" class="btn btn-default btn-xs"
+                    <button type="button" class="btn btn-default btn-sm"
                         onClick="hideKleanKanteen(); return false;">Hide <i>Klean Kanteen</i></button>
                 </div>
             </legend>';
@@ -295,7 +295,7 @@ HTML;
         ;");
 
         $result = $dbc->execute($query);
-        $ret .= '<div class="table-responsive"><table class="table table-default table-condensed small table-striped" id="signText">';
+        $ret .= '<div class="table-responsive"><table class="table table-default table-sm small table-striped" id="signText">';
         while ($row = $dbc->fetchRow($result)) {
             $ret .= '<tr>';
             $ret .= '<td><a href="http://key/git/fannie/item/ItemEditorPage.php?searchupc=' . $row['upc'] . '&ntype=UPC&searchBtn=" target="_blank">'.$row['upc'].'</a></td>';
@@ -336,7 +336,7 @@ HTML;
         ");
 
         $result = $dbc->execute($query);
-		$ret .= '<table class="table table-default table-condensed small table-striped">';
+		$ret .= '<table class="table table-default table-sm small table-striped">';
         while ($row = $dbc->fetchRow($result)) {
             $editL = '<a href="http://'.$HTTP_HOST.'/git/fannie/item/ItemEditorPage.php?searchupc=' . $row['upc'] . '" target="_blank">' . $row['upc'] . '</a> ';
             $batchL = '<a href="http://'.$HTTP_HOST.'/git/fannie/batches/newbatch/EditBatchPage.php?id='
@@ -398,7 +398,7 @@ HTML;
         $ret = '';
         $ret .='<div class="panel panel-default mypanel">
             <legend class="panel-heading small">Multiple SKU items in Final Commit</legend>';
-        $ret .= '<table class="table table-default table-condensed small table-striped">';
+        $ret .= '<table class="table table-default table-sm small table-striped">';
         $ROWS = array('upc', 'brand', 'description', 'price', 'abtpr', 'promoDiscount');
         $upcs = array();
         $tdata = ''; 
