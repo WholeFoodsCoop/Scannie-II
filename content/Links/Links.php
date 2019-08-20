@@ -25,9 +25,10 @@ class Links extends PageLayoutA
     <div style="max-width: 500px;">
         WFC Useful Links 
         <ul style="text-align: left">
-            <li><a href="https://customers.unfi.com/Pages/ProductSearch.aspx">unfi.com</a></li>
+            <li><a href="https://wholesale.frontiercoop.com/datafeeds.html">Frontier Datafeeds</a></li>
             <li><a href="https://www.office.com/">Office 365</a></li>
-            <li><a href=""></a></li>
+            <li><a href="https://customers.unfi.com/Pages/ProductSearch.aspx">unfi.com</a></li>
+            <li><a href="../Scanning/AuditScanner/QuickScanner.php">dontuse</a></li>
         </ul>
     </div>
 </div>
