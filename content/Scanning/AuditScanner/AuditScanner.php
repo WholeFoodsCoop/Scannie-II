@@ -644,7 +644,6 @@ HTML;
                             <a class="text-info" href="AuditScannerReport.php ">View Report</a>
                         </div>
                         <div class="col-4">
-                            <a class="text-info" href="http://'.$MY_ROOTDIR.'/auth/logout.php">Logout</a>
                         </div>
                         <div class="col-4">
                         </div>
