@@ -22,7 +22,6 @@ class SCS extends PageLayoutA
         if (FormLib::get('option', false) == 99) {
             header('location: BatchCheckMenu.php');
         }
-        include(__DIR__.'/../../../config.php');
 
         $dbc = scanLib::getConObj(); 
         if (FormLib::get('signout', false)) {
@@ -197,7 +196,7 @@ class SCS extends PageLayoutA
 
     private function loginView($dbc)
     {
-        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
+        $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
         $storeID = scanLib::getStoreID();
         $sessions = ''; 
         $args = array($storeID);
@@ -784,7 +783,7 @@ JAVASCRIPT;
 
     public function cssContent()
     {
-        $MY_ROOTDIR = $this->config['MY_ROOTDIR'];
+        $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
         $css = <<<HTML
 body {
     font-family: Arial, Helvetica, sans-serif;
