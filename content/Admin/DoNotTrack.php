@@ -32,7 +32,7 @@ class DoNotTrack extends PageLayoutA
     protected $title = "";
     protected $description = "[] ";
     protected $ui = false;
-    protected $must_authenticate = true;
+    protected $must_authenticate = false;
 
     public function preprocess()
     {
@@ -79,10 +79,19 @@ HTML;
     public function cssContent()
     {
 return <<<HTML
+select, input {
+    border: 1px solid lightgrey;
+}
 .my-table {
     overflow-y: auto;
     border: 1px solid lightgrey;
     height: 495px;
+}
+.scanicon, .scanicon-trash {
+    height: 5px;
+    width: 5px;
+    background-size: 15px;
+    background-position: center; 
 }
 HTML;
     }
@@ -127,7 +136,7 @@ HTML;
         $table = $this->getTable($data);
 
         $form = "<div id\"upcForm\">
-            <h5>Add UPC</h5> to selected Page & Report
+            <h5>Add UPC</h5>
             <input type=\"text\" name=\"upc\" id=\"upc\" disabled>
             <button id=\"submitUpcForm\" disabled>Submit</button>
             </div>";
@@ -177,11 +186,13 @@ HTML;
     {
         return <<<JAVASCRIPT
 $('.filter').on('change', function(){
+    var page = $('option:selected', '#filter-pages').text();
+    var method = $('option:selected', '#filter-method').text();
     var filter = $(this).attr('id').substring(7);
     var option = $('option:selected',this).attr('value');
     if (option != 'null') {
         $('#mode').text('');
-        $('#mode').append('<h3><span class="badge badge-secondary">mode</span> '+filter+' - '+option+'</h3>');
+        $('#mode').append('<h4>'+page+' - '+method+'</h4>');
         $('td').each(function(){
             $(this).closest('tr').show();     
         });
@@ -199,8 +210,6 @@ $('.filter').on('change', function(){
             $(this).closest('tr').show();     
         });
     }
-    var page = $('option:selected', '#filter-pages').text();
-    var method = $('option:selected', '#filter-method').text();
     if (page == 'by Page' || method == 'by Method') {
         $('#upc').attr('disabled', true);
         $('#submitUpcForm').attr('disabled', true);
@@ -221,6 +230,14 @@ $('#submitUpcForm').click(function(){
             alert(upc+' => added to '+page+'/'+method);
         },
     });
+});
+$('.scanicon-trash').click(function(){
+    var c = confirm('Delete row?');
+    if (c == true) {
+        return true;
+    } else {
+        return false;
+    }
 });
 JAVASCRIPT;
     }
