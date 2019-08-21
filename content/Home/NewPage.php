@@ -43,8 +43,8 @@ class NewPage extends PageLayoutA
 
     public function pageContent()
     {
-        $SCANALTDB = $this->config['SCANALTDB'];
-        $MY_ROOTDIR = $this->config['MY_ROOTDIR'];
+        $SCANALTDB = $this->config->vars['SCANALTDB'];
+        $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
         $this->ALTDB = $SCANALTDB;
         $ret = '';
         $dbc = scanLib::getConObj();
@@ -142,7 +142,7 @@ class NewPage extends PageLayoutA
                 </div>
                 <ul>
                     <li>Scan POS for  
-                        <a href="#" onclick="
+                        <a href="#specIframe" onclick="
                             $('#specIframe').css('display', 'block'); 
                             $('#specIframe').attr('src', 'http://key/Scannie/content/Item/SpecialPriceCheck.php');
                             var h = $('#specIframe').outerHeight();
@@ -152,10 +152,24 @@ class NewPage extends PageLayoutA
                         "
                         >Sale Price Discrepancies</a>
                     </li>
+                    <li>Do Not Track 
+                        <a href="#doNotTrack" onclick="
+                            $('#doNotTrack').css('display', 'block'); 
+                            //$('#specIframe').attr('src', 'http://key/Scannie/content/Item/SpecialPriceCheck.php');
+                            //var h = $('#specIframe').outerHeight();
+                            //h += parseInt(h, 10);
+                            //$('#specIframe').css('height', h+'px');
+                            //this.preventDefault;
+                        "
+                        >Interface</a>
+                    </li>
                 </ul>
                 <div id="iframeContainer" data-test="test">
                     <iframe src="pleasewait.html" id="specIframe" style="width: 100%; height: auto; padding: 25px; border: 1px solid lightgrey; display:none;">
                     </iframe>
+                </div>
+                <div id="doNotTrack" style="display:none; margin-top: 25px;">
+                    <iframe src="../Admin/DoNotTrack.php" style="width: 100%; height: 800px; border: 1px solid lightgrey;"></iframe>
                 </div>
             </div>
         </div>
@@ -165,11 +179,7 @@ class NewPage extends PageLayoutA
         <div class="card-content">
             <div class="card-body">
                 <div class="card-title">
-                    Item's listed in the <i>Do Not Track(er)</i>
-                        will not show up in the correlating report.</h4>
                 </div>
-                <div id="doNotTrack"></div>
-                <iframe src="../Admin/DoNotTrack.php" style="width: 100%; height: 800px; border: 1px solid lightgrey;"></iframe>
             </div>
         </div>
     </div>
@@ -261,7 +271,7 @@ HTML;
     private function getProdInfo($dbc,$data)
     {
         $ret = '';
-        $FANNIE_SERVE_DIR = $this->config['FANNIE_SERVE_DIR'];
+        $FANNIE_SERVE_DIR = $this->config->vars['FANNIE_SERVE_DIR'];
         $fields = array(
             'super_name',
             'description',
@@ -774,6 +784,10 @@ JAVASCRIPT;
     public function cssContent()
     {
 return <<<HTML
+.card {
+    box-shadow: 5px 5px 5px #cacaca;
+    margin: 25px;
+}
 fieldset {
     border: 1px solid lightgrey;
 }
@@ -788,9 +802,17 @@ fieldset {
     background: rgba(0,0,0,0);
     color: #84B3FF;
     padding: 0px;
-    border-width: 0px 1px 1px 1px;
+    border-width: 1px 1px 1px 1px;
     border-color: lightblue;
     border-style: solid;
+    margin-top: -1px;
+    cursor: pointer;
+}
+th {
+    cursor: pointer;
+}
+.btn-collapse:focus {
+    outline: none;
 }
 div.list {
     display: inline-block;
