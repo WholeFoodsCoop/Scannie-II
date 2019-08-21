@@ -42,7 +42,7 @@ class CoopDealsReview extends WebDispatch
     public function body_content() {
 
         $dbc = ScanLib::getConObj('SCANDB');
-        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
+        $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
 
         $ret = '';
         $ret .= "

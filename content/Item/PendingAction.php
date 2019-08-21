@@ -37,7 +37,7 @@ class PendingAction extends PageLayoutA
     {
         $ret = '';
         $dbc = scanLib::getConObj();
-        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
+        $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
 
         $ret .= '<div class="container">';
         $ret .= '<h4 style="margin-top: 15px;">Pending Actions</h4>';

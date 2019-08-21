@@ -1,4 +1,7 @@
 <?php
+if(!class_exists('config')) {
+    include(__DIR__.'/ConfigModule.php');
+}
 class WebDispatch
 {
     protected $title = 'Scannie';
@@ -16,11 +19,14 @@ class WebDispatch
     protected $loadtime = NULL;
     protected $config;
 
-    function __construct() {}
+    function __construct() 
+    {
+        $this->config = new config();    
+        $this->config->getConfig();
+    }
 
     private function runPage($class)
     {
-        include(__DIR__.'/../../config.php');
         if (!class_exists('FormLib')) {
             include(__DIR__.'/../lib/FormLib.php');
         }
@@ -28,7 +34,6 @@ class WebDispatch
             include(__DIR__.'/../lib/scanLib.php');
         }
         $obj = new $class();
-        $obj->config = get_defined_vars();
         $obj->starttime = microtime(true);
         $obj->draw_page();
     }
@@ -109,7 +114,7 @@ class WebDispatch
 
     private function header()
     {
-        $MY_ROOTDIR = $this->config['MY_ROOTDIR'];
+        $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
         if ($this->enable_linea) {
             $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/cordova-2.2.0.js");
             $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/ScannerLib-Linea-2.0.0.js");

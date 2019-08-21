@@ -14,7 +14,7 @@ class UnfiBreakdowns extends WebDispatch
     
     public function body_content()
     {        
-        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
+        $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
         $start = FormLib::get('start');
         $end = FormLib::get('end');
         if ($end == '') $end = $start;

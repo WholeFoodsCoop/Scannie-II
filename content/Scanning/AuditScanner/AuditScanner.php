@@ -244,8 +244,8 @@ HTML;
 
         $this->addOnloadCommand("");
         $ret = '';
-        $MY_ROOTDIR = $this->config['MY_ROOTDIR'];
-        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
+        $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
+        $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
         $dbc = scanLib::getConObj('SCANALTDB');
         $p = $dbc->prepare("SELECT * FROM ScannieConfig WHERE session_id = ?");
         $r = $dbc->execute($p, session_id());

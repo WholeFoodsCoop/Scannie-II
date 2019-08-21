@@ -169,7 +169,7 @@ HTML;
 
     private function getTableContents($dbc)
     {
-        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
+        $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
         $option = FormLib::get('option');
         $sessionName = $_SESSION['sessionName'];
         $storeID = $_SESSION['storeID'];

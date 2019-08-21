@@ -525,6 +525,7 @@ form {
 .btn {
     margin-top: 5px;
     margin-left: 5px;
+    cursor: pointer;
 }
 .alert {
     margin: 5px;

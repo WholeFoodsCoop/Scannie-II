@@ -40,7 +40,7 @@ class ProdUserChangeReport extends WebDispatch
         $fromdate = FormLib::get('fromdate');
         $todate = FormLib::get('todate');
         $userid = FormLib::get('user');
-        $FAN_DIR = $this->config['FANNIE_ROOTDIR'];
+        $FAN_DIR = $this->config->vars['FANNIE_ROOTDIR'];
         
         if (FormLib::get('submit') !== false) {
             $args = array($fromdate,$todate,$userid);

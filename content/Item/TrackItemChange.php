@@ -56,7 +56,7 @@ HTML;
     {
         $ret = '';
         $dbc = scanLib::getConObj();
-        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
+        $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
 
         if (!class_exists(LastSoldDates)) {
             include('LastSoldDates.php');

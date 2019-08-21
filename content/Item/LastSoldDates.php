@@ -36,7 +36,7 @@ class LastSoldDates extends PageLayoutA
 
     private function last_sold_check_list($dbc)
     {
-        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
+        $FANNIE_ROOTDIR = $this->config->getVars['FANNIE_ROOTDIR'];
         $ret = "";
         $ret .= '
             <div style="height: 25px;"></div>

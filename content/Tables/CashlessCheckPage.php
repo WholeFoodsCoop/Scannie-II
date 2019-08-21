@@ -37,7 +37,7 @@ class CashlessCheckPage extends PageLayoutA
     {           
         $ret = '';
         $dbc = scanLib::getConObj('SCANTRANSDB');
-        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
+        $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
         
         if ($_GET['store_id']) {
             $_SESSION['store_id'] = $_GET['store_id'];
