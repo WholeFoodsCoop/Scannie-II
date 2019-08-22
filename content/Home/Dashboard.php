@@ -26,7 +26,7 @@ if (!class_exists('PageLayoutA')) {
 if (!class_exists('SQLManager')) {
     include_once(__DIR__.'/../../common/sqlconnect/SQLManager.php');
 }
-class NewPage extends PageLayoutA 
+class Dashboard extends PageLayoutA 
 {
 
     protected $title = "";
