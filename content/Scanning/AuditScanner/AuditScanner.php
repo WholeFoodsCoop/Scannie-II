@@ -173,6 +173,10 @@ class AuditScanner extends PageLayoutA
             $prep = $dbc->prepare("UPDATE products SET inUse = 0 WHERE upc = ? AND store_id = ?");
             $res = $dbc->execute($prep, $args);
             echo "Product now NOT in-use";
+            $args = array($upc, $storeID);
+            $prep = $dbc->prepare("INSERT INTO woodshed_no_replicate.exceptionItems (upc, note, timestamp, storeID)
+                VALUES (?, 'Item un-used', NOW(), ?)");
+            $res = $dbc->execute($prep, $args);
         }
 
         return false;
@@ -263,9 +267,7 @@ HTML;
             $this->addOnloadCommand("
                 WebBarcode.Linea.emitTones(
                     [
-                        { 'tone':300, 'duration':50 },
-                        { 'tone':600, 'duration':50 },
-                        { 'tone':300, 'duration':50 },
+                        { 'tone':100, 'duration':100 },
                     ] 
                 );
             ");
@@ -524,7 +526,7 @@ HTML;
             style=\"margin-left: 20px; margin-top: -5px;\"/>";
         $ret .= '
             <div align="center">
-                <div class="container" align="center">
+                <div class="container-fluid" align="center">
                     <div class="row" id="auditCost">
                         <div class="col-4 info" >
                             <div style="float: left; color: rgba(255,255,255,0.6)">cost</div><br />'.$cost.'<br />
@@ -627,7 +629,7 @@ HTML;
                         <!-- <div class="col-4  clear btn btn-warning" onClick="queue('.$storeID.'); return false;">Print</div> -->
                         <div class="col-4 clear">
                             <form method="get" type="hidden">
-                            <a href="../ScannerSettings.php" class="btn btn-info" style="width: 100%;">Config</a>
+                            <a href="../ScannerSettings.php" class="btn btn-info" style="width: 100%;">Conf</a>
                             <input type="hidden" name="note" value="Print Tag" />
                             <input type="hidden" id="upc" name="upc" value="'.$upc.'" />
                         </div>
@@ -702,7 +704,10 @@ HTML;
             <input type=\"hidden\" id=\"storeID\" value=\"$storeID\"/> 
         ";
 
-        return $ret.$hiddenContent;
+        return <<<HTML
+<div class="container-fluid">$ret</div>
+$hiddenContent
+HTML;
     }
 
     private function getCount($dbc,$storeID,$username)
@@ -1141,7 +1146,7 @@ HTML;
         $narrow = (strpos($narrow, 'Flagged') !== false) ? '(is narrow)' : '(is not narrow)';
 
         return <<<HTML
-<div id="menu-action" style="margin-top: -10px">
+<div id="menu-action" style="margin-top: -10px; text-align: center; height: 110%;">
     <ul class="menu-list">
         <li class="menu-list" id="mod-narrow">change <b>narrow</b> status $narrow</li>
         <li class="menu-list" id="mod-in-use">change <b>in-use</b> status $inUse</li>
