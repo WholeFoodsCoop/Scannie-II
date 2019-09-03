@@ -123,6 +123,12 @@ img.icon {
     display: inline-block;
     background-size: cover;
 }
+.scanicon-sm {
+    height: 5px;
+    width: 5px;
+    background-size: 15px;
+    background-position: center; 
+}
 /*
     Core Navigation
 */

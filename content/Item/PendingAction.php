@@ -131,7 +131,7 @@ class PendingAction extends PageLayoutA
                 $table_1 .= '<td>' . $array['desc'] . '</td>';
                 $table_1 .= '<td>' . scanLib::strGetDate($array['note']) . '</td>';
                 $table_1 .= '<td data-value="'.$action_data_value.'">' . $array['timestamp'] . '</td>';
-                $table_1 .= "<td><button name=\"rmItem\" class=\"scanicon scanicon-trash btn btn-default\" value=$upc>&nbsp;</button></td>";
+                $table_1 .= "<td><button name=\"rmItem\" class=\"scanicon scanicon-trash scanicon-sm btn btn-default\" value=$upc>&nbsp;</button></td>";
             } else {
                 $upcLink = '<a id="upcLink" href="http://'.$FANNIE_ROOTDIR.'/item/ItemEditorPage.php?searchupc=' . $upc . '" target="_blank">' . $upc . '</a>';
                 $table_2 .= '<tr>';
@@ -140,7 +140,7 @@ class PendingAction extends PageLayoutA
                 $table_2 .= '<td>' . $array['desc'] . '</td>';
                 $table_2 .= '<td>' . scanLib::strGetDate($array['note']) . '</td>';
                 $table_2 .= '<td data-value="'.$action_data_value.'">' . $array['timestamp'] . '</td>';
-                $table_2 .= "<td><button name=\"rmItem\" class=\"scanicon scanicon-trash btn btn-default\" value=$upc>&nbsp;</button></td>";
+                $table_2 .= "<td><button name=\"rmItem\" class=\"scanicon scanicon-trash scanicon-sm btn btn-default\" value=$upc>&nbsp;</button></td>";
 
             }
         }

@@ -87,12 +87,6 @@ select, input {
     border: 1px solid lightgrey;
     height: 495px;
 }
-.scanicon, .scanicon-trash {
-    height: 5px;
-    width: 5px;
-    background-size: 15px;
-    background-position: center; 
-}
 HTML;
     }
 
@@ -147,14 +141,14 @@ HTML;
     <hr/>
     <div id="controls"></div>
     <div class="row">
-        <div class="col-lg-2">
+        <div class="col-lg-3">
             <h3>Filters</h3>
             <hr/>
             $selects
             <hr/>
             $form
         </div>
-        <div class="col-lg-8">
+        <div class="col-lg-9">
             <div id="mode"></div>
             $table
         </div>
@@ -174,7 +168,7 @@ HTML;
             $table .= "<td class=\"method\">{$row['method']}</td>";
             $table .= "<td class=\"brand\">{$row['brand']}</td>";
             $table .= "<td class=\"description\">{$row['description']}</td>";
-            $table .= "<td><button name=\"delete_row\" value=$id class=\"scanicon scanicon-trash btn btn-default\"></button></td>";
+            $table .= "<td><button name=\"delete_row\" value=$id class=\"scanicon scanicon-trash scanicon-sm btn btn-default\"></button></td>";
             $table .= "</tr>";
         }
         $table .= "</tbody></table></form></div>";
