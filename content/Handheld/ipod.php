@@ -33,7 +33,7 @@ class ipod extends WebDispatch
         $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
         $ret = '';
         
-        $url = "http://$MY_ROOTDIR/content/Scanning/BatchCheck/SCS.php";
+        $url = "http://$MY_ROOTDIR";
         if ($src = $_GET['changesrc']) {
             $url = $src;
         }
