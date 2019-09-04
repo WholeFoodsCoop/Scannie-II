@@ -31,8 +31,8 @@ JAVASCRIPT;
         $DIR = __DIR__;
         $user = null;
         $ud = "";
-        if (!empty($_SESSION['user_name'])) {
-            $user = $_SESSION['user_name'];
+        if (!empty($_COOKIE['user_name'])) {
+            $user = $_COOKIE['user_name'];
             $ud = '<span class="userSymbol"><b>'.strtoupper(substr($user,0,1)).'</b></span>';
         }
         if (empty($user)) {
@@ -133,7 +133,7 @@ HTML;
             Scanning
         </a>
         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Home/NewPage.php">Scan Dept. <strong>Dashboard</strong></a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Home/Dashboard.php">Scan Dept. <strong>Dashboard</strong></a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/BatchCheck/SCS.php"><strong style="color: green">Batch Check</strong> Scanner</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/BatchCheck/BatchCheckQueues.php?option=1"><strong style="color: green">Batch Check</strong> Report</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/AuditScanner/AuditScanner.php"><strong style="color: #4286f4">Audit</strong> Scanner</a>
