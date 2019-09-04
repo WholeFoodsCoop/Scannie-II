@@ -26,13 +26,6 @@ class BatchCheckQueues extends PageLayoutA
         99 => 'Main Menu',
     );
 
-    public function __construct()
-    {
-        foreach (array(1,2,3,4,5,6,7,11,98) as $id) {
-            $this->queueCounts[$id] = 0;
-        }
-    }
-
     public function preprocess()
     {
         if (FormLib::get('option', false) == 99) {
