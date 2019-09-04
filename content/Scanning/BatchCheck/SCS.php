@@ -587,9 +587,7 @@ HTML;
             $this->addOnloadCommand("
                 WebBarcode.Linea.emitTones(
                     [
-                        { 'tone':300, 'duration':50 },
-                        { 'tone':600, 'duration':50 },
-                        { 'tone':300, 'duration':50 },
+                        { 'tone':100, 'duration':100 },
                     ] 
                 );
             ");
