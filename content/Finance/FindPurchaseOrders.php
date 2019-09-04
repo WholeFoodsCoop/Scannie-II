@@ -18,10 +18,6 @@ class FindPurchaseOrders extends PageLayoutA
     protected $title = "Find Purchase Orders";
     protected $ui = TRUE;
 
-    public function __construct()
-    {
-    }
-
     public function preprocess()
     {
         $this->displayFunction = $this->view();
