@@ -69,30 +69,33 @@ class PendingAction extends PageLayoutA
             $data[$row['upc']]['timestamp'] = $row['timestamp'];
         }
 
-        $query = '
-            SELECT
-                e.upc,
-                p.brand,
-                p.description,
-                p.special_price,
-                e.note,
-                p.inUse,
-                e.storeID
-            FROM woodshed_no_replicate.exceptionItems AS e
-                INNER JOIN products AS p ON p.upc=e.upc
-            AND p.store_id = ?
-        ';
-        $args = array($storeID);
-        $prep = $dbc->prepare($query);
-        $result = $dbc->execute($prep,$args);
-        while ($row = $dbc->fetch_row($result)) {
-            $data[$row['upc']]['brand'] = $row['brand'];
-            $data[$row['upc']]['desc'] = $row['description'];
-            $data[$row['upc']]['salePrice'][] = $row['special_price'];
-            $data[$row['upc']]['in_use'] = $row['inUse'];
-            $data[$row['upc']]['storeID'] = $row['storeID'];
-            if (!isset($data[$row['upc']]['note'])) {
-                $data[$row['upc']]['note'] = $row['note'];
+        foreach (array(1,2) as $storeID) {
+            $query = '
+                SELECT
+                    e.upc,
+                    p.brand,
+                    p.description,
+                    p.special_price,
+                    e.note,
+                    p.inUse,
+                    e.storeID
+                FROM woodshed_no_replicate.exceptionItems AS e
+                    INNER JOIN products AS p ON p.upc=e.upc
+                AND p.store_id = ?
+                    AND e.storeID = ?
+            ';
+            $args = array($storeID, $storeID);
+            $prep = $dbc->prepare($query);
+            $result = $dbc->execute($prep,$args);
+            while ($row = $dbc->fetch_row($result)) {
+                $data[$row['upc']]['brand'] = $row['brand'];
+                $data[$row['upc']]['desc'] = $row['description'];
+                $data[$row['upc']]['salePrice'][] = $row['special_price'];
+                $data[$row['upc']]['in_use'] = $row['inUse'];
+                $data[$row['upc']]['storeID'] = $row['storeID'];
+                if (!isset($data[$row['upc']]['note'])) {
+                    $data[$row['upc']]['note'] = $row['note'];
+                }
             }
         }
         unset($data['0000000000000']);
@@ -164,24 +167,12 @@ HTML;
 $('td').each(function(){
     var table_id = $(this).closest('table').attr('id');
     var in_use = $(this).attr('data-value');
-    var current_store = $('#store_id').val();
-    if (current_store == 1 && table_id == 'table_1') {
-        if (in_use == 1) {
-            var action = $(this).closest('td').prev('td').text();
-            if (action == 'Item un-used') {
-                $(this).addClass('text-danger')
-                    .attr('title', 'item has new sales');
-            }
+    if (in_use == 1) {
+        var action = $(this).closest('td').prev('td').text();
+        if (action == 'Item un-used') {
+            $(this).addClass('text-danger')
+                .attr('title', 'item has new sales');
         }
-    } else if (current_store == 2 && table_id == 'table_2') {
-        if (in_use == 1) {
-            var action = $(this).closest('td').prev('td').text();
-            if (action == 'Item un-used') {
-                $(this).addClass('text-danger')
-                    .attr('title', 'item has new sales');
-            }
-        }
-
     }
 });
  $('#rmbtn').submit(function(){
@@ -234,7 +225,4 @@ HTML;
     }
 
 }
-
 WebDispatch::conditionalExec();
-
-
