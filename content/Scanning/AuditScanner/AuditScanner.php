@@ -173,7 +173,7 @@ class AuditScanner extends PageLayoutA
             $prep = $dbc->prepare("UPDATE products SET inUse = 0 WHERE upc = ? AND store_id = ?");
             $res = $dbc->execute($prep, $args);
             echo "Product now NOT in-use";
-            $args = array($upc, $storeID);
+            $args = array($upc, $store);
             $prep = $dbc->prepare("INSERT INTO woodshed_no_replicate.exceptionItems (upc, note, timestamp, storeID)
                 VALUES (?, 'Item un-used', NOW(), ?)");
             $res = $dbc->execute($prep, $args);
