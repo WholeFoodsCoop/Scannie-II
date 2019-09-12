@@ -420,7 +420,7 @@ HTML;
                 AND last_sold is not NULL
                 AND p.price_rule_id = 0
                 AND wicable = 0
-                AND m.superID IN (1,13,9,4,8,17,5) 
+                AND m.superID IN (1,13,9,4,8,17,5,18) 
             GROUP BY upc
         "
         );
@@ -478,7 +478,7 @@ HTML;
                         AND s.storeID=p.store_id
             )
                 AND inUse = 1
-                AND m.superID IN (1,13,9,4,8,17,5) 
+                AND m.superID IN (1,13,9,4,8,17,5,18) 
         ");
         $r = $dbc->execute($p, $a);
         $cols = array('upc', 'brand', 'department', 'store_id');
@@ -589,7 +589,7 @@ HTML;
                 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
             WHERE (v.sku IS NULL OR v.sku=p.upc)
                 AND p.inUse = 1
-                AND m.superID IN (1,13,9,4,8,17,5) 
+                AND m.superID IN (1,13,9,4,8,17,5,18) 
                 AND p.default_vendor_id NOT IN (0, 1, 2)
                 AND p.default_vendor_id > 0 
                 AND p.default_vendor_id IS NOT NULL
@@ -660,7 +660,7 @@ HTML;
             p.department, default_vendor_id, cost, created
             FROM products AS p
                 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
-            WHERE m.superID IN (1,13,9,4,8,17,5) 
+            WHERE m.superID IN (1,13,9,4,8,17,5,18) 
                 AND cost = 0 
                 AND default_vendor_id > 0
                 AND p.inUse = 1
@@ -688,7 +688,7 @@ HTML;
             p.department, default_vendor_id, cost 
             FROM products AS p
                 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
-            WHERE m.superID IN (1,13,9,4,8,17,5) 
+            WHERE m.superID IN (1,13,9,4,8,17,5,18) 
                 AND default_vendor_id = 0
                 AND p.inUse = 1
                 AND p.numflag & (1 << 19) = 0
