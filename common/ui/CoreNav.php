@@ -38,7 +38,7 @@ JAVASCRIPT;
         if (empty($user)) {
             $user = 'Generic User';
             $logVerb = 'Login';
-            $link = "<a class='nav-login' href='http://{$MY_ROOTDIR}/auth/login.php'>[{$logVerb}]</a>";
+            $link = "<a class='nav-login' href='http://{$MY_ROOTDIR}/auth/Login.php'>[{$logVerb}]</a>";
         } else {
             $logVerb = 'Logout';
             $link = "<a class='nav-login' href='http://{$MY_ROOTDIR}/auth/logout.php'>[{$logVerb}]</a>";

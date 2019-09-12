@@ -1,7 +1,4 @@
 <?php
-if(!class_exists('config')) {
-    include(__DIR__.'/ConfigModule.php');
-}
 class WebDispatch
 {
     protected $title = 'Scannie';
@@ -32,6 +29,9 @@ class WebDispatch
         }
         if(!class_exists('scanLib')) {
             include(__DIR__.'/../lib/scanLib.php');
+        }
+        if(!class_exists('config')) {
+            include(__DIR__.'/ConfigModule.php');
         }
         $obj = new $class();
         $obj->starttime = microtime(true);
@@ -79,7 +79,6 @@ class WebDispatch
         // re-rout client to loggin page if user not logged in. 
         if ( WebDispatch::is_session_started() === FALSE ) {
             ini_set('session.gc_maxlifetime', 3600);
-            //session_set_cookie_params(3600);
             session_start(); // ready to go!
             $now = time();
             if (isset($_SESSION['discard_after']) && $now > $_SESSION['discard_after']) {
@@ -89,7 +88,7 @@ class WebDispatch
             }
             $_SESSION['discard_after'] = $now + 3600;
         }
-        session_id();
+        $test = session_id();
         $dbc = scanLib::getConObj('SCANALTDB');
         $a = array(session_id());
         $p = $dbc->prepare("INSERT IGNORE INTO ScannieConfig (session_id, scanBeep, time)
@@ -97,17 +96,16 @@ class WebDispatch
         $dbc->execute($p, $a);
         //echo $dbc->error();
         $hostname = $_SERVER['HTTP_HOST'];
-        if (isset($_COOKIE["user_type"])) {
-            $_SESSION["user_type"] = $_COOKIE["user_type"];
-        }
-        if (isset($_COOKIE["user_name"])) {
-            $_SESSION["user_name"] = $_COOKIE["user_name"];
-        }
         if ($this->must_authenticate == true) {
-            if (!isset($_SESSION['user_type'])) $_SESSION['user_type'] = null;
-                $userType = $_SESSION['user_type'];
+            if (!isset($_COOKIE['user_type'])) {
+                $_COOKIE['user_type'] = null;
+            }
+            $userType = $_COOKIE['user_type'];
             if ($userType != 1) {
-                header('Location: http://'.$hostname.'/Scannie/auth/login.php');
+                header('Location: http://'.$hostname.'/Scannie/auth/Login.php');
+            }
+            if ($_COOKIE['session_token'] != session_id()) {
+                header('Location: http://'.$hostname.'/Scannie/auth/Login.php?session_expired=true');
             }
         }
     }
