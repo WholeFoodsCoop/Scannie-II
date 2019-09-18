@@ -78,6 +78,7 @@ class UnfiBreakdowns extends WebDispatch
                 FROM VendorAliases WHERE sku = ?");
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
+                //echo $row['sku'] . ', ' . $row['upc'] . "<br/>";
                 $id++;
                 $is_primary = $row['isPrimary'];
                 $multiplier = $row['multiplier'];
@@ -190,7 +191,7 @@ $('tr').each(function(){
                     $('#'+tr_id).find('td:last').text(ssp);
                 }
             });
-            $(this).find('td:eq(2)').text(cur_bid);
+            $(this).find('td:eq(3)').text(cur_bid);
         }
         last_sku = sku;
     }
