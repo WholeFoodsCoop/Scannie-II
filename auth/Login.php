@@ -34,6 +34,7 @@ class Login extends PageLayoutA
         $curUser = $_COOKIE['user_name'];
         
         $ret = '';
+        $expired = 0;
         if  (array_key_exists('session_token', $_COOKIE) && $session_expired != false) {
             unset($_COOKIE['user_type']);
             setcookie('user_type', '', time() - 3600, '/');
@@ -41,10 +42,9 @@ class Login extends PageLayoutA
             setcookie('user_name', '', time() - 3600, '/');
             unset($_COOKIE['session_token']);
             setcookie('session_token', '', time() - 3600, '/');
-            $ret .= "<div align=\"center\"><div style=\"margin: 25px;\" class=\"alert alert-warning\">  
-            Your Session has expired.</div></div>";
+            $expired = 1;
         }
-        $ret .= $this->form_content();
+        $ret .= $this->form_content($expired);
 
         $user = array();
 
@@ -104,7 +104,7 @@ JAVASCRIPT;
 
     }
 
-    private function form_content()
+    private function form_content($expired)
     {
         include(__DIR__.'/../config.php');
         $ret = '';
@@ -114,7 +114,9 @@ JAVASCRIPT;
         } else {
             $width = '';
         }
-        $ret .= '
+        $expired_text = ($expired == 1) ? '<div style="margin: 25px; '.$width.'; text-align: center;" class="alert alert-warning">  
+                Your Session has expired.</div>' : '';
+        $ret .= $expired_text.'
             <div class="login-form" align="center" style="'.$width.'">
                 <form method="post">
                     <h2 class="login"><a href="http://'.$MY_ROOTDIR.'" title="Back to Home Page">SV2.0 Login</a>
