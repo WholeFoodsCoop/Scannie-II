@@ -40,7 +40,7 @@ class AuditScanner extends PageLayoutA
         $username = scanLib::getUser();
         $dbc = scanLib::getConObj();
         if (!$username) {
-            header('location: ../../../auth/login.php');
+            header('location: ../../../auth/Login.php');
         }
 
         $action = FormLib::get('action');
