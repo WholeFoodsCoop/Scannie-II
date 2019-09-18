@@ -89,8 +89,14 @@ class admin
             $query = $dbc->prepare("SELECT name, type FROM users WHERE name = ?;");
             $result = $dbc->execute($query,$username);
             while ($row = $dbc->fetch_row($result)) {
-                $_SESSION['user_type'] = $row['type'];
-                $_SESSION['user_name'] = $row['name'];
+                //$_SESSION['user_type'] = $row['type'];
+                //$_SESSION['user_name'] = $row['name'];
+                $cookie_name = 'user_type';
+                $cookie_value = $row['type'];
+                setcookie($cookie_name, $cookie_value, time() + (86400 * 30), '/'); // 86400 = 1 day
+                $cookie_name = 'user_name';
+                $cookie_value = $row['name'];
+                setcookie($cookie_name, $cookie_value, time() + (86400 * 30), '/'); // 86400 = 1 day
             }
             if ($dbc->error()) $ret .=  "Error:" . $dbc->error();
             echo '<div class="container"><div class="alert alert-success">'.$username.' successfully logged in.</div></div>';

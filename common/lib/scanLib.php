@@ -248,8 +248,8 @@ class scanLib
 
     public function getUser()
     {
-        if (!empty($_SESSION['user_name'])) {
-            return $_SESSION['user_name'];
+        if (!empty($_COOKIE['user_name'])) {
+            return $_COOKIE['user_name'];
         } else {
             return false;
         }
