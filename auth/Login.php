@@ -114,8 +114,8 @@ JAVASCRIPT;
         } else {
             $width = '';
         }
-        $expired_text = ($expired == 1) ? '<div style="margin: 25px; '.$width.'; text-align: center;" class="alert alert-warning">  
-                Your Session has expired.</div>' : '';
+        $expired_text = ($expired == 1) ? '<div align="center"><div style="margin: 25px; '.$width.'; text-align: center;" class="alert alert-warning">  
+                Your Session has expired.</div></div>' : '';
         $ret .= $expired_text.'
             <div class="login-form" align="center" style="'.$width.'">
                 <form method="post">
