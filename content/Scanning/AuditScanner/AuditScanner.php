@@ -852,8 +852,10 @@ tr, td {
     height: 100vh;
     width: 100vw;
     z-index: 999;
-    background: linear-gradient(135deg, #42a7f4, #0a1528);
-    background-color: linear-gradient(135deg, #42a7f4, #0a1528);
+    //background: linear-gradient(135deg, #42a7f4, #0a1528);
+    //background-color: linear-gradient(135deg, #42a7f4, #0a1528);
+    background: linear-gradient(135deg, slategrey, darkslategrey);
+    background-color: linear-gradient(135deg, slategrey, darkslategrey);
     position: fixed;
     top: 0px;
     left: 0px;
@@ -877,8 +879,10 @@ li.menu-list {
 body {
     font-family: Arial, Helvetica, sans-serif;
     background-color: rgba(255,255,255,0.9);
-    background: linear-gradient(135deg, #42a7f4, #0a1528);
-    background-color: linear-gradient(135deg, #42a7f4, #0a1528);
+    //background: linear-gradient(135deg, #42a7f4, #0a1528);
+    //background-color: linear-gradient(135deg, #42a7f4, #0a1528);
+    background: linear-gradient(135deg, slategrey, darkslategrey);
+    background-color: linear-gradient(135deg, slategrey, darkslategrey);
     background-repeat: no-repeat;
     background-attachment: fixed;
     color: #cacaca;
@@ -934,7 +938,7 @@ body {
 //background-image: url(\'../common/src/img/lbgrad.png\');
 }
 .vid {
-color: #525259;
+color: #CACACA;
 }
 .clear {
 opacity: 0.8;
