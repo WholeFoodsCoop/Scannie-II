@@ -29,7 +29,7 @@ if (!class_exists('SQLManager')) {
 class NaturalizeProdInfo extends PageLayoutA
 {
 
-    protected $title = "Naturalize Product Information"; 
+    protected $title = "Cleanup Sign Information"; 
     protected $description = "[Naturalize Product Information] Clean-up discrepancies 
         within and between POS products and SIGN information."; 
     protected $ui = TRUE; 
@@ -43,6 +43,8 @@ class NaturalizeProdInfo extends PageLayoutA
         $this->__routes[] = 'post<description>';
         $this->__routes[] = 'post<department>';
         $this->__routes[] = 'post<alt_brand>';
+        $this->__routes[] = 'post<cleanup>';
+        $this->__routes[] = 'post<vendor>';
 
         return parent::preprocess();
     }
@@ -100,6 +102,66 @@ class NaturalizeProdInfo extends PageLayoutA
         }
 
         return false;
+    }
+
+    public function getVendorView()
+    {
+        $vendor = (FormLib::get('vendor')) ? FormLib::get('vendor') : 1;
+        $dbc = scanLib::getConObj();
+        $data = array();
+        
+        $args = array($vendor);
+        $query = "SELECT 
+            pu.upc, pu.brand, pu.description,
+                p.brand AS alt_brand, p.description AS alt_description
+            FROM productUser AS pu
+                LEFT JOIN products AS p ON pu.upc=p.upc
+            WHERE p.default_vendor_id = ?
+            GROUP BY pu.upc";
+        $prep = $dbc->prepare($query);
+        $res = $dbc->execute($prep, $args);
+        $data = array();
+        $product_lines = array();
+        $brands = array();
+        $columns = array('upc','alt_brand','brand','description');
+        $brands = array();
+        $table = "<table class=\"table table-sm small\">    
+            <thead> 
+                <th>UPC</th>
+                <th>POS Brand <input class=\"edit-all\" data-change=\"alt_brand\" placeholder=\"edit all\" style=\"\"></th>
+                <th>SIGN Brand <input class=\"edit-all\" data-change=\"brand\" placeholder=\"edit all\" style=\"\"></th>
+                <th>Description</th>
+            </thead><tbody>";
+        while ($row = $dbc->fetchRow($res)) {
+            $table .= "<tr>";
+            foreach ($columns as $column) {
+                $placeholder = null;
+                $placeholder = $row['alt_'.$column];
+                if ($column != 'upc') {
+                    $table .= "<td><input class=\"editable\" contenteditable=\"true\" data-column=\"$column\"   
+                        data-upc=\"{$row['upc']}\" value=\"{$row[$column]}\" placeholder=\"$placeholder\"/>
+                        </td>";
+                } else {
+                    $table .= "<td>{$row['upc']}</td>";
+                }
+            }
+            $table .= "</tr>";
+        }
+        $table .= "</tbody></table>";
+
+        return <<<HTML
+<div style="position: fixed; top: 0px; width: 100%; opacity: 0.55;">
+<div class="progress" id="alert-wait" style="display: none">
+  <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+  </div>
+</div>
+<form method="get">
+    <strong>Vendor:</strong>
+    <input type="number" name="vendor" value="$vendor" style="border: 1px solid lightgrey; width: 75px"/>
+    <button type="submit">Change Vendor</button>
+</form>
+$table
+HTML;
     }
 
     public function getDepartmentView()
@@ -238,6 +300,20 @@ HTML;
 
     public function pageContent()
     {
+        return <<<HTML
+<div style="padding:25px;">
+<h2>{$this->title}</h2>
+<ul>
+    <li><a href="NaturalizeProdInfo.php?cleanup=1">Review Cleaup Suggestions</a></li>
+    <li><a href="NaturalizeProdInfo.php?department=1">Cleanup by Department/Brand</a></li>
+    <li><a href="NaturalizeProdInfo.php?vendor=3">Cleanup by Vendor</a></li>
+</ul>
+</div>
+HTML;
+    }
+
+    public function getCleanupView()
+    {
         $ret = '';
         $dbc = scanLib::getConObj();
         $data = array();
@@ -319,8 +395,10 @@ $('.edit-all').change(function(){
             $('.editable').each(function(){
                 var column = $(this).attr('data-column');
                 if (column == change_column) {
-                    $(this).val(text);
-                    $(this).trigger('change');
+                    if ($(this).val() != text) {
+                        $(this).val(text);
+                        $(this).trigger('change');
+                    }
                 }
             });
         }
