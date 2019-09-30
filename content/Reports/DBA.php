@@ -19,6 +19,8 @@ class DBA extends PageLayoutA
 
     public function pageContent()
     {
+        $today = new DateTime();
+        $today = $today->format('Y-m-d');
         //$this->addScript('tableColumnFilters.js');
         return <<<HTML
 <div class="row">
@@ -37,6 +39,34 @@ class DBA extends PageLayoutA
             <input type="number" value=0 min=0 max=1 name="watch_n" id="watch_n" class="form-control" />
             <span id="watch_v" style="position: absolute; top: 40px; left: 10px; background: white; color: red;">OFF</span>
         </div>
+        <h4>Saved Queries</h4>
+        <ul>
+            <li><a href='#' class="quick_query">Get Current Sales</a>
+                <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
+                     FROM batchList AS bl
+                        LEFT JOIN products AS p ON bl.upc=p.upc
+                            LEFT JOIN batches AS b ON bl.batchID=b.batchID
+                     WHERE bl.batchID IN ( SELECT batchID FROM batches WHERE '$today' BETWEEN startDate AND endDate)
+                     GROUP BY bl.upc
+                     order by p.department</span>
+                </li>
+            <li><a href='#' class="quick_query">Get Vendor Changes</a>
+                <span class="query">SELECT t.upc, v.sku, t.cost as previousCost, p.cost as newCost, (p.cost - t.cost) AS difference,
+                    p.brand, p.description, p.department as dept, m.super_name
+                    FROM woodshed_no_replicate.temp AS t
+                    LEFT JOIN is4c_op.products AS p ON t.upc = p.upc
+                    LEFT JOIN is4c_op.MasterSuperDepts as m on p.department=m.dept_ID
+                    LEFT JOIN is4c_op.vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
+                    WHERE (p.cost - t.cost) <> 0
+                    AND p.inUse = 1
+                    GROUP BY p.upc
+                    ORDER BY (p.cost - t.cost) ASC;</span>
+                </li>
+        </ul>
+        <h4>Additinal Features</h4>
+        <ul>
+            <li><a href='#' onclick="stripeByColumn();">Stripe Rows by First Column</a></li>
+        </ul>
     </div>
 </div>
 HTML;
@@ -45,6 +75,29 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
+$('.quick_query').click(function(){
+    $('#query').text('');
+    var query = $(this).next().text();
+    $('#query').text(query);
+});
+function stripeByColumn()
+{
+    var prev_dept = '';
+    var color = 'white';
+    $('tr').each(function(){
+        var dept = $(this).find('td:first-child').text();
+        if (dept != prev_dept) {
+            if (color == 'white') {
+                color = '#faf8eb';
+            } else {
+                color = 'white';
+            }
+        }
+        $(this).css('background', color);
+        prev_dept = dept;
+    });
+
+}
 jQuery.loadScript = function (url, callback) {
     jQuery.ajax({
         url: url,
@@ -101,6 +154,9 @@ JAVASCRIPT;
     public function cssContent()
     {
         return <<<HTML
+.query {
+    display: none;
+}
 .row {
     padding: 15px;
 }
