@@ -305,6 +305,9 @@ HTML;
         }
         $noteStr .= '</select>';
 
+        // new addition, filter all columns test
+        $colStr .= '<span id="filter-options"></span>';
+
         $ret .= '
             <table class="table table-bordered table-sm small" style="width: 500px; margin-top: 5px; margin-left: 5px;">
                 <tr class="key"><td>Key</td><td>
@@ -377,6 +380,7 @@ HTML;
         ';
 
         $ret .= '<div style="font-size: 12px; padding-bottom: 10px;"><b>Filter by Notes</b>:'.$noteStr.'</div>';
+        $ret .= '<div style="font-size: 12px; padding-bottom: 10px;"><b>Filter by column</b>: '.$colStr.'</div>';
         $ret .=  '<div class="panel panel-default table-responsive">
             <table class="table table-condensed table-sm small table-bordered tablesorter" id="dataTable">';
         $ret .=  '<thead class="key" id="dataTableThead">
@@ -530,6 +534,9 @@ form {
 .alert {
     margin: 5px;
 }
+input, select {
+    border: 1px solid lightgrey;
+}
 HTML;
     }
 
@@ -583,6 +590,83 @@ HTML;
         ';
 
         return $ret;
+    }
+
+    public function javascriptContent()
+    {
+        return <<<JAVASCRIPT
+var table_id = 'dataTable';
+var getNumCols = function(table_id) {
+    var length = $('#'+table_id).find('tr')[0].cells.length;
+    return length;
+};
+var col_count = getNumCols('dataTable');
+var getOptions = function(row, to_id, table_id)
+{
+    var options = [];
+    $('tr td:nth-child('+row+')').each(function(){
+        var tid = $(this).closest('table').attr('id');
+        if (tid == table_id) {
+            var text = $(this).text();
+            if ( $.inArray(text, options) == -1 ) {
+                options.push(text);
+            }
+        }
+    });
+    var column = $('#'+table_id+' th:nth-child('+row+')').text();
+    var html = '<select class="column-filter" name="row'+row+'" data-col-name="'+column+'" style="display: none;">';
+    $.each(options, function(i,option) {
+        html += '<option value='+option+'>'+option+'</option>';
+    });
+    html += '</select>';
+    $('#'+to_id).append(html);
+}
+var getThead = function(to_id, table_id)
+{
+    var html = '<select class="column-filter-control" name="column-filter-control">';
+    $('#'+table_id+' th').each(function(){
+        var header = $(this).text();
+        html += '<option value='+header+'>'+header+'</option>';
+    });
+    html += '</select>';
+    $('#'+to_id).prepend(html);
+}
+getThead('filter-options', 'dataTable');
+for (var i = 1; i <= col_count; i++) {
+    getOptions(i, 'filter-options', 'dataTable');
+}
+$('.column-filter').change(function(){
+    var name = $(this).attr('name');
+    var row = name.substring(3);
+    var value = $(this).children('option:selected').text();
+    $('tr').each(function() {
+        var tid = $(this).closest('table').attr('id');
+        if (tid == table_id) {
+            $(this).show();
+        }
+    });
+    $('tr td:nth-child('+row+')').each(function(){
+        var tid = $(this).closest('table').attr('id');
+        if (tid == table_id) {
+            var text = $(this).text();
+            if (text != value) {
+                $(this).closest('tr').hide();
+            }
+        }
+    });
+});
+$('.column-filter-control').change(function(){
+    var value = $(this).children('option:selected').text();
+    $('.column-filter').each(function(){
+        var column = $(this).attr('data-col-name');
+        if (column == value) {
+            $(this).show();
+        } else {
+            $(this).hide();
+        }
+    });
+});
+JAVASCRIPT;
     }
 
     public function help_content()
