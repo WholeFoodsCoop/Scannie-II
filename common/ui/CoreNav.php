@@ -103,7 +103,9 @@ HTML;
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/LastSoldDates.php?paste_list=1">Last Sold</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/PendingAction.php">Pending Action</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/Popups.php">Popups</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/SkuTrimmer.php">UNFI SKU Cleanup</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/CheckUnfiWhs.php">UNFI Warehouse</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/NaturalizeProdInfo.php">Update Sign Info</a>
         </div>
       </li>
       <li class="nav-item dropdown">
