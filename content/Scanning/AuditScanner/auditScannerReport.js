@@ -79,7 +79,7 @@ function deleteRow() {
                 data: 'store_id='+store_id+'&upc='+upc+'&username='+username+'&deleteRow=true',
                 success: function(response)
                 {
-                    alert(store_id+', '+upc+', '+username);
+                    //alert(store_id+', '+upc+', '+username);
                     if($('#'+rowclicked).length == 0) {
                         $('#firstTr').hide();
                     } else {
