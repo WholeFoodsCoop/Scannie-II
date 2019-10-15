@@ -15,17 +15,8 @@ class ScannerSettings extends PageLayoutA
     {
         $this->displayFunction = $this->postView();
         $this->__routes[] = 'post<save>';
-        $this->__routes[] = 'post<testview>';
 
         return parent::preprocess();
-    }
-
-    public function postTestviewView()
-    {
-        return <<<HTML
-TEST VIEW
-<a href="#" onclick="window.history.back(); return true;">go back</a>
-HTML;
     }
 
     public function postSaveHandler()
@@ -66,7 +57,6 @@ HTML;
 
         $scanner_settings = array();
         return <<<HTML
-<form method="post"><button name="testview" value="1">click</button></form>
 <div class="container-fluid" style="margin-top: 25px;">
     <label>Go To:</label>
     <ul>
@@ -84,8 +74,8 @@ HTML;
         <input type="hidden" name="sessionID" id="sessionID" value="$a" />
     </form>
     <form method="post">
-        <label>Show Audit Scanner <a href="" data-target="#scanner-settings" data-toggle="collapse">Settings</a></label>
-        <ul class="collapse" id="scanner-settings">
+        <label>Audit Scanner <a href="" data-target="#scanner-settings" data-toggle="collapse">Settings</a></label>
+        <ul class="" id="scanner-settings">
             <li>
                 <label>Par</label>
                 <input type="checkbox" name="auditPar" value=1 id="togglePar" $checkPar/>
@@ -99,7 +89,7 @@ HTML;
                 <input type="checkbox" name="auditSrp" value=1 id="toggleSrp" $checkSrp/>
             </li>
             <li>
-                <label>Product Info</label>
+                <label>Desc, Brand, Dept</label>
                 <input type="checkbox" name="auditProdInfo" value=1 id="toggleProdInfo" $checkProdInfo/>
             </li>
             <li>
