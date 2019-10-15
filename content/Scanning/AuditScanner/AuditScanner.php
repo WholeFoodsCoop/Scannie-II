@@ -256,7 +256,7 @@ HTML;
         $scannerConfig = array();
         $cols = array('scanBeep', 'auditPar', 'auditCost', 'auditSrp',
             'auditProdInfo', 'auditVendorInfo', 'auditSize', 'auditSignInfo',
-            'auditSaleInfo');
+            'auditSaleInfo', 'auditLocations');
         while ($row = $dbc->fetchRow($r)) {
             foreach ($cols as $col) {
                 $scannerConfig[$col] = $row[$col];
@@ -557,7 +557,7 @@ HTML;
                     <br />
                     <div id="auditProdInfo">
                         <div class="row">
-                            <div class="col-12 info" ><span id="description1_v">'.$desc.'</span></div>
+                            <div class="col-12 info" ><span class="sm-label">DESC:</span> <span id="description1_v">'.$desc.'</span></div>
                         </div>
                         <div class="row">
                             <div class="col-12 info" ><span class="sm-label">BRAND: </span> <span id="brand1_v">'.$brand.'</span></div>
@@ -572,14 +572,16 @@ HTML;
                     <div class="row" id="auditLocations">
                         <div class="col-12 info" ><span class="sm-label">LOCATIONS: </span> <span 
                             onclick="$(\'#floor-section-edit\').show();">'.$locations.$touchicon.'</span></div>
+                    </div>
+                    <div class="row" id="auditSize">
                         <div class="col-12 info" ><span class="sm-label">SIZE: </span><span id="size_v">'.$size.'</spa></span> </div>
-                    </div>'
-                ;
+                    </div>
+                ';
 
                 if (!$inUse) {
                     $ret .= '
-                        <div class="row">
-                            <div class="col-12 info" ><span class="text-danger" style="font-weight: bold;">
+                        <div id="in-use-warning">
+                            <div class="col-12 info" ><span class="text-warning" style="font-weight: bold;">
                                 THIS PRODUCT IS NOT IN USE
                             </span></div>
                         </div>
@@ -614,8 +616,11 @@ HTML;
                     ';
                 if (strlen($notes) > 0) {
                 $ret .= '
-                    <div class="row">
-                        <div class="col-12" ><span class="badge badge-secondary alert-danger">Notes:</span> '.$notes.'</div>
+                    <div>
+                        <table class="table table-borderless table-sm small">
+                            <tr><td class="alert-danger" style="width: 36px;">NOTE</td>
+                                <td style="text-align: center">'.$notes.'</td></tr>
+                        </table>
                     </div>
                     ';
                 };
@@ -629,14 +634,16 @@ HTML;
                         <!-- <div class="col-4  clear btn btn-warning" onClick="queue('.$storeID.'); return false;">Print</div> -->
                         <div class="col-4 clear">
                             <form method="get" type="hidden">
-                            <a href="../ScannerSettings.php" class="btn btn-info" style="width: 100%;">Conf</a>
+                            <a href="../ScannerSettings.php" class="btn btn-info" style="width: 100%;">
+                                <span class="scanicon scanicon-settings-white"></span> 
+                            </a>
                             <input type="hidden" name="note" value="Print Tag" />
                             <input type="hidden" id="upc" name="upc" value="'.$upc.'" />
                         </div>
                         </form>
                         <div class="col-4  clear">
-                            <button class="btn btn-danger" onclick="$(\'#notepad\').show();"
-                                style="width: 100%;">Note
+                            <button class="btn btn-danger" onclick="$(\'#notepad\').show();" style="width: 100%;">
+                                <span class="scanicon scanicon-pencil-white"></span>
                             </button></div>
                         <div class="col-4  clear "><a class="btn btn-success" style="width: 100%" href="http://'.$MY_ROOTDIR.'/content/Scanning/BatchCheck/SCS.php">B.C.</a></div>
                     </div>
@@ -792,6 +799,12 @@ HTML;
     public function cssContent()
     {
         return <<<HTML
+#in-use-warning {
+    position: absolute;
+    top: 50px;
+    left: 45px;
+    pointer-events: none;
+}
 tr, td {
     background: rgba(0, 0, 0, 0.1);
 }
@@ -910,6 +923,7 @@ body {
     background-color: rgba(255,255,255,0.2);
     box-shadow: 1px 1px rgba(255,255,255,0.1);
     color: rgba(255,255,255,0.4);
+    z-index: 255;
 }
 .btn-keypad {
     height: 50px;
@@ -998,8 +1012,8 @@ color: rgba(255,255,255,0.6);
     color: purple;
 }
 .text-tiny {
-font-size: 8px;
-color: #6f6f80;
+    font-size: 8px;
+    color: #CACACA;
 }
 .text-sale {
 color: lightgreen;
@@ -1043,7 +1057,9 @@ HTML;
     private function mobile_menu($upc)
     {
         $ret = '';
-        $ret .= '<a href="#" id="btn-action"><button class="btn-action">A</button></a>';
+        $ret .= '<a href="#" id="btn-action"><button class="btn-action">
+            <span class="scanicon scanicon-edit-white"></span> 
+        </button></a>';
         $ret .= '
             <div class="modal" tabindex="-1" role="dialog" id="keypad">
             <br /><br /><br /><br /><br />

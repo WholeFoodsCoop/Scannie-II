@@ -32,6 +32,7 @@ class ScannieConfig extends PageLayoutA
     protected $title = "Scannie Config";
     protected $description = "[Scannie Config] install or configure Scannie Version 2 Setup.";
     protected $ui = TRUE;
+    protected $must_authenticate = true;
 
     public function cssContent()
     {
@@ -53,7 +54,18 @@ HTML;
     public function body_content()
     {
         $ret = '';
-        $dbc = scanLib::getConObj();
+        $dbc = scanLib::getConObj('SCANALTDB');
+        $prep = $dbc->prepare("SELECT 1 FROM ScannieAuth LIMIT 1");
+        $res = $dbc->execute($prep);
+        $row = $dbc->numRows($res);
+        if ($row !== 1) {
+            $prep = $dbc->prepare("CREATE TABLE IF NOT EXISTS ScannieAuth 
+                name VARCHAR(64), email VARCHAR(255), type TINYINT(), hash VARCHAR(255), 
+                id AUTO_INCREMENT, PRIMARY KEY(id))");
+            $res = $dbc->execute($prep);
+            $dbc->numRows($res);
+        }
+
 
         if (!file_exists(__DIR__."/../../config.php")) {
             $ret .= "<div class=\"alert alert-danger\">Scannie config 
@@ -67,8 +79,8 @@ HTML;
                 file is not writable.</div>";
         }
 
-        echo $this->formValuesToJSON();
-        echo $this->formValuesToPHP();
+        //echo $this->formValuesToJSON();
+        //echo $this->formValuesToPHP();
 
         return <<<HTML
 <div class="container-fluid" style="padding-top: 25px;"><form method="post">
@@ -104,7 +116,7 @@ HTML;
                 </tr>
                 <tr>
                     <td><strong class="form-control label">DBMS Password</strong class="form-control label"></td>
-                    <td><input class="form-control" name="scanpass" value="$SCANPASS" /></td>
+                    <td><input type="password" class="form-control" name="scanpass" value="$SCANPASS" /></td>
                 </tr>
                 <tr>
                     <td><strong class="form-control label">IS4C Office Root Directory</strong class="form-control label"></td>
