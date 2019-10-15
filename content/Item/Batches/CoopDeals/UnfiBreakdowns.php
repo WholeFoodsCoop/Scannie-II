@@ -24,6 +24,7 @@ class UnfiBreakdowns extends WebDispatch
         $dbc = ScanLib::getConObj();
         $upcs = array();
         $skus = array();
+        $upcs = array();
         $args = array($start,$end);
         $prep = $dbc->prepare("
             SELECT 
@@ -32,14 +33,15 @@ class UnfiBreakdowns extends WebDispatch
                 bl.batchID,
                 p.description,
                 p.brand,
-                v.sku,
-                p.inUse
+                v.sku
             FROM batchList AS bl
                 LEFT JOIN batches AS b ON bl.batchID=b.batchID
                 LEFT JOIN products AS p ON bl.upc=p.upc
                 LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
+                LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
             WHERE b.batchID >= ?
                 AND b.batchID <= ?
+                AND m.superID <> 1
             GROUP BY bl.upc
         ");
         $res = $dbc->execute($prep, $args);
@@ -47,11 +49,15 @@ class UnfiBreakdowns extends WebDispatch
         $batchListUpcs = array();
         $batchIDs = array();
         while ($row = $dbc->fetchRow($res)) {
+           //echo "<div>{$row['upc']}</div>";
            $upcs[$row['upc']]['saleprice'] = $row['salePrice'];
            $upcs[$row['upc']]['batchID'] = $row['batchID'];
            $upcs[$row['upc']]['description'] = $row['description'];
            $upcs[$row['upc']]['brand'] = $row['brand'];
-           $skus[$row['sku']] = null;
+           $upcs[$row['upc']]['sku'] = [$row['sku']];
+           $upcs[$row['upc']]['upc'] = $row['upc'];
+           $skus[$row['upc']] = $row['sku'];
+           $upcs[] = $row['upc'];
         }
 
         $key = '
@@ -60,7 +66,10 @@ class UnfiBreakdowns extends WebDispatch
             <tbody>
                 <tr><td class="alert-success">&nbsp;</td><td>Item found in batch</td></tr>
                 <tr><td class="alert-danger">&nbsp;</td><td>Item missing from batch</td></tr>
-            </tbody></table></div></div>';
+            </tbody></table></div>
+            <div class="col-lg-4">
+            </div> 
+            </div>';
         $table =  '<table class="table table-condensed table-bordered table-sm small" id="break_table">
             <thead><tr>
                 <th></th>
@@ -72,11 +81,28 @@ class UnfiBreakdowns extends WebDispatch
                 <th>SSP</th>
             </tr></thead><tbody>';
         $id = 0;
-        foreach ($skus as $sku => $na) {
+        foreach ($skus as $upc => $sku) {
+        //while (next($upcs)) {
+            //$upc_data = current($upcs);
+            //$upc = $upc_data['upc'];
+            //$sku = $upc_data['sku'];
             $args = array($sku);
             $prep = $dbc->prepare("SELECT sku, upc, isPrimary, multiplier
                 FROM VendorAliases WHERE sku = ?");
             $res = $dbc->execute($prep, $args);
+            $num_rows = 0;
+            $num_rows = $dbc->numRows($res);
+            if ($num_rows == 0) {
+                $args = array($upc);
+                $prep = $dbc->prepare("SELECT sku FROM VendorAliases WHERE upc = ?");
+                $res = $dbc->execute($prep, $args);
+                $row = $dbc->fetchRow($res);
+                $sku = $row['sku'];
+                $args = array($sku);
+                $prep = $dbc->prepare("SELECT sku, upc, isPrimary, multiplier
+                    FROM VendorAliases WHERE sku = ?");
+                $res = $dbc->execute($prep, $args);
+            }
             while ($row = $dbc->fetchRow($res)) {
                 //echo $row['sku'] . ', ' . $row['upc'] . "<br/>";
                 $id++;
@@ -176,8 +202,13 @@ $('tr').each(function(){
             oppo_type = parseInt(oppo_type, 10);
             var saleprice = $("[data-type='"+oppo_type+"'][data-sku='"+sku+"']").attr('data-saleprice');
             var cur_bid = $("[data-type='"+oppo_type+"'][data-sku='"+sku+"']").attr('data-batchID');
-            var multiplier = $(this).attr('data-multiplier');
             saleprice = parseFloat(saleprice);
+            var multiplier = $(this).attr('data-multiplier');
+            if (type == '1') {
+                // use opposite multiplier if primary
+                var oppo_multiplier = $("[data-type='"+oppo_type+"'][data-sku='"+sku+"']").attr('data-multiplier');
+                var multiplier = 1 / parseFloat(oppo_multiplier);
+            } 
             multiplier = parseFloat(multiplier);
             ssp = saleprice * multiplier;
 
@@ -185,9 +216,9 @@ $('tr').each(function(){
                 type: 'post',
                 data: 'price='+ssp+'&round=true',
                 url: '../../../../common/lib/priceRoundAjax.php',
-                success: function(response, ssp)
+                success: function(resp, ssp)
                 {
-                    ssp = response;
+                    ssp = (resp == -0.01) ? 'check' : resp;
                     $('#'+tr_id).find('td:last').text(ssp);
                 }
             });
@@ -196,6 +227,22 @@ $('tr').each(function(){
         last_sku = sku;
     }
 });
+var removeDuplicateRows = function(table_id)
+{
+    var upcs = [];
+    $('tr').each(function(){
+        var cur_id = $(this).closest('table').attr('id');
+        if (table_id == cur_id) {
+           var upc = $(this).find('td:eq(2)').text();
+            if (upcs.includes(upc)) {
+                $(this).hide();
+            } else {
+                upcs.push(upc);
+            }
+        }
+    });
+}
+removeDuplicateRows('break_table');
 JAVASCRIPT;
     }
 
@@ -206,6 +253,8 @@ JAVASCRIPT;
             <p>Enter a single batch ID or range of ID's to find all breakdown items within.</p>
             <li>Green rows are items that were found in the batch and should not need to be adjusted.</li>
             <li>Red rows are relatives of items found in batches that need to be added to the batch</li>
+            <li>The color coding on the far left side of the table is a visual aid to help in identifying 
+                items that have an association.</li>
         ";
     }
     
