@@ -103,6 +103,9 @@ input {
 .urlbar {
     
 }
+.homeBtn:hover {
+    cursor: pointer;
+}
 HTML;
     }
     
