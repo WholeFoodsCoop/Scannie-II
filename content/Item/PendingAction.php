@@ -167,6 +167,10 @@ HTML;
 $('td').each(function(){
     var table_id = $(this).closest('table').attr('id');
     var in_use = $(this).attr('data-value');
+    if ($(this).text() == 'Item un-used') {
+        $(this).closest('tr').css('font-style', 'italic')
+            .css('font-size', '12');
+    }
     if (in_use == 1) {
         var action = $(this).closest('td').prev('td').text();
         if (action == 'Item un-used') {
