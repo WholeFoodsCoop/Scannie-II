@@ -129,6 +129,42 @@ img.icon {
     background-size: 15px;
     background-position: center; 
 }
+.scanicon-settings {
+    background-image: url('../src/img/icons/icon-settings.png');
+    background-repeat: no-repeat;
+    display: inline-block;
+    background-size: cover;
+}
+.scanicon-edit {
+    background-image: url('../src/img/icons/icon-edit.png');
+    background-repeat: no-repeat;
+    display: inline-block;
+    background-size: cover;
+}
+.scanicon-settings-white {
+    background-image: url('../src/img/icons/icon-settings-white.png');
+    background-repeat: no-repeat;
+    display: inline-block;
+    background-size: cover;
+}
+.scanicon-edit-white {
+    background-image: url('../src/img/icons/icon-edit-white.png');
+    background-repeat: no-repeat;
+    display: inline-block;
+    background-size: cover;
+}
+.scanicon-pencil {
+    background-image: url('../src/img/icons/icon-pencil.png');
+    background-repeat: no-repeat;
+    display: inline-block;
+    background-size: cover;
+}
+.scanicon-pencil-white {
+    background-image: url('../src/img/icons/icon-pencil-white.png');
+    background-repeat: no-repeat;
+    display: inline-block;
+    background-size: cover;
+}
 /*
     Core Navigation
 */
