@@ -62,10 +62,24 @@ class DBA extends PageLayoutA
                     GROUP BY p.upc
                     ORDER BY (p.cost - t.cost) ASC;</span>
                 </li>
+            <li><a href='#' class="quick_query">Grocery Likecodes</a>
+                <span class="query">SELECT 
+                    l.likeCode, l.likeCodeDesc, 
+                        round(avg(cost),2) as AvgCost,
+                            round(stddev(cost),2) as STDEV
+                            FROM likeCodeView AS l 
+                            INNER JOIN products AS p ON l.upc=p.upc
+                            INNER JOIN MasterSuperDepts AS m ON m.dept_ID=p.department 
+                            WHERE m.superID=4
+                                AND p.upc IN (SELECT upc FROM likeCodeView)
+                                    AND p.inUse = 1
+                                    GROUP BY l.likeCode;</span>
+                </li>
+
         </ul>
-        <h4>Additinal Features</h4>
+        <h4>Additional Features</h4>
         <ul>
-            <li><a href='#' onclick="stripeByColumn();">Stripe Rows by First Column</a></li>
+            <li><a href='#' onclick="stripeByColumn();">Stripe Rows</a></li>
         </ul>
     </div>
 </div>
@@ -79,6 +93,7 @@ $('.quick_query').click(function(){
     $('#query').text('');
     var query = $(this).next().text();
     $('#query').text(query);
+    $('#submit').trigger('click');
 });
 function stripeByColumn()
 {
@@ -126,6 +141,7 @@ $('#submit').click(function(){
                     .addClass('table-sm')
                     .addClass('small');
             });
+            stripeByColumn();
         }
     });
 });
