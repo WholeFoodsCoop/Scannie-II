@@ -132,8 +132,19 @@ HTML;
 
     private function getNarrowItems($dbc,$upcs) {
         list($inStr, $args) = $dbc->safeInClause($upcs);
-        $prep = $dbc->prepare("SELECT upc FROM productUser WHERE upc IN ({$inStr}) AND narrow = 1");
+        $prep = $dbc->prepare("SELECT p.upc 
+            FROM productUser AS p
+                LEFT JOIN FloorSectionProductMap AS f ON p.upc=f.upc
+                LEFT JOIN FloorSections AS s ON f.floorSectionID=s.floorSectionID
+                LEFT JOIN products ON p.upc=products.upc
+            WHERE p.upc IN ({$inStr}) 
+                AND (
+                    p.narrow = 1
+                        OR ( s.name like '%Bev%' AND products.department IN (37, 69, 188, 189) )
+                    )
+            GROUP BY p.upc");
         $res = $dbc->execute($prep,$args);
+        echo $dbc->error();
         $td = "";
         $rUpcs = array();
         while ($row = $dbc->fetchRow($res)) {
