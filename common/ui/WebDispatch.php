@@ -139,7 +139,7 @@ class WebDispatch
     <script src="http://{$MY_ROOTDIR}/common/javascript/scannie.js"></script>
     <title>{$this->title}</title>
     <link rel="icon" href="http://{$MY_ROOTDIR}/common/src/icons/scannie_favicon.ico">
-    <link rel="stylesheet" href="http://{$MY_ROOTDIR}/common/css/commonInterface.css">
+    <link rel="stylesheet" href="http://{$MY_ROOTDIR}/common/css/commonInterface.css?reload=always">
 <style>
 {$this->cssContent()}
 </style>
