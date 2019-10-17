@@ -32,18 +32,14 @@ class AuditScannerReport extends PageLayoutA
     protected $ui = TRUE;
     protected $must_authenticate = TRUE;
 
-    private function clear_scandata_hander($dbc,$storeID,$username)
+    private function clear_scandata_handler($dbc,$storeID,$username)
     {
         $args = array($storeID,$username);
         $query = $dbc->prepare("DELETE FROM woodshed_no_replicate.AuditScanner WHERE store_id = ? AND username = ?");
         $dbc->execute($query,$args);
+        $this->addOnloadCommand('window.location = "AuditScannerReport.php"; return false;');
 
-        return <<<HTML
-<div align="center">
-    <div class="alert alert-success">Data Cleared - <a href="AuditScannerReport.php">collapse message</a>
-    </div>
-</div>
-HTML;
+        return false;
     }
 
     private function clear_notes_handler($dbc,$storeID,$username)
@@ -51,13 +47,9 @@ HTML;
         $args = array($storeID,$username);
         $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScanner SET notes = 'n/a' WHERE store_id = ? AND username = ?");
         $dbc->execute($query,$args);
+        $this->addOnloadCommand('window.location = "AuditScannerReport.php"; return false;');
 
-        return <<<HTML
-<div align="center">
-    <div class="alert alert-success">Notes Cleared - <a href="AuditScannerReport.php">collapse message</a>
-    </div>
-</div>
-HTML;
+        return false;
     }
 
     private function update_scandata_handler($dbc,$storeID,$username)
@@ -93,15 +85,7 @@ HTML;
                 </div>
             ';
         } else {
-            return '
-                <div align="center">
-                    <div class="alert alert-success">
-                        Update Successful -
-                        <a href="AuditScannerReport.php">collapse message</a>
-                    </div>
-
-                </div>
-            ';
+            $this->addOnloadCommand('window.location = "AuditScannerReport.php"; return false;');
         }
 
         return false;
@@ -280,7 +264,7 @@ HTML;
         \">$username</h1>";
 
         $routes = array(
-            'cleardata' => 'clear_scandata_hander',
+            'cleardata' => 'clear_scandata_handler',
             'update' => 'update_scandata_handler',
             'clearNotes' => 'clear_notes_handler',
             'list_upcs' => 'list_upcs_handler'
