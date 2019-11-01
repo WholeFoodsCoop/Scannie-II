@@ -54,6 +54,8 @@ class LastSoldDates extends PageLayoutA
                 <div class="row">
                     <div class="col-lg-2">
                         <button type="submit" class="sp btn btn-default btn-sm">Submit</button>
+                        <span type="submit" class="sp btn btn-default btn-sm" 
+                            title="Clear copy/paste selection" onclick="clearSelection(); return false;">Clear</span>
                     </div>
                     <div class="col-lg-2">
                         <a href="TrackChangeNew.php" class="sp">Track Change</a>
@@ -293,6 +295,14 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
+var clearSelection = function(){
+    $('tr').each(function(){
+        var clicked = $(this).find('td:eq(0)').hasClass('selected');
+        if (clicked == true) {
+            $(this).find('td:eq(0)').trigger('click');
+        }
+    });
+}
 $(document).ready(function() {
     $('#hideBlue').click(function() {
         $('#dataTable').find('td').each(function() {
