@@ -44,6 +44,18 @@ class PendingAction extends PageLayoutA
         $ret .= '<h4 style="margin-top: 15px;">Pending Actions</h4>';
         $ret .= $this->form_content();
 
+        $direction = FormLib::get('direction', false);
+        if ($direction !== false) {
+            $new_id = ($direction == 'up') ? 1 : 2;
+            $upc = FormLib::get('upc');
+            $args = array($new_id, $upc);
+            $prep = $dbc->prepare("UPDATE woodshed_no_replicate.exceptionItems 
+                SET storeID = ? WHERE upc = ?");
+            $dbc->execute($prep,$args);
+
+            return false;
+        }
+
         if ($addItem = str_pad($_POST['addItem'], 13, 0, STR_PAD_LEFT)) {
             $note = $_POST['note'];
             $args = array($addItem,$note,$storeID,$note);
@@ -112,6 +124,7 @@ class PendingAction extends PageLayoutA
                 <th>Action Required</th>
                 <th>Timestamp</th>
                 <th></th>
+                <th></th>
             </thead>';
         $table_2 =  '<div class="panel panel-default table-responsive"><table id="table_2" class="table table-striped table-bordered table-sm small">';
         $table_2 .=  '
@@ -121,6 +134,7 @@ class PendingAction extends PageLayoutA
                 <th>Description</th>
                 <th>Action Required</th>
                 <th>Timestamp</th>
+                <th></th>
                 <th></th>
             </thead>';
 
@@ -135,6 +149,8 @@ class PendingAction extends PageLayoutA
                 $table_1 .= '<td>' . scanLib::strGetDate($array['note']) . '</td>';
                 $table_1 .= '<td data-value="'.$action_data_value.'">' . $array['timestamp'] . '</td>';
                 $table_1 .= "<td><button name=\"rmItem\" class=\"scanicon scanicon-trash scanicon-sm btn btn-default\" value=$upc>&nbsp;</button></td>";
+                $table_1 .= "<td><span name=\"dnItem\" class=\"scanicon scanicon-down-arrow scanicon-sm btn btn-default\" onclick=\"moveUpc('dn', '$upc'); return false;\" value=$upc>&nbsp;</span>
+                    </td>";
             } else {
                 $upcLink = '<a id="upcLink" href="http://'.$FANNIE_ROOTDIR.'/item/ItemEditorPage.php?searchupc=' . $upc . '" target="_blank">' . $upc . '</a>';
                 $table_2 .= '<tr>';
@@ -144,6 +160,8 @@ class PendingAction extends PageLayoutA
                 $table_2 .= '<td>' . scanLib::strGetDate($array['note']) . '</td>';
                 $table_2 .= '<td data-value="'.$action_data_value.'">' . $array['timestamp'] . '</td>';
                 $table_2 .= "<td><button name=\"rmItem\" class=\"scanicon scanicon-trash scanicon-sm btn btn-default\" value=$upc>&nbsp;</button></td>";
+                $table_2 .= "<td><span name=\"upItem\" class=\"scanicon scanicon-up-arrow scanicon-sm btn btn-default\" onclick=\"moveUpc('up', '$upc'); return false;\" value=$upc>&nbsp;</span>
+                    </td>";
 
             }
         }
@@ -164,6 +182,20 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
+var moveUpc = function(direction, upc) {
+    var length = upc.length;
+    if (length < 13) {
+        upc = '0' + upc;
+        length++;
+    }
+    $.ajax({
+        type: 'post',
+        data: 'upc='+upc+'&direction='+direction,
+        success: function(r){
+            window.location.reload();
+        },
+    });
+};
 $('td').each(function(){
     var table_id = $(this).closest('table').attr('id');
     var in_use = $(this).attr('data-value');
