@@ -597,6 +597,7 @@ var getOptions = function(row, to_id, table_id)
             }
         }
     });
+    options.sort();
     var column = $('#'+table_id+' th:nth-child('+row+')').text();
     var html = '<select class="column-filter" name="row'+row+'" data-col-name="'+column+'" style="display: none;">';
     $.each(options, function(i,option) {
