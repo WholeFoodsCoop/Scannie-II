@@ -373,7 +373,7 @@ HTML;
             AND upc NOT IN (
                 SELECT upc FROM {$this->ALTDB}.doNotTrack 
                 WHERE method = 'getDiscrepancies'   
-                    AND page = 'NewPage'
+                    AND page = 'Dashboard'
             )
             AND numflag & (1 << 19) = 0
             GROUP BY upc
@@ -414,7 +414,7 @@ HTML;
                 AND upc NOT IN (
                     SELECT upc FROM {$this->ALTDB}.doNotTrack 
                     WHERE method = 'badPriceCheck'   
-                        AND page = 'NewPage'
+                        AND page = 'Dashboard'
                 )
                 AND (normal_price = 0 OR normal_price > 99.99 OR normal_price < cost)
                 AND last_sold is not NULL
@@ -447,7 +447,7 @@ HTML;
                 AND upc NOT IN (
                     SELECT upc FROM {$this->ALTDB}.doNotTrack 
                     WHERE method = 'getMissingScaleItems'   
-                        AND page = 'NewPage'
+                        AND page = 'Dashboard'
                 )
             GROUP BY upc;");
         $r = $dbc->execute($p);
@@ -695,7 +695,7 @@ HTML;
                 AND upc NOT IN (
                     SELECT upc FROM {$this->ALTDB}.doNotTrack 
                     WHERE method = 'getProdMissingVendor'   
-                        AND page = 'NewPage'
+                        AND page = 'Dashboard'
                 )
             GROUP BY upc;");
         //$pre = $dbc->prepare("select * from products limit 1");
@@ -729,7 +729,7 @@ HTML;
                 AND upc NOT IN (
                     SELECT upc FROM {$this->ALTDB}.doNotTrack 
                     WHERE method = 'getMissingMovementTags'   
-                        AND page = 'NewPage'
+                        AND page = 'Dashboard'
                 )
                 AND store_id = ? 
             GROUP by p.upc;
