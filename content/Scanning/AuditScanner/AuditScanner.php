@@ -685,6 +685,7 @@ HTML;
                     </form>
         ';
 
+        asort($notes);
         foreach ($notes as $note) {
             if ($note != NULL) {
                 $ret .= '<span class="qmBtn"  onClick="qm(\''.$note.'\'); return false; ">
