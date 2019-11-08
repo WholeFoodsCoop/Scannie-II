@@ -41,6 +41,11 @@ class DBA extends PageLayoutA
         </div>
         <h4>Saved Queries</h4>
         <ul>
+            <li><a href='#' class="quick_query">Get CMW File</a>
+                <span class="query">SELECT upc, Product, RegUnit, Brand, Description
+FROM woodshed_no_replicate.CMWFile
+                </span>
+            </li>
             <li><a href='#' class="quick_query">Get Current Sales</a>
                 <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
 FROM batchList AS bl
