@@ -11,32 +11,24 @@ $('table').each(function(){
     });
 });
 
-var hideChecked = false;
 $('th').keyup(function(e){
+    var start_time = new Date();
+    start_time = start_time.getTime();
     var str = $(this).text();
     str = str.toUpperCase();
     var columnName = $(this).attr('data-columnName');
     var i = $(this).attr('data-i');
-    $('tr').each(function(){
-        var checked = $(this).find('[type=checkbox]').prop('checked')?true:false;
-        if (hideChecked == true) {
-            if (!checked) {
-                $(this).show();
-            }
-        } else {
-            $(this).show();
-        }
-    });
     $('tr td:nth-child('+i+')').each(function(){
-        var checked = $(this).find('[type=checkbox]').prop('checked')?true:false;
         var curtext = $(this).text();
         curtext = curtext.toUpperCase();
         if (!curtext.includes(str)) {
-            if (!checked) {
-                $(this).closest('tr').hide();
-            }
+            $(this).closest('tr').hide();
         }
     });
+    var stop_time = new Date();
+    stop_time = stop_time.getTime();
+    var time_diff = stop_time - start_time;
+    console.log('filter run-time: '+time_diff+' milliseconds');
 });
 $('th').focus(function(){
     $(this).text("");
@@ -47,47 +39,7 @@ $('th').focusout(function(){
     if (str == '') {
         $(this).text(columnName);    
         $('tr').each(function(){
-            var checked = $(this).find('[type=checkbox]').prop('checked')?true:false;
-            if (hideChecked == true) {
-                if (!checked) {
-                    $(this).show();
-                }
-            } else {
-                $(this).show();
-            }
-        });
-    }
-});
-
-$('#upcBtnOppo').click(function(){
-    var active = $(this).hasClass('active');
-    if (active == true) {
-        $(this).removeClass('active').addClass('inactive');
-        hideChecked = true;
-        $('td').each(function(){
-            var checked = $(this).find('[type=checkbox]').prop('checked')?true:false;
-            if (checked == true) {
-                $(this).closest('tr').hide();
-            }
-        });
-    } else {
-        $(this).removeClass('inactive').addClass('active');
-        hideChecked = false;
-        $('tr').each(function(){
             $(this).show();
         });
     }
-});
-
-$('#upcBtnAll').click(function(){
-    hideChecked = false;
-    $('#upcBtnOppo').removeClass('inactive').addClass('active');
-});
-
-$('tr').each(function(){
-    $(this).find('td:first-child').click(function(){
-        $(this).closest('tr').find("input").each(function() {
-            $(this).trigger('click');
-        });
-    });
 });
