@@ -33,6 +33,12 @@ div.nav-label {
     padding-right: 5px;
     font-size: 12px;
     text-align: right;
+    border-bottom: 1px solid rgba(0,0,0,0.1); 
+    line-height: 0.1em;
+    margin: 10px 10px 20px;
+}
+span.nav-label {
+     background-color: white;
 }
 a.search-resp {
     color: #CACACA;

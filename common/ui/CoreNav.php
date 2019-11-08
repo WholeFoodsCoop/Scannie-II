@@ -113,11 +113,12 @@ HTML;
             Reports 
         </a>
         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-          <div class="nav-item nav-label" align="">Cashless</div>
+          <div class="nav-item nav-label" align=""><span class="nav-label">Cashless</span></div>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Tables/CashlessCheckPage.php">Cashless Transactions</a>
-          <div class="nav-item nav-label" align="">Tables</div>
+          <div class="nav-item nav-label" align=""><span class="nav-label">Tables</span></div>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Tables/CoopDealsFile.php">Coop Deals File</a>
-          <div class="nav-item nav-label" align="">Reports</div>
+          <div class="nav-item nav-label" align=""><span class="nav-label">Reports</span></div>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/PriceRuleTypeReport.php">Price Rule Report</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/WeeklySalesByWeek.php">Weekly Sales By Week</a>
         </div>
       </li>
