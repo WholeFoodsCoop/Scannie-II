@@ -59,7 +59,7 @@ class Dashboard extends PageLayoutA
             ),
             array(
                 'handler' => self::getProdMissingCost($dbc), 
-                'ranges' => array(100, 200, 999),
+                'ranges' => array(10, 20, 999),
             ),
             array(
                 'handler' => self::getProdMissingVendor($dbc), 
@@ -664,7 +664,12 @@ HTML;
                 AND cost = 0 
                 AND default_vendor_id > 0
                 AND p.inUse = 1
-                AND p.department <> 240
+                AND p.department NOT IN (240, 241, 242, 243, 244)
+                AND p.upc NOT IN (
+                    SELECT upc FROM {$this->ALTDB}.doNotTrack 
+                    WHERE method = 'getProdMissingCost'   
+                        AND page = 'Dashboard'
+                )
             GROUP BY upc;");
         $res = $dbc->execute($pre);
         $count = $dbc->numRows($res);
