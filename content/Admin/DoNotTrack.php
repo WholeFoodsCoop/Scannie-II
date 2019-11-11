@@ -216,6 +216,11 @@ $('#submitUpcForm').click(function(){
     var page = $('option:selected', '#filter-pages').attr('value');
     var method = $('option:selected', '#filter-method').attr('value');
     var upc = $('#upc').val();
+    var length = upc.length;
+    while (length < 13) {
+        upc = "0" + upc;
+        length = upc.length;
+    }
     $.ajax({
         type: 'post',
         data: 'page='+page+'&method='+method+'&upc='+upc,
