@@ -84,7 +84,7 @@ l.likeCode, l.likeCodeDesc,
                 <span class="query">SELECT
 upc, sku, brand, description, featured, line_notes, promo, period, sale_price, dealset
 FROM woodshed_no_replicate.FullCoopDealsFile
-WHERE dealset = 'october'
+WHERE dealset = 'november'
 AND (period = 'B' OR period = 'AB') 
                 </span>
             </li>
