@@ -40,6 +40,7 @@ class NaturalizeProdInfo extends PageLayoutA
         $this->displayFunction = $this->pageContent();
         $this->__routes[] = 'get<line>';
         $this->__routes[] = 'post<brand>';
+        $this->__routes[] = 'post<alt_description>';
         $this->__routes[] = 'post<description>';
         $this->__routes[] = 'post<department>';
         $this->__routes[] = 'post<alt_brand>';
@@ -95,6 +96,25 @@ class NaturalizeProdInfo extends PageLayoutA
         $args = array($description, $upc);
         $prep = $dbc->prepare("UPDATE productUser
             SET description = ?
+            WHERE upc = ?");
+        $res = $dbc->execute($prep, $args);
+        if ($er = $dbc->error()) {
+            echo $er;
+        }
+
+        return false;
+    }
+
+    public function postAlt_descriptionHandler()
+    {
+        $upc = FormLib::get('upc');
+        $description = FormLib::get('alt_description');
+        $description = str_replace('and', '&', $description);
+        $dbc = scanLib::getConObj();
+
+        $args = array($description, $upc);
+        $prep = $dbc->prepare("UPDATE products 
+            SET description = ? 
             WHERE upc = ?");
         $res = $dbc->execute($prep, $args);
         if ($er = $dbc->error()) {
@@ -207,7 +227,7 @@ HTML;
         $data = array();
         $product_lines = array();
         $brands = array();
-        $columns = array('upc','alt_brand','brand','description');
+        $columns = array('upc','alt_brand','brand','description', 'alt_description');
         $brands = array();
         $table = "<table class=\"table table-sm small\">    
             <thead> 
@@ -215,6 +235,7 @@ HTML;
                 <th>POS Brand <input class=\"edit-all\" data-change=\"alt_brand\" placeholder=\"edit all\" style=\"\"></th>
                 <th>SIGN Brand <input class=\"edit-all\" data-change=\"brand\" placeholder=\"edit all\" style=\"\"></th>
                 <th>Description</th>
+                <th>POS Description</th>
             </thead><tbody>";
         while ($row = $dbc->fetchRow($res)) {
             $table .= "<tr>";
@@ -378,11 +399,11 @@ $('.editable').change(function(){
         type: 'post',
         data: 'upc='+upc+'&'+column+'='+text,
         success: function(response){
-            console.log('success: '+response);  
+            console.log('success');  
             count_edits--;
         },
         fail: function(response){
-            console.log('failed: '+response);
+            console.log('failed');
         }
     });
 });
