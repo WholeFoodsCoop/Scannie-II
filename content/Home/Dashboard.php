@@ -478,10 +478,11 @@ HTML;
                         AND s.storeID=p.store_id
             )
                 AND inUse = 1
+                AND p.department NOT IN (240, 241)
                 AND m.superID IN (1,13,9,4,8,17,5,18) 
         ");
         $r = $dbc->execute($p, $a);
-        $cols = array('upc', 'brand', 'department', 'store_id');
+        $cols = array('upc', 'brand', 'description', 'department', 'store_id');
         $data = array();
         while ($row = $dbc->fetchRow($r)) {
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
