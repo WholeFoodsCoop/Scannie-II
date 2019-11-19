@@ -847,7 +847,7 @@ tr, td {
 #floor-section-edit-close {
     position: fixed;
     top:15px;
-    right:25px;
+    right:155px;
     color: black;
     text-shadow: 1px 1px lightgrey;
 }
