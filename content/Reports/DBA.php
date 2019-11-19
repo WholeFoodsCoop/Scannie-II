@@ -88,7 +88,16 @@ WHERE dealset = 'november'
 AND (period = 'B' OR period = 'AB') 
                 </span>
             </li>
-
+            <li><a href='#' class="quick_query">Coop Deals Flyer Review</a>
+                <span class="query">
+SELECT p.upc, p.department, b.salePrice, p.brand, p.description 
+FROM
+batchList AS b
+LEFT JOIN products AS p ON b.upc=p.upc
+WHERE b.batchID IN (13581,13579,13576,13573,13570,13567,13565,13563,13560)
+GROUP BY b.upc
+                </span>
+            </li>
         </ul>
         <h4>Additional Features</h4>
         <ul>
