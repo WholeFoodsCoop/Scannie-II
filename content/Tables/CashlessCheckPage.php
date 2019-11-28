@@ -225,7 +225,7 @@ class CashlessCheckPage extends PageLayoutA
             
             $lane = ($lane == '') ? FormLib::get('regNo') : $lane;
             $ret .= '<div align="center"><div class="card" style="" id="table'.$lane.'">
-                <div class="title"><strong>Register No.'.$lane.'</strong></div>
+                <div class="table-responsive"><div class="title"><strong>Register No.'.$lane.'</strong></div>
                 <table class="table table-striped table-sm small">';
                 
             $headers = array('Issuer','trans_no','Processor','Result','TransType','Amount','Date/Time','PAN','refnum');
@@ -265,7 +265,7 @@ class CashlessCheckPage extends PageLayoutA
                 $ret .= '</tr>';
             
             }
-            $ret .= '</table></div></div>';
+            $ret .= '</table></div></div></div>';
             unset($data);
         }
         if ($dbc->error()) $ret .=  $dbc->error();

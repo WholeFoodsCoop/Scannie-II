@@ -130,12 +130,12 @@ class CoopDealsFile extends PageLayoutA
             }
             if ($dbc->error()) echo $dbc->error();
             $table = "";
-            $table .= '<div class="card"><div class="card-body
+            $table .= '<div class="card"><div class="card-body">
                 <div class="table-responsive">
                 <table class="table table-sm small">';
                 $table .= '<thead><th>UPC</th><th>Period</th><th>Department</th><th>SKU</th><th>Brand</th>
                     <th>Description1</th><th>Description2</th><th>Size</th><th>SalePrice</th>
-                    <th>NormalPrice</th><th>LineNotes</th><th>PromoDisc</th></thead>';
+                    <th>NormalPrice</th><th>LineNotes</th><th>PromoDisc</th></thead><tbody>';
             foreach ($data as $upc => $row) {
                 $table .= '<tr class="rowz">';
                 $table .= '<td>' . $upc . '</td>';
@@ -144,7 +144,7 @@ class CoopDealsFile extends PageLayoutA
                 }
                 $table .= '</tr>';
             }
-            $table .= '</table></div></div></div>';
+            $table .= '</tbody></table></div></div></div>';
         }
 
         return <<<HTML
