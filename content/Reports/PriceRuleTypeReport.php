@@ -23,7 +23,7 @@ class PriceRuleTypeReport extends PageLayoutA
         $args = array($cur_super);
         $prep = $dbc->prepare("
             SELECT 
-                p.upc, p.brand, p.description, t.description AS prType 
+                p.upc, p.brand, p.description, t.description AS prType, p.normal_price
             FROM products AS p
                 LEFT JOIN PriceRules AS pr ON p.price_rule_id=pr.priceRuleID
                 LEFT JOIN PriceRuleTypes AS t ON pr.priceRuleTypeID=t.priceRuleTypeID
@@ -38,11 +38,12 @@ class PriceRuleTypeReport extends PageLayoutA
         $table = "";
         if ($cur_super != false) {
             while ($row = $dbc->fetchRow($res)) {
-                $table .= sprintf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>",
+                $table .= sprintf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>",
                     $row['upc'],
                     $row['brand'],
                     $row['description'],
-                    $row['prType']
+                    $row['prType'],
+                    $row['normal_price']
                 );
             }
         }
