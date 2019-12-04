@@ -25,6 +25,7 @@ class DBA extends PageLayoutA
         return <<<HTML
 <div class="row">
     <div class="col-lg-10">
+        <span id="filter-options"></span>
         <div id="response"></div>
     </div>
     <div class="col-lg-2">
@@ -40,10 +41,12 @@ class DBA extends PageLayoutA
             <span id="watch_v" style="position: absolute; top: 40px; left: 10px; background: white; color: red;">OFF</span>
         </div>
         <h4>Saved Queries</h4>
-        <ul>
+        <ul style="height: 200px; overflow-y: auto; font-size: 12px">
             <li><a href='#' class="quick_query">Get CMW File</a>
-                <span class="query">SELECT upc, Product, RegUnit, Brand, Description
+                <span class="query">SELECT upc, Product, RegUnit, Brand, Description, 
+CASE WHEN WhsAvail like '%T%' THEN 'yes' ELSE 'no' END AS Avail
 FROM woodshed_no_replicate.CMWFile
+WHERE CASE WHEN WhsAvail like '%T%' THEN 'yes' ELSE 'no' END = 'yes'
                 </span>
             </li>
             <li><a href='#' class="quick_query">Get Current Sales</a>
@@ -98,10 +101,32 @@ WHERE b.batchID IN (13581,13579,13576,13573,13570,13567,13565,13563,13560)
 GROUP BY b.upc
                 </span>
             </li>
+            <li><a href='#' class="quick_query">Paycard Transactions [Hillside]</a>
+                <span class="query">
+SELECT registerNo, transNo, empNo, processor,
+    cardType,requestDatetime,
+        commErr, xResultMessage, paycardTransactionID as PID,
+            transType
+            FROM is4c_trans.PaycardTransactions
+            WHERE dateID = REPLACE(DATE(NOW()), '-', '') 
+                AND registerNo IN (1,2,3,4,5,6)
+                ORDER BY requestDatetime DESC;
+            </li>
+            <li><a href='#' class="quick_query">Paycard Transactions [Denfeld]</a>
+                <span class="query">
+SELECT registerNo, transNo, empNo, processor,
+    cardType,requestDatetime,
+        commErr, xResultMessage, paycardTransactionID as PID,
+            transType
+            FROM is4c_trans.PaycardTransactions
+            WHERE dateID = REPLACE(DATE(NOW()), '-', '') 
+                AND registerNo IN (12,13,14,15,16)
+                ORDER BY requestDatetime DESC;
+            </li>
         </ul>
         <h4>Additional Features</h4>
-        <ul>
-            <li><a href='#' onclick="stripeByColumn();">Stripe Rows</a></li>
+        <ul style="height: 200px; overflow-y: auto; font-size: 12px">
+            <li><a href='#' onclick="columnGroupFilter();">Column Group Filter</a></li>
         </ul>
     </div>
 </div>
@@ -186,11 +211,95 @@ $('#submit').click(function(){
                     .addClass('table-bordered')
                     .addClass('table-sm')
                     .addClass('small');
+                $(this).attr('id', 'dataTable');
             });
             stripeByColumn();
         }
     });
 });
+
+var columnGroupFilter = function()
+{
+    /*
+        start select-filter chunk   vvv
+    */
+    var table_id = 'dataTable';
+    var getNumCols = function(table_id) {
+        var length = $('#'+table_id).find('tr')[0].cells.length;
+        return length;
+    };
+    var col_count = getNumCols('dataTable');
+    var getOptions = function(row, to_id, table_id)
+    {
+        var options = [];
+        $('tr td:nth-child('+row+')').each(function(){
+            var tid = $(this).closest('table').attr('id');
+            if (tid == table_id) {
+                var text = $(this).text();
+                if ( $.inArray(text, options) == -1 ) {
+                    options.push(text);
+                }
+            }
+        });
+        options.sort();
+        var column = $('#'+table_id+' th:nth-child('+row+')').text();
+        var html = '<select class="column-filter" name="row'+row+'" data-col-name="'+column+'" style="display: none;">';
+        $.each(options, function(i,option) {
+            html += '<option value='+option+'>'+option+'</option>';
+        });
+        html += '</select>';
+        $('#'+to_id).append(html);
+    }
+    var getThead = function(to_id, table_id)
+    {
+        var html = '<select class="column-filter-control" name="column-filter-control">';
+        $('#'+table_id+' th').each(function(){
+            var header = $(this).text();
+            html += '<option value='+header+'>'+header+'</option>';
+        });
+        html += '</select>';
+        $('#'+to_id).prepend(html);
+    }
+    getThead('filter-options', 'dataTable');
+    for (var i = 1; i <= col_count; i++) {
+        getOptions(i, 'filter-options', 'dataTable');
+    }
+    $('.column-filter').change(function(){
+        var name = $(this).attr('name');
+        var row = name.substring(3);
+        var value = $(this).children('option:selected').text();
+        $('tr').each(function() {
+            var tid = $(this).closest('table').attr('id');
+            if (tid == table_id) {
+                $(this).show();
+            }
+        });
+        $('tr td:nth-child('+row+')').each(function(){
+            var tid = $(this).closest('table').attr('id');
+            if (tid == table_id) {
+                var text = $(this).text();
+                if (text != value) {
+                    $(this).closest('tr').hide();
+                }
+            }
+        });
+    });
+    $('.column-filter-control').change(function(){
+        var value = $(this).children('option:selected').text();
+        $('.column-filter').each(function(){
+            var column = $(this).attr('data-col-name');
+            if (column == value) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
+    /*
+        end select-filter chunk ^^^
+    */
+
+}
 
 var timer = setInterval('watch_query()', 1000);
 clearInterval(timer);
@@ -210,12 +319,16 @@ function watch_query()
 {
    $('#submit').trigger('click');
 }
+
 JAVASCRIPT;
     }
 
     public function cssContent()
     {
         return <<<HTML
+select {
+    border: 1px solid lightgrey;
+}
 .highlight-row {
     background: plum;
     color: white;
