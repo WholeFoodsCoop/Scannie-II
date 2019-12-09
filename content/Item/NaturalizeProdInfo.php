@@ -143,7 +143,7 @@ class NaturalizeProdInfo extends PageLayoutA
         $data = array();
         $product_lines = array();
         $brands = array();
-        $columns = array('upc','alt_brand','brand','description');
+        $columns = array('upc','alt_brand','brand','description', 'alt_description');
         $brands = array();
         $table = "<table class=\"table table-sm small\">    
             <thead> 
