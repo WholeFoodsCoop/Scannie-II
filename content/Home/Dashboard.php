@@ -29,8 +29,8 @@ if (!class_exists('SQLManager')) {
 class Dashboard extends PageLayoutA 
 {
 
-    protected $title = "";
-    protected $description = "[] .";
+    protected $title = "Scannie Dashboard";
+    protected $description = "[Dashboard] .";
     protected $ui = TRUE;
     protected $ALTDB = "";
 
@@ -97,6 +97,10 @@ class Dashboard extends PageLayoutA
             ),
             array(
                 'handler' => self::badPriceCheck($dbc),
+                'ranges' => array(1, 2, 999),
+            ),
+            array(
+                'handler' => self::limboPcBatch($dbc),
                 'ranges' => array(1, 2, 999),
             ),
         );
@@ -376,6 +380,7 @@ HTML;
                     AND page = 'Dashboard'
             )
             AND numflag & (1 << 19) = 0
+            AND department <> 500
             GROUP BY upc
             HAVING MIN({$field}) <> MAX({$field})
             ORDER BY department
@@ -393,6 +398,28 @@ HTML;
         } else {
             return false;
         }
+    }
+
+    public function limboPcBatch($dbc)
+    {
+        $desc = 'Forgotten Price-Change Batches';
+        $p = $dbc->prepare("SELECT batchID, batchName, batchType 
+            FROM batches 
+            WHERE batchID NOT IN 
+                (SELECT bid AS batchID FROM batchReviewLog) 
+            AND batchType = 4
+            AND batchID > 13768;");
+        $r = $dbc->execute($p);
+        $cols = array('batchID', 'batchName', 'owner');
+        $data = array();
+        while ($row = $dbc->fetchRow($r)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+        }
+        if ($er = $dbc->error()) echo "<div class='alert alert-danger'>$er</div>";
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+
     }
 
     public function badPriceCheck($dbc)
