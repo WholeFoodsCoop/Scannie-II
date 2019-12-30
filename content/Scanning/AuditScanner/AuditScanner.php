@@ -246,7 +246,6 @@ HTML;
     public function body_content()
     {
 
-        $this->addOnloadCommand("");
         $ret = '';
         $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
         $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
@@ -256,7 +255,7 @@ HTML;
         $scannerConfig = array();
         $cols = array('scanBeep', 'auditPar', 'auditCost', 'auditSrp',
             'auditProdInfo', 'auditVendorInfo', 'auditSize', 'auditSignInfo',
-            'auditSaleInfo', 'auditLocations');
+            'auditSaleInfo', 'auditLocations', 'socketDevice');
         while ($row = $dbc->fetchRow($r)) {
             foreach ($cols as $col) {
                 $scannerConfig[$col] = $row[$col];
@@ -296,7 +295,16 @@ HTML;
         include(__DIR__.'/../../../common/lib/PriceRounder.php');
         $rounder = new PriceRounder();
         $storeID = scanLib::getStoreID();
-        $upc = scanLib::upcPreparse(FormLib::get('upc'));
+        $upc = FormLib::get('upc');
+        $isSocketDevice = $scannerConfig['socketDevice'];
+        if ($isSocketDevice != 0 ) {
+            // do something if scanner is socket mobile device
+            //&& FormLib::get('isSocketDevice') != 1
+            if (strlen($upc) == 12) {
+                $upc = substr($upc, 0, -1);
+            }
+        }
+        $upc = scanLib::upcPreparse($upc);
 
         $loading .= '
             <div class="progress" id="progressBar">
@@ -312,7 +320,7 @@ HTML;
         $ret .= $this->mobile_menu($upc);
         $ret .= $loading;
         $ret .= '<div align="center"><h4 id="heading">AUDIE: THE AUDIT SCANNER</h4></div>';
-        $ret .= $this->form_content();
+        $ret .= $this->form_content($isSocketDevice);
 
         //Gather product SALE information
         $saleQueryArgs = array($storeID,$upc);
@@ -728,15 +736,19 @@ HTML;
         return $count[0]-1;
     }
 
-    private function form_content($dbc)
+    private function form_content($isSocketDevice)
     {
-
-        $upc = ScanLib::upcPreparse(FormLib::get('upc'));
+        $autofocus = ($this->deviceType != 'mobile') ? 'autofocus' : '';
+        $upc = FormLib::get('upc');
+        if ($isSocketDevice != 0) {
+            $upc = substr(FormLib::get('upc'), 0, -1);
+        }
+        $upc = ScanLib::upcPreparse($upc);
         $ret .= '';
         $ret .= '
             <div align="center">
                 <form method="post" class="" id="my-form" name="main_form">
-                    <input class="form-control input-sm info" name="upc" id="upc" value="'.$upc.'"
+                    <input class="form-control input-sm info" name="upc" id="upc" value="'.$upc.'" '.$autofocus.' 
                         style="text-align: center; width: 140px; border: none;" pattern="\d*">
                     <input type="hidden" id="sku" name="sku" />
                     <input type="hidden" name="success" value="empty"/>
