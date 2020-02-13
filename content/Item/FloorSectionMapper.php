@@ -29,8 +29,9 @@ if (!class_exists('SQLManager')) {
 class FloorSectionMapper extends PageLayoutA 
 {
     
-    protected $title = "";
-    protected $description = "[] ";
+    protected $title = "Floor Section Mapper";
+    protected $description = "[Floor Section Mapper] Map floor secions
+        to products";
     protected $ui = true;
 
     public function preprocess()
@@ -305,6 +306,19 @@ td {
 .selected {
     background-color: rgba(255, 55, 55, 0.4);
 }
+HTML;
+    }
+
+    public function helpContent()
+    {
+        return <<<HTML
+<legend>User Interface</legend>
+<ul>
+    <li><strong>Left Mouse Click</strong> to reset 
+        product floor section.</li>
+    <li><strong>Left Click + Shift</strong> to add a floor section 
+        to a product's map.
+</ul>
 HTML;
     }
     
