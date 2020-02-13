@@ -19,7 +19,6 @@ class Home extends PageLayoutA
     public function pageContent()
     {
         $ret = '';
-        $this->addScript('Home.js');
 
         return <<<HTML
 <div align="center" style="padding-top: 35vh; font-size: 22px; font-weight: bold; text-shadow: 1px 1px lightgrey;">
