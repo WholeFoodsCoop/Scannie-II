@@ -58,6 +58,16 @@ WHERE bl.batchID IN ( SELECT batchID FROM batches WHERE '$today' BETWEEN startDa
 GROUP BY bl.upc
 order by p.department</span>
             </li>
+            <li><a href='#' class="quick_query">Get Review Comments</a>
+                <span class="query">SELECT r.upc, p.default_vendor_id AS vendorID, p.brand, p.description,
+r.user, r.reviewed, r.comment
+FROM prodReview AS r
+    LEFT JOIN products AS p ON r.upc=p.upc
+WHERE comment IS NOT NULL
+GROUP BY p.upc
+ORDER BY p.default_vendor_id
+                </span>
+            </li>
             <li><a href='#' class="quick_query">Get Vendor Changes</a>
                 <span class="query">SELECT t.upc, v.sku, t.cost as previousCost, p.cost as newCost, (p.cost - t.cost) AS difference,
 p.brand, p.description, p.department as dept, m.super_name
@@ -122,6 +132,16 @@ SELECT registerNo, transNo, empNo, processor,
             WHERE dateID = REPLACE(DATE(NOW()), '-', '') 
                 AND registerNo IN (12,13,14,15,16)
                 ORDER BY requestDatetime DESC;
+            </li>
+            <li><a href='#' class="quick_query">Get Prods by Floor Section</a>
+                <span class="query">
+SELECT p.upc, p.brand, p.description
+FROM products as p 
+LEFT JOIN FloorSectionProductMap AS m ON p.upc=m.upc 
+WHERE 
+m.floorSectionID = 8
+AND p.inUse = 1
+GROUP BY upc
             </li>
         </ul>
         <h4>Additional Features</h4>
