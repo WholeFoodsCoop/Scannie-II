@@ -69,7 +69,11 @@ HTML;
         return <<<HTML
 <img class="backToTop collapse no-print" id="backToTop" src="http://$MY_ROOTDIR/common/src/img/upArrow.png" />
 <!--<nav class="navbar navbar-expand-md navbar-dark bg-dark mynav">-->
-<nav class="navbar navbar-expand-md navbar-dark bg-custom mynav no-print">
+<div id="navbar-placeholder" style="height: 5px; background-color: black; 
+    background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px);
+    cursor: pointer;"
+    onclick="$('#site-navbar').show(); $(this).hide(); return false;"></div>
+<nav class="navbar navbar-expand-md navbar-dark bg-custom mynav no-print" id="site-navbar">
   <a class="navbar-brand" href="http://{$MY_ROOTDIR}">Sv2</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
@@ -99,6 +103,7 @@ HTML;
         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/CheckScannedDate.php">Check PLU Queues</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/ProdUserChangeReport.php">Edits by User</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/FloorSectionMapper.php">Floor Section Mapper</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Links/">Links</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/LastSoldDates.php?paste_list=1">Last Sold</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/PendingAction.php">Pending Action</a>
@@ -116,8 +121,9 @@ HTML;
           <div class="nav-item nav-label" align=""><span class="nav-label">Cashless</span></div>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Tables/CashlessCheckPage.php">Cashless Transactions</a>
           <div class="nav-item nav-label" align=""><span class="nav-label">Tables</span></div>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Tables/CoopDealsFile.php">Coop Deals File</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Tables/CoopDealsFile.php">Coop Deals File Report</a>
           <div class="nav-item nav-label" align=""><span class="nav-label">Reports</span></div>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/BatchHistory.php">Batch Update Report</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/PriceRuleTypeReport.php">Price Rule Report</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/WeeklySalesByWeek.php">Weekly Sales By Week</a>
         </div>
@@ -138,7 +144,7 @@ HTML;
         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Home/Dashboard.php">Scan Dept. <strong>Dashboard</strong></a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/BatchCheck/SCS.php"><strong style="color: green">Batch Check</strong> Scanner</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/BatchCheck/BatchCheckQueues.php?option=1"><strong style="color: green">Batch Check</strong> Report</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/BatchCheck/newpage.php"><strong style="color: green">Batch Check</strong> Report</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/AuditScanner/AuditScanner.php"><strong style="color: #4286f4">Audit</strong> Scanner</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/AuditScanner/AuditScannerReport.php"><strong style="color: #4286f4">Audit</strong> Report</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/AuditScanner/BasicsScan.php"><strong style="color: purple">Basics</strong> Scan</a>
@@ -159,6 +165,12 @@ HTML;
       -->
     </ul>
     <div id="nav-search-container">
+    <div style="float: left; display: inline-block; color: white; margin-right: 24px; 
+        text-align: center;  cursor: pointer;"
+        onclick="$('#site-navbar').hide(); $('#navbar-placeholder').show(); return false;">
+        <span style="font-size: 11px;">
+        <img src="http://$MY_ROOTDIR/common/src/img/upArrowLight.png" style="margin-top: 10px; height: 15px; width: 15px" />
+    </div>
     <form class="form-inline my-2 my-lg-0">
       <input class="form-control mr-sm-2" type="search" id="nav-search" placeholder="Search" aria-label="Search">
       <div id="search-resp"></div>
@@ -177,21 +189,3 @@ HTML;
     }
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
