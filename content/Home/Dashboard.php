@@ -256,7 +256,7 @@ HTML;
     {
         $desc = "Discrepancies with products between stores";
         $fields = array('description','normal_price','cost','tax','foodstamp','wicable','discount','scale',
-            'department','brand','local','price_rule_id',);
+            'department','brand','local','price_rule_id');
         $data = array();
         $tempData = array();
         foreach ($fields as $field) {
@@ -381,6 +381,7 @@ HTML;
             )
             AND numflag & (1 << 19) = 0
             AND department <> 500
+            AND department <> 708
             GROUP BY upc
             HAVING MIN({$field}) <> MAX({$field})
             ORDER BY department
@@ -408,7 +409,9 @@ HTML;
             WHERE batchID NOT IN 
                 (SELECT bid AS batchID FROM batchReviewLog) 
             AND batchType = 4
-            AND batchID > 13768;");
+            AND batchID > 13768
+            AND owner != 'PRODUCE' 
+            ;");
         $r = $dbc->execute($p);
         $cols = array('batchID', 'batchName', 'owner');
         $data = array();
