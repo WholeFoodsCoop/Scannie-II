@@ -140,7 +140,7 @@ HTML;
             WHERE p.upc IN ({$inStr}) 
                 AND (
                     p.narrow = 1
-                        OR ( s.name like '%Bev%' AND products.department IN (37, 69, 188, 189) )
+                        OR ( s.name like '%Bev%' AND products.department IN (37, 69, 165, 188, 189) )
                     )
             GROUP BY p.upc");
         $res = $dbc->execute($prep,$args);
