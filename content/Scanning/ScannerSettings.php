@@ -53,6 +53,8 @@ class ScannerSettings extends PageLayoutA
             $checkSize = ($row['auditSize']) ? 'checked' : '';
             $checkSignInfo = ($row['auditSignInfo']) ? 'checked' : '';
             $checkSaleInfo = ($row['auditSaleInfo']) ? 'checked' : '';
+            $checkSaleInfo = ($row['auditSaleInfo']) ? 'checked' : '';
+            $isSocketDevice = ($row['socketDevice']) ? 'checked' : '';
         };
 
         $scanner_settings = array();
@@ -111,6 +113,10 @@ class ScannerSettings extends PageLayoutA
             <li>
                 <label>Sale Info</label>
                 <input type="checkbox" name="auditSaleInfo" value=1 id="toggleSaleInfo" $checkSaleInfo/>
+            </li>
+            <li>
+                <label>Socket Device</label>
+                <input type="checkbox" name="socketDevice" value=1 id="toggleSocketDevice" $isSocketDevice/>
             </li>
         </ul>
         <input type="hidden" name="sessionID" id="sessionID" value="$a" />
