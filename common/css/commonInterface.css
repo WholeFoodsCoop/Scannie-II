@@ -193,6 +193,9 @@ img.icon {
     font-weight: bold;
     //text-shadow: 0.1px 0.1px slategrey;
 }
+a.nav-link {
+    font-size: 15px;
+}
 .help-contents
 {
     display: none;
@@ -393,7 +396,6 @@ a.mobileHeader:hover{
   and (-webkit-device-pixel-ratio: 3)
   and (orientation: landscape) {
     body {
-        zoom: 150%;
     }
     img.icon {
         height: 50px;
