@@ -1,3 +1,6 @@
+/*
+    old batchCheckQueues.js
+*/
 // keep <thead> at top of window.
 var theadOnTop = 0;
 $(function(){

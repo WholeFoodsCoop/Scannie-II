@@ -397,9 +397,9 @@ HTML;
             $thead .= "<th class=''>Clear</th>";
         }
         $thead .= "<th class='blank-th' id='blank-th'></th>";
-        $table = "<div class='table-responsive'><table id='mytable' class='table table-stiped table-compressed tablesorter small'><thead id='mythead' class='mythead'>$thead</thead><tbody>";
+        $table = "<div class='table-responsive'><table id='mytable' class='table table-stiped table-condensed tablesorter small'><thead id='mythead' class='mythead'>$thead</thead><tbody>";
 
-        $hiddenThead = "<div class='table-responsive'><table id='mytable-clone' class='table table-stiped table-compressed tablesorter small'><thead id='mythead-clone' class='mythead'>$thead</thead><tbody></tbody></table></div>";
+        $hiddenThead = "<div class='table-responsive'><table id='mytable-clone' class='table table-stiped table-condensed tablesorter small'><thead id='mythead-clone' class='mythead'>$thead</thead><tbody></tbody></table></div>";
         $hiddenContent .= $hiddenThead;
 
         $r = 1;
@@ -482,7 +482,7 @@ HTML;
             }
         }
         if ($option == 3) {
-            $table = '<div class="table-responsive"><table class="table table-stiped table-compressed small"><thead><th>upc</th><th>notes</th><th>Clear</th></thead><tbody>';
+            $table = '<div class="table-responsive"><table class="table table-stiped table-condensed small"><thead><th>upc</th><th>notes</th><th>Clear</th></thead><tbody>';
             $args = array($sessionName);
             $prep = $dbc->prepare("SELECT upc, session, notes FROM woodshed_no_replicate.batchCheckNotes WHERE session = ?");
             $res = $dbc->execute($prep,$args);

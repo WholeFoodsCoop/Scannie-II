@@ -125,7 +125,7 @@ $('.btn-queue').click(function(){
         $('#discoButtons').hide();
     }
     //alert(queue);
-        $.ajax({
+    $.ajax({
         type: 'post',
         url: 'SCS.php',
         data: 'upc='+upc+'&queue='+queue+'&qval='+qval, 
@@ -169,7 +169,7 @@ $('#closeAllBatches').click(function(){
 });
 $('#menuBtn').click(function(){
     // $('#menu').show();
-    window.location.href = 'BatchCheckMenu.php';
+    window.location.href = 'newMenu.php';
 });
 $('#closeMenu').click(function(){
     $('#menu').hide();

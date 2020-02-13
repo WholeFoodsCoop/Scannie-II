@@ -124,15 +124,20 @@ class BatchCheckChat extends PageLayoutA
         }
 
         return <<<HTML
-
-<div id="messageBoard">$messages</div>
-<div class="form" id="myform" >
-    <form name="chatForm" method="post" action="BatchCheckChat.php#myform">
-        <input type="hidden" id="lastMsg" name="lastMsg" value="$lastMsgId">
-        <textarea class="form-control" name="message" id="message"></textarea>
-        <button type="submit" name="sendMsg" value="1" class="btn btn-default">Send</button>
-    </form>
-    <a class="btn btn-default" href="SCS.php">Back to Scanner</a>
+<div class="row">
+    <div class="col-lg-4"></div>
+    <div class="col-lg-4">
+        <div id="messageBoard">$messages</div>
+        <div class="form" id="myform" >
+            <form name="chatForm" method="post" action="BatchCheckChat.php#myform">
+                <input type="hidden" id="lastMsg" name="lastMsg" value="$lastMsgId">
+                <textarea class="form-control" name="message" id="message"></textarea>
+                <button type="submit" name="sendMsg" value="1" class="btn btn-default">Send</button>
+            </form>
+            <a class="btn btn-default" href="SCS.php" id="page-bottom">Back to Scanner</a>
+        </div>
+    </div>
+    <div class="col-lg-4"></div>
 </div>
 HTML;
     }
@@ -178,15 +183,10 @@ HTML;
             include('SCS.php');
         }
         $scsObj = new SCS();
-        $cssContent = $scsObj->cssContent();
+        //$cssContent = $scsObj->cssContent();
         return <<<HTML
 body {
     font-family: Arial, Helvetica, sans-serif;
-    background-color: rgba(255,255,255,0.9);
-    background: linear-gradient(135deg, #42a7f4, #0a1528);
-    background-color: linear-gradient(135deg, #42a7f4, #0a1528);
-    background-repeat: no-repeat;
-    background-attachment: fixed;
 }
 .userName {
     color: #cacaca;

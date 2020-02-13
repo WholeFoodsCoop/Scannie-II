@@ -131,22 +131,30 @@ class SCS extends PageLayoutA
         $sessionName = FormLib::get('sessionName');
         $storeID = FormLib::get('storeID');
 
-        $capQueues = array();
-        if ($qv == 6) {
-            $capQueues = array(6, 7, 8);
-            list($inClause, $args) = $dbc->safeInClause($capQueues);
-        } elseif ($qv == 9) {
-            $capQueues = array(9, 10);
-            list($inClause, $args) = $dbc->safeInClause($capQueues);
+        if ($qv == 2) {
+            $args = array($sessionName, $storeID);
+            $prep = $dbc->prepare("UPDATE woodshed_no_replicate.batchCheckQueues SET inQueue = 1 WHERE inQueue = 2 
+                AND session = ? AND storeID = ?");
+            $dbc->execute($prep, $args);
+        } else {
+            $capQueues = array();
+            if ($qv == 6) {
+                $capQueues = array(6, 7, 8);
+                list($inClause, $args) = $dbc->safeInClause($capQueues);
+            } elseif ($qv == 9) {
+                $capQueues = array(9, 10);
+                list($inClause, $args) = $dbc->safeInClause($capQueues);
+            }
+            $choice = ($qv == 6 || $qv == 9) ? $inClause : $qv;
+            $andCond = ($qv == 11) ? "" : " AND session = ? AND storeID = ?";
+            $query = "DELETE FROM woodshed_no_replicate.batchCheckQueues
+                WHERE inQueue IN ($choice) $andCond";
+            $args[] = $sessionName;
+            $args[] = $storeID;
+            $prep = $dbc->prepare($query);
+            $res = $dbc->execute($prep,$args);
         }
-        $choice = ($qv == 6 || $qv == 9) ? $inClause : $qv;
-        $andCond = ($qv == 11) ? "" : " AND session = ? AND storeID = ?";
-        $query = "DELETE FROM woodshed_no_replicate.batchCheckQueues
-            WHERE inQueue IN ($choice) $andCond";
-        $args[] = $sessionName;
-        $args[] = $storeID;
-        $prep = $dbc->prepare($query);
-        $res = $dbc->execute($prep,$args);
+
         $json = array();
         $json['error'] = $dbc->error();
 
@@ -264,13 +272,14 @@ HTML;
             $inQueues[] = $row['inQueue'];
         }
         switch($queue) {
+            case 'Unch':
             case 'Unchecked':
                 //needed for the BatchCheckQueues
                 //if in 'good','missing' delete row, if does not exist, do nothing.
-                if (in_array(1,$inQueues)) {
+                if (in_array(1,$inQueues) || in_array(2,$inQueues)) {
                     $args = array($upc,$sessionName,$storeID);
                     $prep = $dbc->prepare("DELETE FROM woodshed_no_replicate.batchCheckQueues 
-                        WHERE inQueue = 1 AND upc = ? AND session = ? AND storeID = ?");
+                        WHERE inQueue IN (1,2) AND upc = ? AND session = ? AND storeID = ?");
                     $dbc->execute($prep,$args);
                 } elseif (in_array(2,$inQueues)) {
                     $args = array($upc,$sessionName,$storeID);
@@ -344,7 +353,12 @@ HTML;
                 }
                 break;
             case 'Clear':
-                if ($qval == 6) {
+                if ($qval == 1 || $qval == 2) {
+                    $args = array($upc,$sessionName,$storeID);
+                    $prep = $dbc->prepare("DELETE FROM woodshed_no_replicate.batchCheckQueues 
+                        WHERE upc = ? AND session = ? AND storeID = ? AND inQueue in (1,2,98)");
+                    $dbc->execute($prep,$args);
+                } else if ($qval == 6) {
                     $args = array($upc,$sessionName,$storeID);
                     $prep = $dbc->prepare("DELETE FROM woodshed_no_replicate.batchCheckQueues 
                         WHERE upc = ? AND session = ? AND storeID = ? AND inQueue in (6,7,8)");
@@ -408,7 +422,7 @@ HTML;
         $field = FormLib::get('edit');
         $field = substr($field,4); 
         $sessionName = $_SESSION['sessionName'];
-        function switchResult($field,$newValue,$upc,$sessionName,$dbc) {
+        function switchResult($field,$newValue,$upc,$sessionName,$dbc,$storeID) {
             switch($field) {
                 case 'brand':
                 case 'description':
@@ -417,27 +431,28 @@ HTML;
                     return 'products';
                 case 'notes':
                     $tempTable = 'woodshed_no_replicate.batchCheckNotes';
-                    $args = array($upc,$sessionName);
-                    $query = "SELECT notes FROM $tempTable WHERE upc = ? AND session = ?";
+                    $args = array($upc,$sessionName,$storeID);
+                    $query = "SELECT notes FROM $tempTable WHERE upc = ? AND session = ? AND storeID = ?";
                     $prep = $dbc->prepare($query);
                     $res = $dbc->execute($prep,$args);
                     $rows = $dbc->numRows($res);
                     if ($rows == 0) {
-                        $args = array($newValue,$upc,$sessionName);
-                        $query = "INSERT INTO $tempTable (notes,upc,session) values (?,?,?);";
+                        $args = array($newValue,$upc,$sessionName,$storeID);
+                        $query = "INSERT INTO $tempTable (notes,upc,session,storeID) values (?,?,?,?);";
                         $prep = $dbc->prepare($query);
                         $res = $dbc->execute($prep,$args);
                     }
                     return $tempTable; 
             }
         }
-        $table = switchResult($field,$newValue,$upc,$sessionName,$dbc);
+        $table = switchResult($field,$newValue,$upc,$sessionName,$dbc,$storeID);
         // make the actual edit in POS to the appropriate table
         $args = array($newValue,$upc);
         $query = "UPDATE $table SET $field = ? WHERE upc = ?";
         if ($field == 'notes') {
-            $query .= " AND session = ?";
+            $query .= " AND session = ? AND storeID = ?";
             $args[] = $sessionName;
+            $args[] = $storeID;
         }
         $prep = $dbc->prepare($query);
         $res = $dbc->execute($prep,$args);
@@ -623,8 +638,8 @@ HTML;
         $location = 'n/a';
         $location = (!is_null($this->data[$upc]['sections'])) ? $this->data[$upc]['sections'] : 'n/a';
 
-        $args = array($upc,$session);
-        $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.batchCheckNotes WHERE upc = ? AND session = ?");
+        $args = array($upc,$session,$storeID);
+        $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.batchCheckNotes WHERE upc = ? AND session = ? AND storeID = ?");
         $res = $dbc->execute($prep,$args);
         while ($row = $dbc->fetchRow($res)) {
             $notes = $row['notes'];
