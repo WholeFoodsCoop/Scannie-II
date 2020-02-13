@@ -47,6 +47,7 @@ class SpecialCalculator extends PageLayoutA
         $ret .= '
             <form method="get">
             <div class="container-fluid" style="margin-top: 15px;">
+                <p>Based on Discount</p>
                 <div class="row">
                     <div class="col-6">
                         <div class="form-group">
@@ -87,17 +88,18 @@ class SpecialCalculator extends PageLayoutA
         $calc2 .= '
             <form method="get">
             <div class="container-fluid" style="position: fixed; top: 49px;">
+                <p>Based on MSRP</p>
                 <div class="row">
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small">Normal Price</label>
-                            <input class="form-control form-control-sm" name="normal_price" id="normal_price" autofocus>
+                            <label class="small">SRP</label>
+                            <input class="form-control form-control-sm" name="srp" id="srp" autofocus>
                         </div>
                     </div>
                     <div class="col-4">
                         <div class="form-group">
-                            <label class="small">% Off</label>
-                            <input class="form-control form-control-sm" id="percent_off" name="percent_off">
+                            <label class="small">Margin</label>
+                            <input class="form-control form-control-sm" id="margin" name="margin">
                         </div>
                     </div>
                 </div>
@@ -118,8 +120,7 @@ class SpecialCalculator extends PageLayoutA
         $calc2 .= "<div class='container-fluid'>";
         $calc2 .= "<table class=\"table table-condensed table-small small\" align=\"center\">";
 
-        $calc2 .= "<tr><td>Raw SRP</td><td id=\"calc2_srp\"></td></tr>";
-        $calc2 .= "<tr><td>Rounded Saleprice</td><td><strong class='success'><span id=\"calc2_rounded\"></span></strong></tr>";
+        $calc2 .= "<tr><td>Estimated Cost</td><td><strong class='success'><span id=\"calc2_rounded\"></span></strong></tr>";
 
         $calc2 .= "</table>";
         $calc2 .= "</div>";
@@ -129,7 +130,7 @@ class SpecialCalculator extends PageLayoutA
         return <<<HTML
 <div style="padding: 5px;">
     <a href="#" class="toggle-mode" id="toggle-first" data-target="calc1">Find Price</a> | 
-    <a href="#" class="toggle-mode" data-target="calc2">n/a</a>
+    <a href="#" class="toggle-mode" data-target="calc2">FP2</a>
 </div>
 <div class="mode-view" id="calc1">$ret</div>
 <div class="mode-view" id="calc2">$calc2</div>
@@ -150,21 +151,12 @@ $('#submit-calc1').click(function(){
 
 });
 $('#submit-calc2').click(function(){
-    var price = $('#normal_price').val();
-    var percent = $('#percent_off').val();
-    var srp = 0;
-    percent = percent * 0.01;
-    srp = parseFloat(price) - (parseFloat(price) * parseFloat(percent));
-    $('#calc2_srp').text(srp.toFixed(3));
-    $.ajax({
-        type: 'post',
-        data: 'srp='+srp+'&round=true',
-        url: 'marginCalcAjax.php',
-        success: function(response)
-        {
-            $('#calc2_rounded').text(response);
-        }
-    });
+    var srp = $('#srp').val();
+    var margin = $('#margin').val();
+    margin = margin * 0.01;
+    //cost = srp - srp * margin;
+    var cost = srp - (srp * margin);
+    $('#calc2_rounded').text(cost.toFixed(3));
 });
 $('.mode-view').each(function(){
     $(this).hide();
