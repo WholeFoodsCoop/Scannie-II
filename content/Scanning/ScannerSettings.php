@@ -62,6 +62,7 @@ class ScannerSettings extends PageLayoutA
 <div class="container-fluid" style="margin-top: 25px;">
     <label>Go To:</label>
     <ul>
+        <li><a href="AuditScanner/QuickScanner.php">Quick Scanner</a></li>
         <li><a href="AuditScanner/AuditScanner.php">Audit Scanner</a></li>
         <li><a href="BatchCheck/SCS.php">Batch Check</a></li>
     </ul>
