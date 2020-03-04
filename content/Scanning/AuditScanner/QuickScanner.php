@@ -34,7 +34,7 @@ class QuickScanner extends PageLayoutA
     protected $title = "Audit Scanner";
     protected $description = "[Audit Scanner] is a light-weight, all around product
         scanner for use with iUnfi iPod Touch scanners.";
-    protected $ui = false;
+    protected $ui = true;
     protected $use_preprocess = TRUE;
     protected $enable_linea = true;
 
@@ -42,40 +42,76 @@ class QuickScanner extends PageLayoutA
     {
 
         $this->addOnloadCommand("");
+        $this->addScript('auditScanner.js?unique='.$timestamp);
         $ret = "";
-        $beep = $scannerConfig['scanBeep'];
+        //$beep = $scannerConfig['scanBeep'];
+        $beep = true;
         if ($beep == true) {
-            $this->addOnloadCommand("
-                WebBarcode.Linea.emitTones(
-                    [
-                        { 'tone':300, 'duration':50 },
-                        { 'tone':600, 'duration':50 },
-                        { 'tone':300, 'duration':50 },
-                    ] 
-                );
-            ");
         }
 
         $upc = scanLib::upcPreparse(FormLib::get('upc'));
 
         $upcs = array(
-84480901077 => 14.99, 
-84480900953 => 34.99,
-84480900116 => 11.99,
-84480900114 => 11.99,
-84480900718 => 11.99,
-84480900117 => 11.99,
-84480900112 => 11.99,
-84480900110 => 11.99,
-84480900934 => 41.99,
-89903300098 => 18.99,
-89903300097 => 18.99);
+'0076333205567' => 'x', 
+'0076333205494' => 'x',
+'0076333205493' => 'x',
+'0076333205492' => 'x',
+'0076333205490' => 'x',
+'0076333205489' => 'x',
+'0076333205485' => 'x',
+'0076333205484' => 'x',
+'0076333205481' => 'x',
+'0076333205480' => 'x',
+'0076333205479' => 'x',
+'0076333205477' => 'x',
+'0076333204365' => 'x',
+'0076333204363' => 'x',
+'0076333204356' => 'x',
+'0076333204351' => 'x',
+'0076333204349' => 'x',
+'0076333204348' => 'x',
+'0076333204345' => 'x',
+'0076333204335' => 'x',
+'0076333204333' => 'x',
+'0076333204332' => 'x',
+'0076333204330' => 'x',
+'0076333204329' => 'x',
+'0076333204328' => 'x',
+'0076333203575' => 'x',
+'0076333203277' => 'x',
+'0076333202730' => 'x',
+'0076333202675' => 'x',
+'0076333202495' => 'x',
+'0076333202470' => 'x',
+'0076333202464' => 'x',
+'0076333202430' => 'x',
+'0007545090650' => 'x',
+        );
+
         $table = "<table class=\"table small\">";
         foreach ($upcs as $plu => $price) {
             $tr_color = ($upc == $plu) ? "alert alert-warning" : "";
-            $table .= "<tr class=\"$tr_color\"><td>$plu</td><td>$price</td></tr>";
+            $table .= ($upc == $plu) ? "<tr class=\"$tr_color\"><td>$plu</td><td>$price</td></tr>" : '';
+            if ($upc == $plu) {
+                $this->addOnloadCommand("
+                    WebBarcode.Linea.emitTones(
+                        [
+                            { 'tone':100, 'duration':50 },
+                            { 'tone':300, 'duration':50 },
+                            { 'tone':600, 'duration':50 },
+                            { 'tone':900, 'duration':50 },
+                            { 'tone':1200, 'duration':50 },
+                            { 'tone':1500, 'duration':50 },
+                            { 'tone':1800, 'duration':50 },
+                            { 'tone':2100, 'duration':50 },
+                            { 'tone':2400, 'duration':50 },
+                        ] 
+                    );
+                ");
+            }
         }
-        $table .= "</table>";
+
+        if ($table == '');
 
 
         $uid = '<span class="userSymbol-plus"><b>'.strtoupper(substr($username,0,1)).'</b></span>';
