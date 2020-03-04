@@ -23,6 +23,12 @@ class DBA extends PageLayoutA
         $today = $today->format('Y-m-d');
         //$this->addScript('tableColumnFilters.js');
         return <<<HTML
+<div id="processing" style="display: none; cursor: wait; color: white; z-index: 999; position: fixed; top: 63px; left: 45vw; width: 50px; height: 25; border-radius: 3px; background-color: slategrey">
+    <!--<img class="scanicon-processing" border="none"/>-->
+    <div class="progress">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; height: 25px"></div>
+    </div>
+</div>
 <div class="row">
     <div class="col-lg-10">
         <span id="filter-options"></span>
@@ -57,6 +63,13 @@ FROM batchList AS bl
 WHERE bl.batchID IN ( SELECT batchID FROM batches WHERE '$today' BETWEEN startDate AND endDate)
 GROUP BY bl.upc
 order by p.department</span>
+            </li>
+            <li><a href='#' class="quick_query">Get DenHerb MT</a>
+                <span class="query">select department, upc, brand, description, ROUND(auto_par*7,1) as den_par 
+from products where inUse = 1 and store_id = 1 and scale = 1 and department > 251 and department < 260
+order by department, upc
+
+                </span>
             </li>
             <li><a href='#' class="quick_query">Get Review Comments</a>
                 <span class="query">SELECT r.upc, p.default_vendor_id AS vendorID, p.brand, p.description,
@@ -218,6 +231,10 @@ $('#submit').click(function(){
         type: 'post',
         data: 'query='+query,
         url: '../../../git/fannie/reports/DBA/index.php',
+        beforeSend: function() {
+            $('#processing').show();
+            $('body').css('cursor', 'wait');
+        },
         success: function(response) {
             $('#response').html(response);
             $('th').each(function(){
@@ -234,6 +251,10 @@ $('#submit').click(function(){
                 $(this).attr('id', 'dataTable');
             });
             stripeByColumn();
+        },
+        complete: function() {
+            $('#processing').hide();
+            $('body').css('cursor', 'default');
         }
     });
 });

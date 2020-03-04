@@ -104,8 +104,7 @@ class FloorSectionMapper extends PageLayoutA
                 $deptSpec
             GROUP BY f.upc, f.floorSectionID
         ");
-        $res = $dbc->execute($prep, $args);
-        $products = array();
+        $res = $dbc->execute($prep, $args); $products = array();
         while ($row = $dbc->fetchRow($res)) {
             $upc = $row['upc'];
             $fsID = $row['floorSectionID'];
@@ -134,6 +133,11 @@ class FloorSectionMapper extends PageLayoutA
 
 
         return <<<HTML
+<div id="processing" style="color: white; display: none; position: fixed; top: 50px; left: 45vw; width: 50px; height: 50px; border-radius: 3px; border: 1px solid darkslategrey; background-color: slategrey">
+    <!--<img class="scanicon-processing" border="none"/>-->
+Proc-
+essing
+</div>
 <input type="hidden" name="keydown" id="keydown"/>
 <div style="position: fixed; top: 70px; right: 15; font-weight: bold; text-size: 20px; 
     background: rgba(255,255,255,0.7); border: 1px solid lightgrey; padding-left: 5px; padding-right: 5px;">
@@ -160,7 +164,7 @@ HTML;
             $sel = ($storeID == $id) ? 'selected' : '';
             $storeSelectOpts .= "<option value=\"$id\" $sel>$name</option>";
         }
-
+ 
         return <<<HTML
 <form id="form-content" name="form-content" method="get">
     <select name="storeID" id="storeID">$storeSelectOpts</select>
@@ -240,6 +244,10 @@ $(document).mousedown(function(e){
                 url: 'floorSectionMapperAjax.php',
                 type: 'post',
                 data: 'upc='+upc+'&floorSectionID='+floorSectionID+'&shift=1',
+                beforeSend: function()
+                {
+                    $('#processing').show();
+                },
                 success: function(response)
                 {
                     console.log('ajax success');
@@ -249,6 +257,10 @@ $(document).mousedown(function(e){
                 {
                     console.log('ajax failed');
                 },
+                complete: function()
+                {
+                    $('#processing').hide();
+                }
             });
             if (target.hasClass('selected')) {
                 target.removeClass('selected');
@@ -270,6 +282,10 @@ $(document).mousedown(function(e){
                 url: 'floorSectionMapperAjax.php',
                 type: 'post',
                 data: 'upc='+upc+'&floorSectionID='+floorSectionID+'&shift=0'+'&storeID='+storeID,
+                beforeSend: function()
+                {
+                    $('#processing').show();
+                },
                 success: function(response)
                 {
                     console.log('ajax success');
@@ -278,6 +294,10 @@ $(document).mousedown(function(e){
                 fail: function(response)
                 {
                     console.log('ajax failed');
+                },
+                complete: function()
+                {
+                    $('#processing').hide();
                 },
             });
             var i = 0;
@@ -302,6 +322,9 @@ JAVASCRIPT;
         return <<<HTML
 td {
     cursor: pointer;
+}
+tr:hover {
+    border: rgba(155, 255, 155, 0.3);
 }
 .selected {
     background-color: rgba(255, 55, 55, 0.4);
