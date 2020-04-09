@@ -9,6 +9,8 @@ class WebDispatch
     protected $must_authenticate = false;
     protected $current_user = false;
     protected $auth_classes = array();
+    protected $auth_type = 0;
+    protected $auth_types = null;
     protected $enable_linea = false;
     protected $ui = true;
     protected $deviceType = '';
@@ -97,11 +99,20 @@ class WebDispatch
         //echo $dbc->error();
         $hostname = $_SERVER['HTTP_HOST'];
         if ($this->must_authenticate == true) {
+            try {
+                $auth_types_allowed = $this->auth_types; 
+            } catch (Exception $ex) {
+            }
             if (!isset($_COOKIE['user_type'])) {
                 $_COOKIE['user_type'] = null;
             }
             $userType = $_COOKIE['user_type'];
-            if ($userType != 1) {
+            if (is_array($auth_types_allowed))  {
+                if (!in_array($userType, $auth_types_allowed)) {
+                    header('Location: http://'.$hostname.'/Scannie/auth/Page_403.php?accesslevel=false');
+                }
+            }
+            if (!in_array($userType, array(1,2))) {
                 header('Location: http://'.$hostname.'/Scannie/auth/Login.php');
             }
             if ($_COOKIE['session_token'] != session_id()) {
@@ -168,6 +179,7 @@ HTML;
             <div class="col-md-4">
                 <div class="pre">
                    <div>Page drawn in: {$this->loadtime}</div>
+                   <div class="close" onclick="$('#help-contents').hide(); return false;">x</div>
                 </div>
             </div>
         </div>
