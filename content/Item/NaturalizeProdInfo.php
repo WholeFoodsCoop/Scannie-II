@@ -34,6 +34,7 @@ class NaturalizeProdInfo extends PageLayoutA
         within and between POS products and SIGN information."; 
     protected $ui = TRUE; 
     protected $must_authenticate = true;
+    protected $auth_types = array(2);
 
     public function preprocess()
     {
@@ -91,6 +92,7 @@ class NaturalizeProdInfo extends PageLayoutA
         $upc = FormLib::get('upc');
         $description = FormLib::get('description');
         $description = str_replace('and', '&', $description);
+        $description = str_replace('\n', "\n", $description);
         $dbc = scanLib::getConObj();
 
         $args = array($description, $upc);

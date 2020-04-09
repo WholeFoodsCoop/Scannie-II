@@ -33,6 +33,8 @@ class FloorSectionMapper extends PageLayoutA
     protected $description = "[Floor Section Mapper] Map floor secions
         to products";
     protected $ui = true;
+    protected $must_authenticate = true;
+    protected $auth_types = array(2);
 
     public function preprocess()
     {

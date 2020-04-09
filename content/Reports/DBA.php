@@ -9,6 +9,7 @@ class DBA extends PageLayoutA
 {
 
     protected $must_authenticate = true;
+    protected $auth_types = array(2);
 
     public function preprocess()
     {
@@ -47,7 +48,7 @@ class DBA extends PageLayoutA
             <span id="watch_v" style="position: absolute; top: 40px; left: 10px; background: white; color: red;">OFF</span>
         </div>
         <h4>Saved Queries</h4>
-        <ul style="height: 200px; overflow-y: auto; font-size: 12px">
+        <ul style="font-size: 12px">
             <li><a href='#' class="quick_query">Get CMW File</a>
                 <span class="query">SELECT upc, Product, RegUnit, Brand, Description, 
 CASE WHEN WhsAvail like '%T%' THEN 'yes' ELSE 'no' END AS Avail
@@ -72,11 +73,13 @@ order by department, upc
                 </span>
             </li>
             <li><a href='#' class="quick_query">Get Review Comments</a>
-                <span class="query">SELECT r.upc, p.default_vendor_id AS vendorID, p.brand, p.description,
+                <span class="query">SELECT v.vendorName, r.upc, p.default_vendor_id AS vendorID, p.brand, p.description,
 r.user, r.reviewed, r.comment
 FROM prodReview AS r
     LEFT JOIN products AS p ON r.upc=p.upc
+    LEFT JOIN vendors AS v ON p.default_vendor_id=v.vendorID
 WHERE comment IS NOT NULL
+    AND comment != ''
 GROUP BY p.upc
 ORDER BY p.default_vendor_id
                 </span>
@@ -93,6 +96,13 @@ WHERE (p.cost - t.cost) <> 0
 GROUP BY p.upc
 ORDER BY (p.cost - t.cost) ASC;</span>
             </li>
+            <li><a href='#' class="quick_query">Get UNFI OOS</a>
+                <span class="query">SELECT g.*, p.last_sold, p.store_id
+FROM GenericUpload AS g
+LEFT JOIN products AS p ON g.upc=p.upc
+WHERE last_sold IS NOT NULL
+AND last_sold > '2020-03-01'</span>
+            </li>
             <li><a href='#' class="quick_query">Grocery Likecodes</a>
                 <span class="query">SELECT 
 l.likeCode, l.likeCodeDesc, 
@@ -106,12 +116,12 @@ l.likeCode, l.likeCodeDesc,
                 AND p.inUse = 1
                 GROUP BY l.likeCode;</span>
             </li>
-            <li><a href='#' class="quick_query">Coop Deals File</a>
+            <li><a href='#' class="quick_query"><span style="color: green">Coop Deals</span> File</a>
                 <span class="query">SELECT
 upc, sku, brand, description, featured, line_notes, promo, period, sale_price, dealset
 FROM woodshed_no_replicate.FullCoopDealsFile
-WHERE dealset = 'november'
-AND (period = 'B' OR period = 'AB') 
+WHERE dealset = 'april'
+AND (period = 'A' OR period = 'AB') 
                 </span>
             </li>
             <li><a href='#' class="quick_query">Coop Deals Flyer Review</a>

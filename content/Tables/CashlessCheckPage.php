@@ -32,6 +32,7 @@ class CashlessCheckPage extends PageLayoutA
         cashless transactions for every lane.";
     protected $ui = TRUE;
     protected $must_authenticate = TRUE;
+    protected $auth_types = array(2);
 
     public function body_content()
     {           
