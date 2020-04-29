@@ -655,14 +655,12 @@ HTML;
                             </button></div>
                         <div class="col-4  clear "><a class="btn btn-success" style="width: 100%" href="http://'.$MY_ROOTDIR.'/content/Scanning/BatchCheck/SCS.php">B.C.</a></div>
                     </div>
-                    <br /><br />
                     <div class="row">
-                        <div class="col-4">
-                            <a class="text-info" href="AuditScannerReport.php ">View Report</a>
+                        <div class="col-8">
+                            <a class="btn btn-primary" style="width: 100%; " href="AuditScannerReport.php ">View Report</a>
                         </div>
                         <div class="col-4">
-                        </div>
-                        <div class="col-4">
+                            <a class="btn btn-default" style="background: lightgrey; color: black;" href="http://'.$FANNIE_ROOTDIR.'/modules/plugins2.0/ShelfAudit/SaMenuPage.php">Menu</a>
                         </div>
                     </div>
                 </div>
