@@ -202,10 +202,10 @@ class NewAuditReport extends PageLayoutA
                 100 * (p.normal_price - p.cost) / p.normal_price AS curMargin,
                 100 * ROUND(CASE
                     WHEN vd.margin > 0.01 THEN vd.margin ELSE dm.margin 
-                END, 3) AS margin,
+                END, 4) AS margin,
                 a.notes,
                 CASE
-                    WHEN vd.margin > 0.01 THEN p.cost / (1 - vd.margin) ELSE p.cost - (1 - dm.margin)
+                    WHEN vd.margin > 0.01 THEN p.cost / (1 - vd.margin) ELSE p.cost / (1 - dm.margin)
                 END AS rsrp
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
@@ -217,7 +217,7 @@ class NewAuditReport extends PageLayoutA
                 RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON p.upc=a.upc
                 LEFT JOIN deptMargin AS dm ON p.department=dm.dept_ID
                 LEFT JOIN vendorDepartments AS vd
-                    ON vd.vendorID = p.default_vendor_id AND vd.deptID = v.vendorDept
+                    ON vd.vendorID = p.default_vendor_id AND vd.posDeptID = p.department 
             WHERE p.upc != '0000000000000'
             GROUP BY p.upc
             ORDER BY a.date DESC
@@ -236,7 +236,7 @@ class NewAuditReport extends PageLayoutA
             <th class=\"sign-description hidden\">sign-description</th>
             <th class=\"cost\">cost</th>
             <th class=\"price\">price</th>
-            <th class=\"margin_target_diff\">margin / target / off</th>
+            <th class=\"margin_target_diff\">margin / target (diff)</th>
             <th class=\"srp\">srp</th>
             <th class=\"rsrp\">round srp</th>
             <th class=\"prid\">prid</th>
@@ -276,7 +276,7 @@ class NewAuditReport extends PageLayoutA
             $td .= "<td class=\"sign-description hidden\">$signDescription</td>";
             $td .= "<td class=\"cost\">$cost</td>";
             $td .= "<td class=\"price\">$price</td>";
-            $diff = round($margin - $curMargin, 1);
+            $diff = round($curMargin - $margin, 1);
             $td .= "<td class=\"margin_target_diff\">$curMargin / $margin ($diff)</td>";
             $td .= "<td class=\"rsrp\">$rsrp</td>";
             $td .= "<td class=\"srp\">$srp</td>";
