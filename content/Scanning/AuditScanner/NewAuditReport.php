@@ -23,6 +23,7 @@ class NewAuditReport extends PageLayoutA
         $this->__routes[] = 'post<rowCount>';
         $this->__routes[] = 'post<setSku>';
         $this->__routes[] = 'post<setBrand>';
+        $this->__routes[] = 'post<setDescription>';
 
         return parent::preprocess();
     }
@@ -35,15 +36,31 @@ class NewAuditReport extends PageLayoutA
         return false;
     }
 
-    public function postSetBrandHandler()
+    public function postSetDescriptionHandler()
     {
         $upc = FormLib::get('upc');
-        $brand = FormLib::get('brand');
+        $description = FormLib::get('description');
+        $table = FormLib::get('table');
         $json = array();
 
         $dbc = ScanLib::getConObj();
         $mod = new DataModel($dbc);
-        $json['saved'] = $mod->setBrand($upc, $brand);
+        $json['saved'] = $mod->setDescription($upc, $description, $table);
+        echo json_encode($json);
+
+        return false;
+    }
+
+    public function postSetBrandHandler()
+    {
+        $upc = FormLib::get('upc');
+        $brand = FormLib::get('brand');
+        $table = FormLib::get('table');
+        $json = array();
+
+        $dbc = ScanLib::getConObj();
+        $mod = new DataModel($dbc);
+        $json['saved'] = $mod->setBrand($upc, $brand, $table);
         echo json_encode($json);
 
         return false;
@@ -270,10 +287,10 @@ class NewAuditReport extends PageLayoutA
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku editable editable-sku\">$sku</td>";
-            $td .= "<td class=\"brand editable editable-brand\">$brand</td>";
-            $td .= "<td class=\"sign-brand hidden\">$signBrand</td>";
-            $td .= "<td class=\"description\">$description</td>";
-            $td .= "<td class=\"sign-description hidden\">$signDescription</td>";
+            $td .= "<td class=\"brand editable editable-brand\" data-table=\"products\">$brand</td>";
+            $td .= "<td class=\"sign-brand editable editable-brand hidden\" data-table=\"productUser\">$signBrand</td>";
+            $td .= "<td class=\"description editable editable-description\" data-table=\"products\">$description</td>";
+            $td .= "<td class=\"sign-description editable editable-description hidden\" data-table=\"productUser\">$signDescription</td>";
             $td .= "<td class=\"cost\">$cost</td>";
             $td .= "<td class=\"price\">$price</td>";
             $diff = round($curMargin - $margin, 1);
@@ -408,6 +425,10 @@ $modal
 </div>
 $nFilter
 $columnCheckboxes
+<div style="font-size: 12px; padding: 10px;">
+    <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label><input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="column-checkbox" checked>
+</div>
+
 <div id="mytable-container">
     {$this->postFetchHandler()}
 </div>
@@ -607,12 +628,13 @@ $('.editable-brand').click(function(){
     lastBrand = $(this).text();
 });
 $('.editable-brand').focusout(function(){
+    var table = $(this).attr('data-table');
     var upc = $(this).parent().find('td.upc').attr('data-upc');
     var brand = $(this).text();
     if (brand != lastBrand) {
         $.ajax({
             type: 'post',
-            data: 'setBrand=true&upc='+upc+'&brand='+brand,
+            data: 'setBrand=true&upc='+upc+'&brand='+brand+'&table='+table,
             dataType: 'json',
             url: 'NewAuditReport.php',
             success: function(response)
@@ -624,7 +646,30 @@ $('.editable-brand').focusout(function(){
             },
         });
     }
-
+});
+var lastDescription = null;
+$('.editable-description').click(function(){
+    lastDescription = $(this).text();
+});
+$('.editable-description').focusout(function(){
+    var table = $(this).attr('data-table');
+    var upc = $(this).parent().find('td.upc').attr('data-upc');
+    var description = $(this).text();
+    if (description != lastDescription) {
+        $.ajax({
+            type: 'post',
+            data: 'setDescription=true&upc='+upc+'&description='+description+'&table='+table,
+            dataType: 'json',
+            url: 'NewAuditReport.php',
+            success: function(response)
+            {
+                console.log(response);
+                if (response.saved != true) {
+                    // alert user of error
+                }
+            },
+        });
+    }
 });
 
 $(document).keydown(function(e){
@@ -679,6 +724,14 @@ $('.column-checkbox').each(function(){
     if (column == 'sign-description') {
         $(this).prop('checked', false);
     }
+});
+
+$('#check-pos-descript').click(function(){
+    //var checked = $(this).is(':checked');
+    $('#check-brand').trigger('click');
+    $('#check-sign-brand').trigger('click');
+    $('#check-description').trigger('click');
+    $('#check-sign-description').trigger('click');
 });
 
 // check for new rows, replace table if new scans found
