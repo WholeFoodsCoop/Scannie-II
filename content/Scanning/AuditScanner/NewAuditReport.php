@@ -24,6 +24,7 @@ class NewAuditReport extends PageLayoutA
         $this->__routes[] = 'post<setSku>';
         $this->__routes[] = 'post<setBrand>';
         $this->__routes[] = 'post<setDescription>';
+        $this->__routes[] = 'post<checked>';
 
         return parent::preprocess();
     }
@@ -31,6 +32,26 @@ class NewAuditReport extends PageLayoutA
     public function postTestHandler()
     {
         $json = array('test'=>'successful');
+        echo json_encode($json);
+
+        return false;
+    }
+
+    public function postCheckedHandler()
+    {
+        $upc = FormLib::get('upc');
+        $checked = FormLib::get('checked');
+        $checked = ($checked == 'false') ? 0 : 1;
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+        $json = array();
+
+        $dbc = ScanLib::getConObj();
+        $args = array($checked, $storeID, $username, $upc);
+        $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan SET checked = ? WHERE storeID = ? AND username = ? AND upc = ?");
+        $dbc->execute($query, $args);
+        if ($er = $dbc->error())
+            $json['error'] = $er;
         echo json_encode($json);
 
         return false;
@@ -148,10 +169,12 @@ class NewAuditReport extends PageLayoutA
             $plus[] = $str;
         }
         foreach ($plus as $upc) {
-            $args = array($upc, $username, $storeID);
-            $prep = $dbc->prepare("INSERT IGNORE INTO woodshed_no_replicate.AuditScan (upc, username, storeID, date)
-                VALUES (?, ?, ?, NOW());");
-            $res = $dbc->execute($prep, $args);
+            if ($upc != 0) {
+                $args = array($upc, $username, $storeID);
+                $prep = $dbc->prepare("INSERT IGNORE INTO woodshed_no_replicate.AuditScan (upc, username, storeID, date)
+                    VALUES (?, ?, ?, NOW());");
+                $res = $dbc->execute($prep, $args);
+            }
         }
 
         return header('location: NewAuditReport.php');
@@ -207,6 +230,7 @@ class NewAuditReport extends PageLayoutA
                 u.description AS signDescription,
                 p.cost, 
                 p.normal_price AS price, 
+                p.special_price AS sale,
                 t.description AS priceRuleType, 
                 CONCAT(p.department, ' - ', d.dept_name) AS dept,
                 d.dept_no, 
@@ -223,7 +247,8 @@ class NewAuditReport extends PageLayoutA
                 a.notes,
                 CASE
                     WHEN vd.margin > 0.01 THEN p.cost / (1 - vd.margin) ELSE p.cost / (1 - dm.margin)
-                END AS rsrp
+                END AS rsrp,
+                a.checked
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -236,7 +261,7 @@ class NewAuditReport extends PageLayoutA
                 LEFT JOIN vendorDepartments AS vd
                     ON vd.vendorID = p.default_vendor_id AND vd.posDeptID = p.department 
             WHERE p.upc != '0000000000000'
-            GROUP BY p.upc
+            GROUP BY a.upc
             ORDER BY a.date DESC
         ");
 
@@ -244,7 +269,31 @@ class NewAuditReport extends PageLayoutA
         $textarea = "<div style=\"position: relative\">
             <span class=\"status-popup\">Copied!</span>
             <textarea class=\"copy-text\" rows=3 cols=10>";
+
+        $pth = "
+        <tr id=\"filter-tr\">
+            <td data-column=\"upc\"class=\"upc column-filter\"></td>
+            <td data-column=\"sku\"class=\"sku column-filter\"></td>
+            <td data-column=\"brand\"class=\"brand column-filter\"></td>
+            <td data-column=\"sign-brand\"class=\"sign-brand hidden column-filter\"></td>
+            <td data-column=\"description\"class=\"column-filter\"></td>
+            <td data-column=\"sign-description\"class=\"sign-description hidden column-filter\"></td>
+            <td data-column=\"cost\"class=\"cost column-filter\"></td>
+            <td data-column=\"price\"class=\"price column-filter\"></td>
+            <td data-column=\"sale\"class=\"sale column-filter\"></td>
+            <td data-column=\"\"class=\"margin_target_diff column-filter\"></td>
+            <td data-column=\"srp\"class=\"srp column-filter\"></td>
+            <td data-column=\"rsrp\"class=\"rsrp column-filter\"></td>
+            <td data-column=\"prid\"class=\"prid column-filter\"></td>
+            <td data-column=\"dept\"class=\"dept column-filter\"></td>
+            <td data-column=\"vendor\"class=\"vendor column-filter\"></td>
+            <td data-column=\"notes\"class=\"notes column-filter\"></td>
+            <td data-column=\"\"class=\"\"></td>
+            <td data-column=\"\"class=\"check\"></td>
+        </tr>
+        ";
         $th = "
+        <tr>
             <th class=\"upc\">upc</th>
             <th class=\"sku\">sku</th>
             <th class=\"brand\">brand</th>
@@ -253,6 +302,7 @@ class NewAuditReport extends PageLayoutA
             <th class=\"sign-description hidden\">sign-description</th>
             <th class=\"cost\">cost</th>
             <th class=\"price\">price</th>
+            <th class=\"sale\">sale</th>
             <th class=\"margin_target_diff\">margin / target (diff)</th>
             <th class=\"srp\">srp</th>
             <th class=\"rsrp\">round srp</th>
@@ -261,6 +311,8 @@ class NewAuditReport extends PageLayoutA
             <th class=\"vendor\">vendor</th>
             <th class=\"notes\">notes</th>
             <th class=\"\"></th>
+            <th class=\"check\"></th>
+        </tr>
         ";
         $result = $dbc->execute($prep, $args);
         while ($row = $dbc->fetch_row($result)) {
@@ -274,6 +326,8 @@ class NewAuditReport extends PageLayoutA
             $signDescription = $row['signDescription'];
             $cost = $row['cost'];
             $price = $row['price'];
+            $sale = $row['sale'];
+            $sale = ($sale == '0.00') ? '' : "$$sale";
             $margin = round($row['margin'], 2);
             $curMargin = round($row['curMargin'], 2);
             $rsrp = round($row['rsrp'], 2);
@@ -283,6 +337,8 @@ class NewAuditReport extends PageLayoutA
             $vendor = $row['vendor'];
             $notes = $row['notes'];
             $vendorID = $row['vendorID'];
+            $checked = $row['checked'];
+            $checked = ($checked == 1) ? 'checked' : '';
             $rowID = uniqid();
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
@@ -293,6 +349,7 @@ class NewAuditReport extends PageLayoutA
             $td .= "<td class=\"sign-description editable editable-description hidden\" data-table=\"productUser\">$signDescription</td>";
             $td .= "<td class=\"cost\">$cost</td>";
             $td .= "<td class=\"price\">$price</td>";
+            $td .= "<td class=\"sale\">$sale</td>";
             $diff = round($curMargin - $margin, 1);
             $td .= "<td class=\"margin_target_diff\">$curMargin / $margin ($diff)</td>";
             $td .= "<td class=\"rsrp\">$rsrp</td>";
@@ -302,6 +359,7 @@ class NewAuditReport extends PageLayoutA
             $td .= "<td class=\"vendor\" data-vendorID=\"$vendorID\">$vendor</td>";
             $td .= "<td class=\"notes\">$notes</td>";
             $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td></td>";
+            $td .= "<td class=\"check\"><input type=\"checkbox\" name=\"check\" class=\"row-check\" $checked/></td>";
             $td .= "</tr>";
             $textarea .= "$upc\r\n";
         }
@@ -312,6 +370,7 @@ class NewAuditReport extends PageLayoutA
 <input type="hidden" id="table-rows" value="$rows" />
 <table class="table table-bordered table-sm small items" id="mytable">
 <thead>$th</thead>
+$pth
 <tbody>
     $td
     <tr><td>$textarea</td></tr>
@@ -360,8 +419,8 @@ HTML;
         $noteStr .= "</select>";
         $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
 
-        $columns = array('upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'cost', 'price',
-            'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'notes');
+        $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'cost', 'price',
+            'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'notes');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         foreach ($columns as $column) {
             $columnCheckboxes .= "<span class=\"column-checkbox\"><label for=\"check-$column\">$column</label> <input type=\"checkbox\" name=\"column-checkboxes\" id=\"check-$column\" value=\"$column\" class=\"column-checkbox\" checked></span>";
@@ -398,7 +457,6 @@ HTML;
                 </div>
         ";
 
-        //$this->addScript('auditScannerReport.js');
         $this->addScript('../../../common/javascript/tablesorter/js/jquery.tablesorter.min.js');
         $this->addScript('../../../common/javascript/tablesorter/js/jquery.metadata.js');
         $this->addOnloadCommand("$('#mytable').tablesorter();");
@@ -509,28 +567,6 @@ $('#clearAllInputB').click(function() {
     };
 });
 
-//var fetchTable = function() {
-//    $.ajax({
-//        type: 'post',
-//        data: 'fetch=true',
-//        url: 'NewAuditReport.php',
-//        success: function(response)
-//        {
-//            $('#mytable').remove();
-//            $('#mytable-container').html(null);
-//            $('#mytable').html(null);
-//            //$('#mytable-container').html(response);
-//            $('#mytable-container').append(response);
-//            $('#mytable').remove();
-//            $('#mytable').each(function(){
-//                //alert('hello');
-//            });
-//            stripeTable();
-//        },
-//    });
-//};
-
-
 $("#notes").change( function() {
     var noteKey = $("#notes").val();
     var note = $("#notes").find(":selected").text();
@@ -578,7 +614,6 @@ $('.scanicon-trash').click( function(event) {
             success: function(response)
             {
                 console.log(response);
-                //$('#'+rowclicked).hide();
                 location.reload();
             },
             error: function(response)
@@ -654,7 +689,7 @@ $('.editable-description').click(function(){
 $('.editable-description').focusout(function(){
     var table = $(this).attr('data-table');
     var upc = $(this).parent().find('td.upc').attr('data-upc');
-    var description = $(this).text();
+    var description = encodeURIComponent($(this).text());
     if (description != lastDescription) {
         $.ajax({
             type: 'post',
@@ -727,7 +762,6 @@ $('.column-checkbox').each(function(){
 });
 
 $('#check-pos-descript').click(function(){
-    //var checked = $(this).is(':checked');
     $('#check-brand').trigger('click');
     $('#check-sign-brand').trigger('click');
     $('#check-description').trigger('click');
@@ -764,12 +798,84 @@ $('[id]').each(function(){
         console.warn('Multiple IDs #'+this.id);
 });
 
+var styleChecked = function() {
+    $('.row-check').each(function(){
+        var checked = $(this).is(':checked');
+        if (checked == true) {
+            $(this).closest('tr').addClass('highlight-checked');
+        } else {
+            $(this).closest('tr').removeClass('highlight-checked');
+        }
+    });
+};
+$('.row-check').click(function(){
+    var checked = $(this).is(':checked');
+    var upc = $(this).closest('tr').find('td.upc').attr('data-upc');
+    var storeID = $('#storeID').val();
+    var username = $('#username').val();
+    $.ajax({
+        type: 'post',
+        data: 'checked='+checked+'&upc='+upc+'&username='+username+'&storeID='+storeID,
+        dataType: 'json',
+        url: 'NewAuditReport.php',
+        success: function(response)
+        {
+            console.log(response);
+            styleChecked();
+        },
+    });
+});
+styleChecked();
+
+// uncheck column filter defaults
+$('#check-prid').trigger('click');
+$('#check-margin_target_diff').trigger('click');
+$('#check-notes').trigger('click');
+$('#check-sale').trigger('click');
+
+$('.column-filter').each(function(){
+    $(this).attr('contentEditable', true);
+});
+$('.column-filter').focusin(function(){
+    $(this).select();
+});
+$('.column-filter').focusout(function(){
+    $(this).text('');
+});
+$('.column-filter').keyup(function(){
+    $('tr').each(function(){
+        $(this).show();
+    });
+    var text = $(this).text().toUpperCase();
+    var column = $(this).attr('data-column');
+    $('td.'+column).each(function(){
+        if ($(this).closest('tr').attr('id') != 'filter-tr') {
+            var contents = $(this).text();
+            contents = contents.toUpperCase();
+            console.log(text+','+column+','+contents);
+            console.log(contents.includes(text));
+            if (contents.includes(text)) {
+                //alert('hiya!');
+                $(this).closest('tr').show();
+            } else {
+                $(this).closest('tr').hide();
+            }
+        }
+    });
+});
 JAVASCRIPT;
     }
 
     public function cssContent()
     {
         return <<<HTML
+td.column-filter {
+    height: 28px;
+}
+input[type=checkbox]:checked {
+    color: red;
+    border: 1px solid red;
+}
 th, .editable {
     cursor: pointer;
 }
@@ -820,6 +926,11 @@ thead {
     border-color: grey;
     border-width: 1px;
     box-shadow: 1px 1px slategrey;
+}
+.highlight-checked {
+    background: grey;
+    background-color: grey;
+    color: white;
 }
 HTML;
     }
