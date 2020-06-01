@@ -24,9 +24,24 @@ class NewAuditReport extends PageLayoutA
         $this->__routes[] = 'post<setSku>';
         $this->__routes[] = 'post<setBrand>';
         $this->__routes[] = 'post<setDescription>';
+        $this->__routes[] = 'post<setDept>';
         $this->__routes[] = 'post<checked>';
 
         return parent::preprocess();
+    }
+
+    private function getMovement($dbc, $upc)
+    {
+        $data = array();
+        $args = array($upc);
+        $prep = $dbc->prepare("SELECT DATE(last_sold) AS last_sold, inUse, store_id FROM products WHERE upc = ?;");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $data[$row['store_id']]['last_sold'] = $row['last_sold'];
+            $data[$row['store_id']]['inUse'] = $row['inUse'];
+        }
+
+        return $data;
     }
 
     public function postTestHandler()
@@ -35,6 +50,23 @@ class NewAuditReport extends PageLayoutA
         echo json_encode($json);
 
         return false;
+    }
+
+    private function getDeptOptions($dbc, $dept)
+    {
+        $args = array();
+        $prep = $dbc->prepare("SELECT dept_no, dept_name FROM departments;");
+        $res = $dbc->execute($prep);
+        $departments = "<select class=\"edit-department\">";
+        while ($row = $dbc->fetchRow($res)) {
+            $num = $row['dept_no'];
+            $name = $row['dept_name'];
+            $sel = ($dept == $num) ? 'selected' : '';
+            $departments .= "<option value=\"$num\" $sel>$num - $name</option>";
+        }
+        $departments .= "</select>";
+         
+        return $departments;
     }
 
     public function postCheckedHandler()
@@ -57,6 +89,21 @@ class NewAuditReport extends PageLayoutA
         return false;
     }
 
+    public function postSetDeptHandler()
+    {
+        $upc = FormLib::get('upc');
+        $dept = FormLib::get('department');
+        $table = FormLib::get('table');
+        $json = array();
+
+        $dbc = ScanLib::getConObj();
+        $mod = new DataModel($dbc);
+        $json['saved'] = $mod->setDept($upc, $dept);
+        echo json_encode($json);
+
+        return false;
+    }
+     
     public function postSetDescriptionHandler()
     {
         $upc = FormLib::get('upc');
@@ -208,18 +255,7 @@ class NewAuditReport extends PageLayoutA
         $storeID = scanLib::getStoreID();
         $rounder = new PriceRounder();
 
-        // first, load the upcs, then fetch the data? 
         $args = array($username, $storeID);
-        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan 
-            WHERE username = ? AND storeID = ?");
-        $res = $dbc->execute($prep, $args);
-        $upcs = array();
-        while ($row = $dbc->fetchRow($res)) {
-            //echo $row['upc'];
-            $upcs[$row['upc']] = $row['upc'];
-        }
-
-        list($args, $inStr) = $dbc->safeInClause($upcs);
         $prep = $dbc->prepare("
             SELECT 
                 p.upc,
@@ -248,7 +284,8 @@ class NewAuditReport extends PageLayoutA
                 CASE
                     WHEN vd.margin > 0.01 THEN p.cost / (1 - vd.margin) ELSE p.cost / (1 - dm.margin)
                 END AS rsrp,
-                a.checked
+                a.checked,
+                p.last_sold
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -261,6 +298,8 @@ class NewAuditReport extends PageLayoutA
                 LEFT JOIN vendorDepartments AS vd
                     ON vd.vendorID = p.default_vendor_id AND vd.posDeptID = p.department 
             WHERE p.upc != '0000000000000'
+                AND a.username = ?
+                AND a.storeiD = ?
             GROUP BY a.upc
             ORDER BY a.date DESC
         ");
@@ -287,9 +326,10 @@ class NewAuditReport extends PageLayoutA
             <td data-column=\"prid\"class=\"prid column-filter\"></td>
             <td data-column=\"dept\"class=\"dept column-filter\"></td>
             <td data-column=\"vendor\"class=\"vendor column-filter\"></td>
+            <td data-column=\"\"class=\"column-filter\"></td>
             <td data-column=\"notes\"class=\"notes column-filter\"></td>
-            <td data-column=\"\"class=\"\"></td>
-            <td data-column=\"\"class=\"check\"></td>
+            <td data-column=\"\"class=\"column-filter\"></td>
+            <td data-column=\"\"class=\"check column-filter\"></td>
         </tr>
         ";
         $th = "
@@ -309,6 +349,7 @@ class NewAuditReport extends PageLayoutA
             <th class=\"prid\">prid</th>
             <th class=\"dept\">dept</th>
             <th class=\"vendor\">vendor</th>
+            <th class=\"last_sold\">last_sold</th>
             <th class=\"notes\">notes</th>
             <th class=\"\"></th>
             <th class=\"check\"></th>
@@ -317,6 +358,12 @@ class NewAuditReport extends PageLayoutA
         $result = $dbc->execute($prep, $args);
         while ($row = $dbc->fetch_row($result)) {
             $upc = $row['upc'];
+            $data = $this->getMovement($dbc, $upc);
+            $lastSold = '';
+            foreach ($data as $storeID => $bRow) {
+                $inUse = ($bRow['inUse'] == 1) ? 'alert-success' : 'alert-danger';
+                $lastSold .= '('.$storeID.') <span class="'.$inUse.'">'.$bRow['last_sold'].'</span> ';
+            }
             $uLink = '<a class="upc" href="../../../../git/fannie/item/ItemEditorPage.php?searchupc='.$upc.
                 '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
             $sku = $row['sku'];
@@ -340,6 +387,7 @@ class NewAuditReport extends PageLayoutA
             $checked = $row['checked'];
             $checked = ($checked == 1) ? 'checked' : '';
             $rowID = uniqid();
+            $deptOpts = $this->getDeptOptions($dbc, $row['dept_no']);
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku editable editable-sku\">$sku</td>";
@@ -355,9 +403,13 @@ class NewAuditReport extends PageLayoutA
             $td .= "<td class=\"rsrp\">$rsrp</td>";
             $td .= "<td class=\"srp\">$srp</td>";
             $td .= "<td class=\"prid\">$prid</td>";
-            $td .= "<td class=\"dept\">$dept</td>";
+            $td .= "<td class=\"dept\">
+                <span class=\"dept-text\">$dept</span>
+                <span class=\"dept-select hidden\">$deptOpts</span>
+                </td>";
             $td .= "<td class=\"vendor\" data-vendorID=\"$vendorID\">$vendor</td>";
             $td .= "<td class=\"notes\">$notes</td>";
+            $td .= "<td class=\"last_sold\">$lastSold</td>";
             $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td></td>";
             $td .= "<td class=\"check\"><input type=\"checkbox\" name=\"check\" class=\"row-check\" $checked/></td>";
             $td .= "</tr>";
@@ -371,7 +423,7 @@ class NewAuditReport extends PageLayoutA
 <table class="table table-bordered table-sm small items" id="mytable">
 <thead>$th</thead>
 $pth
-<tbody>
+<tbody id="mytablebody">
     $td
     <tr><td>$textarea</td></tr>
 </tbody>
@@ -420,7 +472,7 @@ HTML;
         $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
 
         $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'cost', 'price',
-            'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'notes');
+            'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'notes');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         foreach ($columns as $column) {
             $columnCheckboxes .= "<span class=\"column-checkbox\"><label for=\"check-$column\">$column</label> <input type=\"checkbox\" name=\"column-checkboxes\" id=\"check-$column\" value=\"$column\" class=\"column-checkbox\" checked></span>";
@@ -486,6 +538,17 @@ $columnCheckboxes
 <div style="font-size: 12px; padding: 10px;">
     <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label><input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="column-checkbox" checked>
 </div>
+<div style="font-size: 12px; padding: 10px;">
+    <div class="form-group dummy-form">
+        <button class="btn btn-default btn-sm small" id="view-unchecked">View UnChecked</button>
+    </div>
+    <div class="form-group dummy-form">
+        <button class="btn btn-default btn-sm small" id="view-checked">View Checked</button>
+    </div>
+    <div class="form-group dummy-form">
+        <button class="btn btn-default btn-sm small" id="check-prices">Check Prices</button>
+    </div>
+</div>
 
 <div id="mytable-container">
     {$this->postFetchHandler()}
@@ -531,6 +594,13 @@ $.ajax({
     },
 });
 stripeTable();
+setInterval('stripeTable()', 1000);
+//$(document).mouseup(function(){
+//    stripeTable();
+//});
+//$(document).mousedown(function(){
+//    stripeTable();
+//});
 $('#clearNotesInputB').click(function() {
     var c = confirm("Are you sure?");
     if (c == true) {
@@ -827,12 +897,6 @@ $('.row-check').click(function(){
 });
 styleChecked();
 
-// uncheck column filter defaults
-$('#check-prid').trigger('click');
-$('#check-margin_target_diff').trigger('click');
-$('#check-notes').trigger('click');
-$('#check-sale').trigger('click');
-
 $('.column-filter').each(function(){
     $(this).attr('contentEditable', true);
 });
@@ -863,14 +927,108 @@ $('.column-filter').keyup(function(){
         }
     });
 });
+
+
+$('#view-checked').click(function(){
+    $('#mytablebody tr').each(function(){
+        $(this).show();
+    });
+    $('#mytablebody tr').each(function(){
+        var checked = $(this).find('.row-check').is(':checked');
+        if (checked == true) {
+            $(this).show();
+        } else {
+            $(this).hide();
+        }
+    });
+});
+$('#view-unchecked').click(function(){
+    $('#mytablebody tr').each(function(){
+        $(this).show();
+    });
+    $('#mytablebody tr').each(function(){
+        var checked = $(this).find('.row-check').is(':checked');
+        if (checked == false) {
+            $(this).show();
+        } else {
+            $(this).hide();
+        }
+    });
+});
+$('#check-prices').click(function(){
+    $('#mytablebody tr').each(function(){
+        var srp = parseFloat($(this).find('.srp').text());
+        var price = parseFloat($(this).find('.price').text());
+        if (price < srp) {
+            $(this).find('.srp').css('color', 'red')
+                .css('font-weight', 'bold');
+            $(this).find('.price').css('color', 'red');
+        } else if (price > srp) {
+            $(this).find('.srp').css('color', 'blue')
+                .css('font-weight', 'bold');
+            $(this).find('.price').css('color', 'blue');
+        }
+    });
+});
+
+$('.edit-department').change(function(){
+    var upc = $(this).parent().parent().parent().find('td.upc').attr('data-upc');
+    var dept = $(this).val();
+    console.log(upc+', '+dept);
+    $.ajax({
+        type: 'post',
+        data: 'setDept=true&upc='+upc+'&department='+dept,
+        dataType: 'json',
+        url: 'NewAuditReport.php',
+        success: function(response)
+        {
+            console.log(response);
+        },
+    });
+});
+
+$('.dept-text').click(function(){
+    $(this).parent().find('.dept-select').show();
+    $(this).parent().find('.dept-select').trigger('click');;
+    $(this).hide();
+});
+$('.dept-select').change(function(){
+    setTimeout(function(){location.reload(); 
+    }, 500);
+});
+$('.dept-select').focusout(function(){
+    setTimeout(function(){location.reload(); 
+    }, 500);
+});
+
+// uncheck column filter defaults
+$('#check-prid').trigger('click');
+$('#check-margin_target_diff').trigger('click');
+$('#check-notes').trigger('click');
+$('#check-sale').trigger('click');
+$('#check-last_sold').trigger('click');
 JAVASCRIPT;
     }
 
     public function cssContent()
     {
         return <<<HTML
-td.column-filter {
+.dept-text {
+    cursor: pointer;
+}
+select {
+    border:none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    -ms-appearance: none; /* get rid of default appearance for IE8, 9 and 10*/
+    background-color: rgba(0,0,0,0);
+    cursor: pointer;
+}
+td.column-filter, tr.filter-tr {
     height: 28px;
+    background: lightblue;
+    background: linear-gradient(#F5F5F5, white, #F5F5F5);
 }
 input[type=checkbox]:checked {
     color: red;
