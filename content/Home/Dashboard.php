@@ -103,6 +103,10 @@ class Dashboard extends PageLayoutA
                 'handler' => self::limboPcBatch($dbc),
                 'ranges' => array(1, 2, 999),
             ),
+            array(
+                'handler' => self::badDeliDepts($dbc),
+                'ranges' => array(1, 2, 999),
+            ),
         );
 
         $muData = $this->multiStoreDiscrepCheck($dbc);
@@ -423,6 +427,25 @@ HTML;
         return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
             'desc'=>$desc);
 
+    }
+
+    static function badDeliDepts($dbc)
+    {
+        $desc = 'Products in unused Deli Departments';
+        $p = $dbc->prepare("SELECT 
+            upc, brand, description, last_sold, store_id, department
+            FROM products where department IN (70, 71)
+            ORDER BY upc;");
+        $r = $dbc->execute($p);
+        $cols = array('upc', 'brand', 'description', 'department');
+        $data = array();
+        while ($row = $dbc->fetchRow($r)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+        }
+        if ($er = $dbc->error()) echo "<div class='alert alert-danger'>$er</div>";
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
     }
 
     public function badPriceCheck($dbc)
