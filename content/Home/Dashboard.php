@@ -196,7 +196,7 @@ class Dashboard extends PageLayoutA
 HTML;
     }
 
-    public function getReportHeader($data, $range)
+    private function getReportHeader($data, $range)
     {
         $pcount = number_format(count($data['data']), 0, '.', ',');
         $count = count($data['data']);
@@ -256,7 +256,7 @@ HTML;
             'desc'=>$desc);
     }
 
-    public function multiStoreDiscrepCheck($dbc)
+    private function multiStoreDiscrepCheck($dbc)
     {
         $desc = "Discrepancies with products between stores";
         $fields = array('description','normal_price','cost','tax','foodstamp','wicable','discount','scale',
