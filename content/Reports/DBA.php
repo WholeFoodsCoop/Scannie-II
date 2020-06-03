@@ -23,6 +23,16 @@ class DBA extends PageLayoutA
         $today = new DateTime();
         $today = $today->format('Y-m-d');
         //$this->addScript('tableColumnFilters.js');
+        /* codemirror modul
+        $this->addCssFile('../../node_modules/codemirror/lib/codemirror.css');
+        $this->addScript('../../node_modules/codemirror/lib/codemirror.js');
+        $this->addScript('../../node_modules/codemirror/mode/sql/sql.js');
+        $this->addOnloadCommand('editor.init("query", {
+                lineNumbers: true,
+                mode: "text/x-sql"
+            });');
+        */
+
         return <<<HTML
 <div id="processing" style="display: none; cursor: wait; color: white; z-index: 999; position: fixed; top: 63px; left: 45vw; width: 50px; height: 25; border-radius: 3px; background-color: slategrey">
     <!--<img class="scanicon-processing" border="none"/>-->
@@ -49,6 +59,19 @@ class DBA extends PageLayoutA
         </div>
         <h4>Saved Queries</h4>
         <ul style="font-size: 12px">
+            <li><a href='#' class="quick_query">Get Bulk Sale Items</a>
+                <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
+FROM batchList AS bl
+LEFT JOIN products AS p ON bl.upc=p.upc
+LEFT JOIN batches AS b ON bl.batchID=b.batchID
+LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
+WHERE bl.batchID IN ( SELECT batchID FROM batches WHERE '$today' BETWEEN startDate AND endDate)
+AND m.super_name = 'BULK'
+AND p.department NOT IN (245, 251)
+GROUP BY bl.upc
+order by p.department, p.brand
+</span>
+            </li>
             <li><a href='#' class="quick_query">Get CMW File</a>
                 <span class="query">SELECT upc, Product, RegUnit, Brand, Description, 
 CASE WHEN WhsAvail like '%T%' THEN 'yes' ELSE 'no' END AS Avail
@@ -63,16 +86,40 @@ FROM batchList AS bl
     LEFT JOIN batches AS b ON bl.batchID=b.batchID
 WHERE bl.batchID IN ( SELECT batchID FROM batches WHERE '$today' BETWEEN startDate AND endDate)
 GROUP BY bl.upc
-order by p.department</span>
+order by p.department, p.brand</span>
+            </li>
+            <li><a href='#' class="quick_query">Get Current Linked PLU</a>
+                <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
+FROM batchList AS bl
+LEFT JOIN products AS p ON bl.upc=p.upc
+LEFT JOIN batches AS b ON bl.batchID=b.batchID
+LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
+WHERE bl.batchID IN ( SELECT batchID FROM batches WHERE '2020-04-29' BETWEEN startDate AND endDate)
+AND m.super_name = 'BULK'
+AND p.department NOT IN (245, 251)
+GROUP BY bl.upc
+order by p.department, p.brand                </span>
             </li>
             <li><a href='#' class="quick_query">Get DenHerb MT</a>
                 <span class="query">select department, upc, brand, description, ROUND(auto_par*7,1) as den_par 
 from products where inUse = 1 and store_id = 1 and scale = 1 and department > 251 and department < 260
 order by department, upc
-
                 </span>
             </li>
-            <li><a href='#' class="quick_query">Get Review Comments</a>
+            <li><a href='#' class="quick_query">Get Missing Sub-Locations</a>
+                <span class="query">select i.upc, f.subSection, s.name, p.department, m.super_name
+FROM PickupOrderItems as i 
+LEFT JOIN FloorSubSections AS f ON i.upc=f.upc 
+LEFT JOIN FloorSections AS s ON f.floorSectionID=s.floorSectionID 
+LEFT JOIN products AS p ON p.upc=i.upc
+LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
+WHERE f.subSection IS NULL
+AND m.super_name NOT IN ('WELLNESS', 'BULK', 'PRODUCE','BREAD','DELI','GEN MERCH')
+GROUP BY i.upc
+ORDER BY m.super_name
+                </span>
+            </li>
+            <li><a href='#' class="quick_query">Get Review-Comments</a>
                 <span class="query">SELECT v.vendorName, r.upc, p.default_vendor_id AS vendorID, p.brand, p.description,
 r.user, r.reviewed, r.comment
 FROM prodReview AS r
@@ -180,6 +227,21 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
+var editor = (function () {
+    var _editor = {};
+    var mod = {};
+
+    mod.init = function(elem, obj) {
+        _editor = CodeMirror.fromTextArea(document.getElementById(elem), obj);
+    };
+
+    mod.get = function() {
+        return _editor;
+    };
+
+    return mod;
+})();
+        
 $(document).keydown(function(e){
     var key = e.keyCode;
     $('#keydown').val(key);
