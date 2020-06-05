@@ -547,9 +547,11 @@ $modal
 <div class="form-group dummy-form">
     <button class="btn btn-secondary btn-sm page-control" data-toggle="modal" data-target="#upcs_modal">Upload a List</button>
 </div>
+<!--
 <div class="form-group dummy-form">
     <button class="btn btn-secondary btn-sm page-control" id="temp" title="Store current costs to temp database">Store Current Costs</button>
 </div>
+-->
 <div class="form-group dummy-form">
     <a class="btn btn-info btn-sm page-control" href="AuditScanner.php ">Scanner</a>
 </div>
@@ -560,6 +562,11 @@ $columnCheckboxes
     <div class="col-lg-8">
         <div style="font-size: 12px; padding: 10px;">
             <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label><input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="column-checkbox" checked>
+        </div>
+        <div id="countDisplay" style="font-size: 12px; padding: 10px; display: none;">
+            <span id="checkedCount"></span> / 
+            <span id="itemCount"></span> -> 
+            <span id="percentComplete"></span> 
         </div>
         <div style="font-size: 12px; padding: 10px;">
             <div class="form-group dummy-form">
@@ -854,6 +861,31 @@ $(document).mousedown(function(e){
     }
 });
 
+$('.row-check').click(function(){
+    if (!$('#countDisplay').is(':visible')) {
+        $('#countDisplay').show();
+    }
+    var rows = 0;
+    var count = 0;
+    $('.row-check').each(function(){
+        rows++;
+        if ($(this).prop('checked') == true) {
+            count++;
+        }
+    });
+    $('#itemCount').text(rows);
+    $('#checkedCount').text(count);
+    var percent = 100 * (count / rows);
+    var strpercent = '';
+    var i = 0
+    for (i; i < percent; i += 10) {
+        strpercent += '<span style="color: lightgreen;">=</span>';
+    }
+    for (i; i < 100; i += 10) {
+        strpercent += '<span style="color: lightgrey;">~</span>';
+    }
+    $('#percentComplete').html(Math.round(percent, 4) + '% Complete ' + strpercent);
+});
 $('.column-checkbox').change(function(){
     var checked = $(this).is(':checked');
     var column = $(this).val();
