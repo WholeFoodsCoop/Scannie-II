@@ -34,7 +34,8 @@ class NewAuditReport extends PageLayoutA
     {
         $data = array();
         $args = array($upc);
-        $prep = $dbc->prepare("SELECT DATE(last_sold) AS last_sold, inUse, store_id FROM products WHERE upc = ?;");
+        $prep = $dbc->prepare("SELECT DATE(last_sold) AS last_sold, inUse, store_id FROM products WHERE upc = ?
+            ORDER BY upc, store_id;");
         $res = $dbc->execute($prep, $args);
         while ($row = $dbc->fetchRow($res)) {
             $data[$row['store_id']]['last_sold'] = $row['last_sold'];
@@ -285,7 +286,12 @@ class NewAuditReport extends PageLayoutA
                     WHEN vd.margin > 0.01 THEN p.cost / (1 - vd.margin) ELSE p.cost / (1 - dm.margin)
                 END AS rsrp,
                 a.checked,
-                p.last_sold
+                p.last_sold,
+                pr.reviewed,
+                CASE
+                    WHEN p.size <> 0 THEN p.size ELSE v.size
+                END AS size,
+                v.units
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -297,6 +303,7 @@ class NewAuditReport extends PageLayoutA
                 LEFT JOIN deptMargin AS dm ON p.department=dm.dept_ID
                 LEFT JOIN vendorDepartments AS vd
                     ON vd.vendorID = p.default_vendor_id AND vd.posDeptID = p.department 
+                LEFT JOIN prodReview AS pr ON p.upc=pr.upc
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
                 AND a.storeiD = ?
@@ -317,6 +324,7 @@ class NewAuditReport extends PageLayoutA
             <td data-column=\"sign-brand\"class=\"sign-brand hidden column-filter\"></td>
             <td data-column=\"description\"class=\"column-filter\"></td>
             <td data-column=\"sign-description\"class=\"sign-description hidden column-filter\"></td>
+            <td data-column=\"size\"class=\"size column-filter\"></td>
             <td data-column=\"cost\"class=\"cost column-filter\"></td>
             <td data-column=\"price\"class=\"price column-filter\"></td>
             <td data-column=\"sale\"class=\"sale column-filter\"></td>
@@ -329,7 +337,6 @@ class NewAuditReport extends PageLayoutA
             <td data-column=\"\"class=\"column-filter\"></td>
             <td data-column=\"notes\"class=\"notes column-filter\"></td>
             <td data-column=\"\"class=\"column-filter\"></td>
-            <td data-column=\"\"class=\"check column-filter\"></td>
         </tr>
         ";
         $th = "
@@ -340,6 +347,8 @@ class NewAuditReport extends PageLayoutA
             <th class=\"sign-brand hidden\">sign-brand</th>
             <th class=\"description\">description</th>
             <th class=\"sign-description hidden\">sign-description</th>
+            <th class=\"size\">size</th>
+            <th class=\"units\">units</th>
             <th class=\"cost\">cost</th>
             <th class=\"price\">price</th>
             <th class=\"sale\">sale</th>
@@ -350,7 +359,9 @@ class NewAuditReport extends PageLayoutA
             <th class=\"dept\">dept</th>
             <th class=\"vendor\">vendor</th>
             <th class=\"last_sold\">last_sold</th>
+            <th class=\"reviewed\">reviewed</th>
             <th class=\"notes\">notes</th>
+            <th class=\"\"></th>
             <th class=\"\"></th>
             <th class=\"check\"></th>
         </tr>
@@ -388,6 +399,9 @@ class NewAuditReport extends PageLayoutA
             $checked = ($checked == 1) ? 'checked' : '';
             $rowID = uniqid();
             $deptOpts = $this->getDeptOptions($dbc, $row['dept_no']);
+            $reviewed = $row['reviewed'];
+            $size = $row['size'];
+            $units = $row['units'];
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku editable editable-sku\">$sku</td>";
@@ -395,6 +409,8 @@ class NewAuditReport extends PageLayoutA
             $td .= "<td class=\"sign-brand editable editable-brand hidden\" data-table=\"productUser\">$signBrand</td>";
             $td .= "<td class=\"description editable editable-description\" data-table=\"products\">$description</td>";
             $td .= "<td class=\"sign-description editable editable-description hidden\" data-table=\"productUser\">$signDescription</td>";
+            $td .= "<td class=\"size\">$size</td>";
+            $td .= "<td class=\"units\">$units</td>";
             $td .= "<td class=\"cost\">$cost</td>";
             $td .= "<td class=\"price\">$price</td>";
             $td .= "<td class=\"sale\">$sale</td>";
@@ -410,6 +426,7 @@ class NewAuditReport extends PageLayoutA
             $td .= "<td class=\"vendor\" data-vendorID=\"$vendorID\">$vendor</td>";
             $td .= "<td class=\"notes\">$notes</td>";
             $td .= "<td class=\"last_sold\">$lastSold</td>";
+            $td .= "<td class=\"reviewed\">$reviewed</td>";
             $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td></td>";
             $td .= "<td class=\"check\"><input type=\"checkbox\" name=\"check\" class=\"row-check\" $checked/></td>";
             $td .= "</tr>";
@@ -471,8 +488,8 @@ HTML;
         $noteStr .= "</select>";
         $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
 
-        $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'cost', 'price',
-            'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'notes');
+        $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'cost', 'price',
+            'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'notes', 'reviewed');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         foreach ($columns as $column) {
             $columnCheckboxes .= "<span class=\"column-checkbox\"><label for=\"check-$column\">$column</label> <input type=\"checkbox\" name=\"column-checkboxes\" id=\"check-$column\" value=\"$column\" class=\"column-checkbox\" checked></span>";
@@ -531,24 +548,56 @@ $modal
     <button class="btn btn-secondary btn-sm page-control" data-toggle="modal" data-target="#upcs_modal">Upload a List</button>
 </div>
 <div class="form-group dummy-form">
+    <button class="btn btn-secondary btn-sm page-control" id="temp" title="Store current costs to temp database">Store Current Costs</button>
+</div>
+<div class="form-group dummy-form">
     <a class="btn btn-info btn-sm page-control" href="AuditScanner.php ">Scanner</a>
 </div>
 $nFilter
 $columnCheckboxes
-<div style="font-size: 12px; padding: 10px;">
-    <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label><input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="column-checkbox" checked>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div style="font-size: 12px; padding: 10px;">
+            <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label><input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="column-checkbox" checked>
+        </div>
+        <div style="font-size: 12px; padding: 10px;">
+            <div class="form-group dummy-form">
+                <button class="btn btn-default btn-sm small" id="view-unchecked">View UnChecked</button>
+            </div>
+            <div class="form-group dummy-form">
+                <button class="btn btn-default btn-sm small" id="view-checked">View Checked</button>
+            </div>
+            <div class="form-group dummy-form">
+                <button class="btn btn-default btn-sm small" id="view-all">View All</button>
+            </div>
+            <div class="form-group dummy-form">
+                <button class="btn btn-default btn-sm small" id="check-prices">Check Prices</button>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card" style="margin: 5px">
+            <div class="card-body">
+                <h5 class="card-title"></h5>
+                <div class="row">
+                    <div class="col-lg-9">
+                        <input type="text" id="calculator" name="calculator" style="font-size: 12px" class="form-control small" autofocus>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="form-group">
+                            <button id="clear" class="btn btn-default btn-sm small">CL</button>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <p id="output" style="font-size: 12px; padding-top: 10px;"></p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-<div style="font-size: 12px; padding: 10px;">
-    <div class="form-group dummy-form">
-        <button class="btn btn-default btn-sm small" id="view-unchecked">View UnChecked</button>
-    </div>
-    <div class="form-group dummy-form">
-        <button class="btn btn-default btn-sm small" id="view-checked">View Checked</button>
-    </div>
-    <div class="form-group dummy-form">
-        <button class="btn btn-default btn-sm small" id="check-prices">Check Prices</button>
-    </div>
-</div>
+
 
 <div id="mytable-container">
     {$this->postFetchHandler()}
@@ -929,6 +978,11 @@ $('.column-filter').keyup(function(){
 });
 
 
+$('#view-all').click(function(){
+    $('#mytablebody tr').each(function(){
+        $(this).show();
+    });
+});
 $('#view-checked').click(function(){
     $('#mytablebody tr').each(function(){
         $(this).show();
@@ -1001,12 +1055,92 @@ $('.dept-select').focusout(function(){
     }, 500);
 });
 
+$('#temp').click(function(){
+    c = confirm('Save costs to temp table?');
+    if (c === true) {
+        alert('well foo');
+    }
+});
+
 // uncheck column filter defaults
 $('#check-prid').trigger('click');
 $('#check-margin_target_diff').trigger('click');
 $('#check-notes').trigger('click');
 $('#check-sale').trigger('click');
 $('#check-last_sold').trigger('click');
+$('#check-reviewed').trigger('click');
+
+var resizes = 0;
+$('#calculator').keydown(function(e){
+    if (e.keyCode == 13) {
+        // Enter key pressed
+        //alert('enter');
+        var arr = $('#calculator').val();
+        arr = arr.split(" ");
+        if (arr.length == 3) {
+            var val_1 = parseFloat(arr[0], 10);
+            var oper = arr[1];
+            var val_2 = parseFloat(arr[2], 10);
+        } else {
+            arr = arr[0];
+            if (arr.indexOf('/') !== -1) {
+                var oper =  '/';
+                arr = arr.split('/');
+            } else if (arr.indexOf('*') !== -1) {
+                var oper =  '*';
+                arr = arr.split('*');
+            } else if (arr.indexOf('+') !== -1) {
+                var oper =  '+';
+                arr = arr.split('+');
+            } else if (arr.indexOf('-') !== -1) {
+                var oper =  '-';
+                arr = arr.split('-');
+            }
+            var val_1 = arr[0];
+            var val_2 = arr[1];
+        }
+        
+        var ans = '';
+        switch (oper) {
+            case '+':
+                ans = parseFloat(val_1) + parseFloat(val_2); 
+                break;
+            case '-':
+                ans = val_1 - val_2; 
+                break;
+            case '*':
+                ans = val_1 * val_2; 
+                break;
+            case '/':
+                ans = val_1 / val_2; 
+                break;
+        }
+        var val = $('#calculator').val(ans.toFixed(3));
+        var html = $('#output').text();
+        $('#output').prepend("<div>"+val_1+' '+oper+' '+val_2+" = "+ans.toFixed(3)+"</div>");
+        if (resizes == 0) {
+            window.resizeBy(0, 30);
+        } else {
+            window.resizeBy(0, 18);
+        }
+        resizes += 1;
+    }
+    if (e.keyCode == 8) {
+        // "Backspace"
+        //$('#calculator').val('');
+    }
+});
+
+$('#clear').click(function(){
+    $('#output').html("");
+    window.resizeTo(215,120);
+    $('#calculator').focus().val(null);
+    resizes = 0;
+});
+
+$('#calculator').click(function(){
+    $(this).select();
+});
 JAVASCRIPT;
     }
 
