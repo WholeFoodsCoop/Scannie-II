@@ -958,10 +958,10 @@ $('.row-check').click(function(){
     var strpercent = '';
     var i = 0
     for (i; i < percent; i += 10) {
-        strpercent += '<span style="color: lightgreen;">&#9618;</span>';
+        strpercent += '<span style="color: lightgreen;">&#9608;</span>';
     }
     for (i; i < 101; i += 10) {
-        strpercent += '<span style="color: grey;">&#9618;</span>';
+        strpercent += '<span style="color: grey;">&#9608;</span>';
     }
     $('#percentComplete').html(Math.round(percent, 4) + '% Complete ' + strpercent);
 });
