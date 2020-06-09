@@ -25,9 +25,51 @@ class NewAuditReport extends PageLayoutA
         $this->__routes[] = 'post<setBrand>';
         $this->__routes[] = 'post<setDescription>';
         $this->__routes[] = 'post<setDept>';
+        $this->__routes[] = 'post<setCost>';
         $this->__routes[] = 'post<checked>';
+        $this->__routes[] = 'post<review>';
 
         return parent::preprocess();
+    }
+
+    public function postReviewView()
+    {
+        $dbc = ScanLib::getConObj();
+        $review = FormLib::get('review');
+        $username = FormLib::get('username');
+        $json = array();
+
+        if ($review == 'open') {
+            $prep = $dbc->prepare("INSERT INTO woodshed_no_replicate.temp (upc,cost) SELECT upc, cost FROM products WHERE UPC in (SELECT upc FROM woodshed_no_replicate.AuditScan WHERE username = ?) GROUP BY upc;");
+            $res = $dbc->execute($prep, array($username));
+        } elseif ($review == 'close') {
+            $prep = $dbc->prepare("INSERT INTO productCostChanges (upc, previousCost, newCost, difference, date) 
+                SELECT 
+                t.upc AS upc, 
+                t.cost as previousCost, 
+                p.cost as newCost, 
+                (p.cost - t.cost) AS difference, 
+                DATE(NOW()) AS date 
+                FROM woodshed_no_replicate.temp AS t 
+                LEFT JOIN products AS p ON t.upc = p.upc 
+                RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON p.upc=a.upc
+                WHERE (p.cost - t.cost) <> 0 
+                AND a.username = ?
+                GROUP BY p.upc 
+                ON DUPLICATE KEY UPDATE previousCost=VALUES(previousCost), newCost=VALUES(newCost), difference=VALUES(difference), date=VALUES(date);
+            ");
+            $res = $dbc->execute($prep, array($username));
+            if (!$er = $dbc->error()) {
+                $prep = $dbc->prepare("DELETE FROM woodshed_no_replicate.temp");
+                $res = $dbc->execute($prep);
+            }
+        }
+        $suff = '';
+        if ($er = $dbc->error())
+            $suff = "?$er"; 
+
+
+        return header("location: NewAuditReport.php$suff");
     }
 
     private function getMovement($dbc, $upc)
@@ -85,6 +127,20 @@ class NewAuditReport extends PageLayoutA
         $dbc->execute($query, $args);
         if ($er = $dbc->error())
             $json['error'] = $er;
+        echo json_encode($json);
+
+        return false;
+    }
+
+    public function postSetCostHandler()
+    {
+        $upc = FormLib::get('upc');
+        $cost = FormLib::get('cost');
+        $json = array();
+
+        $dbc = ScanLib::getConObj();
+        $mod = new DataModel($dbc);
+        $json['saved'] = $mod->setCost($upc, $cost);
         echo json_encode($json);
 
         return false;
@@ -372,8 +428,9 @@ class NewAuditReport extends PageLayoutA
             $data = $this->getMovement($dbc, $upc);
             $lastSold = '';
             foreach ($data as $storeID => $bRow) {
-                $inUse = ($bRow['inUse'] == 1) ? 'alert-success' : 'alert-danger';
-                $lastSold .= '('.$storeID.') <span class="'.$inUse.'">'.$bRow['last_sold'].'</span> ';
+                $inUse = ($bRow['inUse'] != 1) ? 'alert-danger' : 'alert-success';
+                $ls = ($bRow['last_sold'] == null) ? '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : $bRow['last_sold'];
+                $lastSold .= '('.$storeID.') <span class="'.$inUse.'">'.$ls.'</span> ';
             }
             $uLink = '<a class="upc" href="../../../../git/fannie/item/ItemEditorPage.php?searchupc='.$upc.
                 '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
@@ -478,6 +535,22 @@ HTML;
         $storeID = scanLib::getStoreID();
         $test = new DataModel($dbc);
 
+        $prep = $dbc->prepare("SELECT * FROM woodshed_no_replicate.temp");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            //echo "<div>{$row['upc']}</div>";
+        }
+        $countTemp = $dbc->numRows($res);
+        $tempClass = "btn-secondary";
+        if ($countTemp > 0) {
+            $tempBtn = 'Close Review';
+            $tempInputVal = 'close';
+            $tempClass = 'btn-danger';
+        } else {
+            $tempBtn = 'Open Review';
+            $tempInputVal = 'open';
+        }
+
         $options = $this->getNotesOpts($dbc,$storeID,$username);
         $noteStr = "";
         $noteStr .= "<select id=\"notes\" style=\"font-size: 10px; font-weight: normal; margin-left: 5px; border: 1px solid lightgrey\">";
@@ -547,11 +620,13 @@ $modal
 <div class="form-group dummy-form">
     <button class="btn btn-secondary btn-sm page-control" data-toggle="modal" data-target="#upcs_modal">Upload a List</button>
 </div>
-<!--
 <div class="form-group dummy-form">
-    <button class="btn btn-secondary btn-sm page-control" id="temp" title="Store current costs to temp database">Store Current Costs</button>
+    <form method="post" action="NewAuditReport.php">
+        <button class="btn $tempClass btn-sm page-control" id="temp-btn">$tempBtn</button>
+        <input type="hidden" name="review" value="$tempInputVal"/>
+        <input type="hidden" name="username" value="$username"/>
+    </form>
 </div>
--->
 <div class="form-group dummy-form">
     <a class="btn btn-info btn-sm page-control" href="AuditScanner.php ">Scanner</a>
 </div>
@@ -564,8 +639,8 @@ $columnCheckboxes
             <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label><input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="column-checkbox" checked>
         </div>
         <div id="countDisplay" style="font-size: 12px; padding: 10px; display: none;">
-            <span id="checkedCount"></span> / 
-            <span id="itemCount"></span> -> 
+            <span id="checkedCount"></span> <b>/ 
+            <span id="itemCount"></span></b> -> 
             <span id="percentComplete"></span> 
         </div>
         <div style="font-size: 12px; padding: 10px;">
@@ -586,14 +661,14 @@ $columnCheckboxes
     <div class="col-lg-4">
         <div class="card" style="margin: 5px">
             <div class="card-body">
-                <h5 class="card-title"></h5>
+                <h6 class="card-title">Simple Input Calculator &trade;</h6>
                 <div class="row">
                     <div class="col-lg-9">
                         <input type="text" id="calculator" name="calculator" style="font-size: 12px" class="form-control small" autofocus>
                     </div>
                     <div class="col-lg-3">
                         <div class="form-group">
-                            <button id="clear" class="btn btn-default btn-sm small">CL</button>
+                            <button id="clear" class="btn btn-default btn-sm small form-control">CL</button>
                         </div>
                     </div>
                 </div>
@@ -750,88 +825,92 @@ $('.scanicon-trash').click( function(event) {
     }
 });
 
-var lastSku = null
-$('.editable').each(function(){
-    $(this).attr('contentEditable', true);
-    $(this).attr('spellCheck', false);
-});
-$('.editable').click(function(){
-    $(this).addClass('currentEdit');
-});
-$('.editable').focusout(function(){
-    $(this).removeClass('currentEdit');
-});
-
-$('.editable-sku').click(function(){
-    lastSku = $(this).text();
-});
-$('.editable-sku').focusout(function(){
-    var sku = $(this).text();
-    var vendorID = $(this).parent().find('td.vendor').attr('data-vendorID');
-    var upc = $(this).parent().parent().find('.upc').attr('data-upc');
-    $.ajax({
-        type: 'post',
-        data: 'setSku=true&lastSku='+lastSku+'&sku='+sku+'&vendorID='+vendorID+'&upc='+upc,
-        dataType: 'json',
-        url: 'NewAuditReport.php',
-        success: function(response)
-        {
-            console.log(response);
-            if (response.saved != true) {
-                // alert user of error
-            }
-        },
-    });
-
-});
-var lastBrand = null;
-$('.editable-brand').click(function(){
-    lastBrand = $(this).text();
-});
-$('.editable-brand').focusout(function(){
-    var table = $(this).attr('data-table');
-    var upc = $(this).parent().find('td.upc').attr('data-upc');
-    var brand = $(this).text();
-    if (brand != lastBrand) {
-        $.ajax({
-            type: 'post',
-            data: 'setBrand=true&upc='+upc+'&brand='+brand+'&table='+table,
-            dataType: 'json',
-            url: 'NewAuditReport.php',
-            success: function(response)
-            {
-                console.log(response);
-                if (response.saved != true) {
-                    // alert user of error
-                }
-            },
-        });
-    }
-});
-var lastDescription = null;
-$('.editable-description').click(function(){
-    lastDescription = $(this).text();
-});
-$('.editable-description').focusout(function(){
-    var table = $(this).attr('data-table');
-    var upc = $(this).parent().find('td.upc').attr('data-upc');
-    var description = encodeURIComponent($(this).text());
-    if (description != lastDescription) {
-        $.ajax({
-            type: 'post',
-            data: 'setDescription=true&upc='+upc+'&description='+description+'&table='+table,
-            dataType: 'json',
-            url: 'NewAuditReport.php',
-            success: function(response)
-            {
-                console.log(response);
-                if (response.saved != true) {
-                    // alert user of error
-                }
-            },
-        });
-    }
-});
+//var lastSku = null
+//$('.editable').each(function(){
+//    $(this).attr('contentEditable', true);
+//    $(this).attr('spellCheck', false);
+//});
+//$('.editable').click(function(){
+//    $(this).addClass('currentEdit');
+//});
+//$('.editable').focusout(function(){
+//    $(this).removeClass('currentEdit');
+//});
+//
+//$('.editable-sku').click(function(){
+//    lastSku = $(this).text();
+//});
+//$('.editable-sku').focusout(function(){
+//    var sku = $(this).text();
+//    var vendorID = $(this).parent().find('td.vendor').attr('data-vendorID');
+//    var upc = $(this).parent().parent().find('.upc').attr('data-upc');
+//    $.ajax({
+//        type: 'post',
+//        data: 'setSku=true&lastSku='+lastSku+'&sku='+sku+'&vendorID='+vendorID+'&upc='+upc,
+//        dataType: 'json',
+//        url: 'NewAuditReport.php',
+//        success: function(response)
+//        {
+//            console.log(response);
+//            if (response.saved != true) {
+//                // alert user of error
+//            } else {
+//            }
+//        },
+//    });
+//
+//});
+//var lastBrand = null;
+//$('.editable-brand').click(function(){
+//    lastBrand = $(this).text();
+//});
+//$('.editable-brand').focusout(function(){
+//    var table = $(this).attr('data-table');
+//    var upc = $(this).parent().find('td.upc').attr('data-upc');
+//    var brand = $(this).text();
+//    if (brand != lastBrand) {
+//        $.ajax({
+//            type: 'post',
+//            data: 'setBrand=true&upc='+upc+'&brand='+brand+'&table='+table,
+//            dataType: 'json',
+//            url: 'NewAuditReport.php',
+//            success: function(response)
+//            {
+//                console.log(response);
+//                if (response.saved != true) {
+//                    // alert user of error
+//                }
+//            },
+//        });
+//    }
+//});
+//var lastDescription = null;
+//$('.editable-description').click(function(){
+//    lastDescription = $(this).text();
+//});
+//$('.editable-description').focusout(function(){
+//    var table = $(this).attr('data-table');
+//    var upc = $(this).parent().find('td.upc').attr('data-upc');
+//    var description = encodeURIComponent($(this).text());
+//    if (description != lastDescription) {
+//        $.ajax({
+//            type: 'post',
+//            data: 'setDescription=true&upc='+upc+'&description='+description+'&table='+table,
+//            dataType: 'json',
+//            url: 'NewAuditReport.php',
+//            success: function(response)
+//            {
+//                console.log(response);
+//                if (response.saved != true) {
+//                    // alert user of error
+//                }
+//                var test = $(this).parent();
+//                //var test = $(this);
+//                console.log(test);
+//            },
+//        });
+//    }
+//});
 
 $(document).keydown(function(e){
     var key = e.keyCode;
@@ -879,10 +958,10 @@ $('.row-check').click(function(){
     var strpercent = '';
     var i = 0
     for (i; i < percent; i += 10) {
-        strpercent += '<span style="color: lightgreen;">=</span>';
+        strpercent += '<span style="color: lightgreen;">&#9618;</span>';
     }
-    for (i; i < 100; i += 10) {
-        strpercent += '<span style="color: lightgrey;">~</span>';
+    for (i; i < 101; i += 10) {
+        strpercent += '<span style="color: grey;">&#9618;</span>';
     }
     $('#percentComplete').html(Math.round(percent, 4) + '% Complete ' + strpercent);
 });
@@ -1000,7 +1079,6 @@ $('.column-filter').keyup(function(){
             console.log(text+','+column+','+contents);
             console.log(contents.includes(text));
             if (contents.includes(text)) {
-                //alert('hiya!');
                 $(this).closest('tr').show();
             } else {
                 $(this).closest('tr').hide();
@@ -1172,6 +1250,18 @@ $('#clear').click(function(){
 
 $('#calculator').click(function(){
     $(this).select();
+});
+
+$('#temp-btn').click(function(){
+    var text = $(this).text();
+    if (text == 'Close Review') {
+        c = confirm('Are you sure?');
+        if (c == true) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 });
 JAVASCRIPT;
     }
