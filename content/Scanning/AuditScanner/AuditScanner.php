@@ -224,7 +224,7 @@ HTML;
         $note = FormLib::get('note');
         $username = FormLib::get('username');
         $args = array($note,$upc,$username);
-        $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScanner
+        $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan
             SET notes = ? WHERE upc = ? AND username = ?;");
         $result = $dbc->execute($query,$args);
         $error = 0;
@@ -458,7 +458,7 @@ HTML;
         }
         if ($dbc->error()) echo $dbc->error();
         $args = array($upc, $username);
-        $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScanner WHERE upc = ?
+        $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE upc = ?
             AND username = ?");
         $res = $dbc->execute($prep, $args);
         $notes = "";
@@ -493,7 +493,8 @@ HTML;
         $data = array('cost'=>$passcost,'price'=>$price,'desc'=>$desc,'brand'=>$brand,'vendor'=>$vd,'upc'=>$upc,
             'dept'=>$dept,'margin'=>$margin,'rsrp'=>$rSrp,'srp'=>$srp,'smarg'=>$sMargin,'warning'=>$sWarn,
             'pid'=>$pid,'dMargin'=>$dMargin,'storeID'=>$storeID,'username'=>$username);
-        $ret .= $this->record_data_handler($data,$username,$storeID);
+        //$ret .= $this->record_data_handler($data,$username,$storeID);
+        $ret .= $this->recordData($upc, $username, $storeID);
 
         $warning = array();
         $margOff = ($margin / $dMargin);
@@ -657,7 +658,7 @@ HTML;
                     </div>
                     <div class="row">
                         <div class="col-8">
-                            <a class="btn btn-primary" style="width: 100%; " href="AuditScannerReport.php ">View Report</a>
+                            <a class="btn btn-primary" style="width: 100%; " href="NewAuditReport.php ">View Report</a>
                         </div>
                         <div class="col-4">
                             <a class="btn btn-default" style="background: lightgrey; color: black;" href="http://'.$FANNIE_ROOTDIR.'/modules/plugins2.0/ShelfAudit/SaMenuPage.php">Menu</a>
@@ -704,7 +705,7 @@ HTML;
             </div>';
         $touchicon = "<img class=\"scanicon-pointer\" src=\"../../../common/src/img/icons/pointer-light.png\"
             style=\"margin-left: 20px; margin-top: -5px;\"/>";
-        $count = $this->getCount($dbc,$storeID,$username);
+        $count = $this->getCount($dbc, $storeID, $username);
         $ret .= '<div class="counter"><span id="counter">'.$count.'</span>'.$touchicon.'</div>';
 
         $ret .= '<br /><br /><br /><br /><br /><br />';
@@ -727,11 +728,11 @@ HTML;
     private function getCount($dbc,$storeID,$username)
     {
         $args = array($username,$storeID);
-        $prep = $dbc->prepare("SELECT count(*) from woodshed_no_replicate.AuditScanner
-            WHERE username = ? AND store_id = ?");
+        $prep = $dbc->prepare("SELECT count(*) FROM woodshed_no_replicate.AuditScan
+            WHERE username = ? AND storeID = ?");
         $res = $dbc->execute($prep,$args);
         $count = $dbc->fetchRow($res);
-        return $count[0]-1;
+        return $count[0];
     }
 
     private function form_content($isSocketDevice)
@@ -758,6 +759,22 @@ HTML;
 
         return $ret;
 
+    }
+
+    private function recordData($upc, $username, $storeID)
+    {
+        $dbc = scanLib::getConObj('SCANALTDB');
+        $args = array($upc, $username, $storeID);
+        if ($upc == 0)
+            return false;
+        $prep = $dbc->prepare("INSERT IGNORE INTO AuditScan (upc, username, storeID, date)
+            VALUES (?, ?, ?, NOW())");
+        $res = $dbc->execute($prep, $args);
+        if ($dbc->error()) {
+            return '<div class="alert alert-danger">' . $dbc->error() . '</div>';
+        } else {
+            return false;
+        }
     }
 
     private function record_data_handler($data,$username,$storeID)
