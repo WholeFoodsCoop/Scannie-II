@@ -321,7 +321,10 @@ class NewAuditReport extends PageLayoutA
                 u.brand AS signBrand,
                 p.description AS description,
                 u.description AS signDescription,
-                p.cost, 
+                p.cost,
+                CASE 
+                    WHEN e.shippingMarkup > 0 THEN p.cost + (p.cost * e.shippingMarkup) ELSE p.cost
+                END AS adjcost,
                 p.normal_price AS price, 
                 p.special_price AS sale,
                 t.description AS priceRuleType, 
@@ -440,6 +443,7 @@ class NewAuditReport extends PageLayoutA
             $description = $row['description'];
             $signDescription = $row['signDescription'];
             $cost = $row['cost'];
+            $adjcost = $row['adjcost'];
             $price = $row['price'];
             $sale = $row['sale'];
             $sale = ($sale == '0.00') ? '' : "$$sale";
@@ -447,6 +451,12 @@ class NewAuditReport extends PageLayoutA
             $curMargin = round($row['curMargin'], 2);
             $rsrp = round($row['rsrp'], 2);
             $srp = $rounder->round($rsrp);
+            if ($adjcost != $cost) {
+                $cost = $adjcost;
+                $curMargin = round(100 * ($price - $cost) / $price, 3);
+                $rsrp = round($cost / (1 - ($margin/100)), 2);
+                $srp = $rounder->round($rsrp);
+            }
             $prid = $row['priceRuleType'];
             $dept = $row['dept'];
             $vendor = $row['vendor'];
@@ -960,7 +970,7 @@ $('.row-check').click(function(){
     for (i; i < percent; i += 10) {
         strpercent += '<span style="color: lightgreen;">&#9608;</span>';
     }
-    for (i; i < 101; i += 10) {
+    for (i; i < 100; i += 10) {
         strpercent += '<span style="color: grey;">&#9608;</span>';
     }
     $('#percentComplete').html(Math.round(percent, 4) + '% Complete ' + strpercent);
