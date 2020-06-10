@@ -26,6 +26,7 @@ class NewAuditReport extends PageLayoutA
         $this->__routes[] = 'post<setDescription>';
         $this->__routes[] = 'post<setDept>';
         $this->__routes[] = 'post<setCost>';
+        $this->__routes[] = 'post<setNotes>';
         $this->__routes[] = 'post<checked>';
         $this->__routes[] = 'post<review>';
 
@@ -127,6 +128,22 @@ class NewAuditReport extends PageLayoutA
         $dbc->execute($query, $args);
         if ($er = $dbc->error())
             $json['error'] = $er;
+        echo json_encode($json);
+
+        return false;
+    }
+
+    public function postSetNotesHandler()
+    {
+        $upc = FormLib::get('upc');
+        $notes = FormLib::get('notes');
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+        $json = array();
+
+        $dbc = ScanLib::getConObj('SCANALTDB');
+        $mod = new DataModel($dbc);
+        $json['saved'] = $mod->setNotes($upc, $storeID, $notes, $username);
         echo json_encode($json);
 
         return false;
@@ -491,7 +508,7 @@ class NewAuditReport extends PageLayoutA
                 <span class=\"dept-select hidden\">$deptOpts</span>
                 </td>";
             $td .= "<td class=\"vendor\" data-vendorID=\"$vendorID\">$vendor</td>";
-            $td .= "<td class=\"notes\">$notes</td>";
+            $td .= "<td class=\"notes editable editable-notes\">$notes</td>";
             $td .= "<td class=\"last_sold\">$lastSold</td>";
             $td .= "<td class=\"reviewed\">$reviewed</td>";
             $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td></td>";
@@ -835,11 +852,43 @@ $('.scanicon-trash').click( function(event) {
     }
 });
 
+
+var lastNotes = null
+$('.editable-notes').click(function(){
+    lastNotes = $(this).text();
+});
+$('.editable-notes').focusout(function(){
+    var notes= $(this).text();
+    var upc = $(this).parent().parent().find('.upc').attr('data-upc');
+    if (lastNotes != notes) {
+        //alert(lastNotes+','+notes+','+upc+','+storeID+','+username);
+        $.ajax({
+            type: 'post',
+            data: 'setNotes=true&upc='+upc+'&storeID='+storeID+'&username='+username+'&notes='+notes,
+            dataType: 'json',
+            url: 'NewAuditReport.php',
+            success: function(response)
+            {
+                console.log(response);
+                if (response.saved != true) {
+                    // alert user of error
+                } else {
+                }
+            },
+        });
+    }
+
+});
+
 //var lastSku = null
 //$('.editable').each(function(){
 //    $(this).attr('contentEditable', true);
 //    $(this).attr('spellCheck', false);
 //});
+$('.editable-notes').each(function(){
+    $(this).attr('contentEditable', true);
+    $(this).attr('spellCheck', false);
+});
 //$('.editable').click(function(){
 //    $(this).addClass('currentEdit');
 //});

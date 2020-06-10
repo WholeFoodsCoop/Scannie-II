@@ -79,4 +79,44 @@ class DataModel
 
         return true;
     }
+
+    public function setDept($upc, $dept)
+    {
+        $args = array($dept, $upc);
+        $query = "UPDATE products SET department = ? WHERE upc = ?";
+        $prep = $this->connection->prepare($query);
+        $res = $this->connection->execute($prep, $args);
+        if ($er = $this->connection->error()) {
+            return $er;
+        }
+
+        return true;
+    }
+
+    public function setCost($upc, $cost)
+    {
+        $args = array($cost, $upc);
+        $query = "UPDATE products SET cost = ? WHERE upc = ?";
+        $prep = $this->connection->prepare($query);
+        $res = $this->connection->execute($prep, $args);
+        if ($er = $this->connection->error()) {
+            return $er;
+        }
+
+        return true;
+    }
+
+    public function setNotes($upc, $storeID, $notes, $username)
+    {
+        $args = array($notes, $upc, $storeID, $username);
+        $query = "UPDATE AuditScan SET notes = ? WHERE upc = ? AND storeID = ? AND username = ?";
+        $prep = $this->connection->prepare($query);
+        $res = $this->connection->execute($prep, $args);
+        if ($er = $this->connection->error()) {
+            return $er;
+        }
+
+        return true;
+    }
+
 }
