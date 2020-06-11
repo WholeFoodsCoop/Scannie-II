@@ -889,6 +889,14 @@ $('.editable-notes').each(function(){
     $(this).attr('contentEditable', true);
     $(this).attr('spellCheck', false);
 });
+$('.editable-description.sign-description').each(function(){
+    $(this).attr('contentEditable', true);
+    $(this).attr('spellCheck', false);
+});
+$('.editable-brand.sign-brand').each(function(){
+    $(this).attr('contentEditable', true);
+    $(this).attr('spellCheck', false);
+});
 //$('.editable').click(function(){
 //    $(this).addClass('currentEdit');
 //});
@@ -919,57 +927,57 @@ $('.editable-notes').each(function(){
 //    });
 //
 //});
-//var lastBrand = null;
-//$('.editable-brand').click(function(){
-//    lastBrand = $(this).text();
-//});
-//$('.editable-brand').focusout(function(){
-//    var table = $(this).attr('data-table');
-//    var upc = $(this).parent().find('td.upc').attr('data-upc');
-//    var brand = $(this).text();
-//    if (brand != lastBrand) {
-//        $.ajax({
-//            type: 'post',
-//            data: 'setBrand=true&upc='+upc+'&brand='+brand+'&table='+table,
-//            dataType: 'json',
-//            url: 'NewAuditReport.php',
-//            success: function(response)
-//            {
-//                console.log(response);
-//                if (response.saved != true) {
-//                    // alert user of error
-//                }
-//            },
-//        });
-//    }
-//});
-//var lastDescription = null;
-//$('.editable-description').click(function(){
-//    lastDescription = $(this).text();
-//});
-//$('.editable-description').focusout(function(){
-//    var table = $(this).attr('data-table');
-//    var upc = $(this).parent().find('td.upc').attr('data-upc');
-//    var description = encodeURIComponent($(this).text());
-//    if (description != lastDescription) {
-//        $.ajax({
-//            type: 'post',
-//            data: 'setDescription=true&upc='+upc+'&description='+description+'&table='+table,
-//            dataType: 'json',
-//            url: 'NewAuditReport.php',
-//            success: function(response)
-//            {
-//                console.log(response);
-//                if (response.saved != true) {
-//                    // alert user of error
-//                }
-//                var test = $(this).parent();
-//                //var test = $(this);
-//                console.log(test);
-//            },
-//        });
-//    }
-//});
+var lastBrand = null;
+$('.editable-brand.sign-brand').click(function(){
+    lastBrand = $(this).text();
+});
+$('.editable-brand.sign-brand').focusout(function(){
+    var table = $(this).attr('data-table');
+    var upc = $(this).parent().find('td.upc').attr('data-upc');
+    var brand = $(this).text();
+    if (brand != lastBrand) {
+        $.ajax({
+            type: 'post',
+            data: 'setBrand=true&upc='+upc+'&brand='+brand+'&table='+table,
+            dataType: 'json',
+            url: 'NewAuditReport.php',
+            success: function(response)
+            {
+                console.log(response);
+                if (response.saved != true) {
+                    // alert user of error
+                }
+            },
+        });
+    }
+});
+var lastDescription = null;
+$('.editable-description.sign-description').click(function(){
+    lastDescription = $(this).text();
+});
+$('.editable-description.sign-description').focusout(function(){
+    var table = $(this).attr('data-table');
+    var upc = $(this).parent().find('td.upc').attr('data-upc');
+    var description = encodeURIComponent($(this).text());
+    if (description != lastDescription) {
+        $.ajax({
+            type: 'post',
+            data: 'setDescription=true&upc='+upc+'&description='+description+'&table='+table,
+            dataType: 'json',
+            url: 'NewAuditReport.php',
+            success: function(response)
+            {
+                console.log(response);
+                if (response.saved != true) {
+                    // alert user of error
+                }
+                var test = $(this).parent();
+                //var test = $(this);
+                console.log(test);
+            },
+        });
+    }
+});
 
 $(document).keydown(function(e){
     var key = e.keyCode;
