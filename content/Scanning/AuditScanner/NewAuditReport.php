@@ -355,7 +355,7 @@ class NewAuditReport extends PageLayoutA
                 a.username,
                 100 * (p.normal_price - p.cost) / p.normal_price AS curMargin,
                 100 * ROUND(CASE
-                    WHEN vd.margin > 0.01 THEN vd.margin ELSE dm.margin 
+                    WHEN vd.margin > 0.01 THEN vd.margin ELSE d.margin 
                 END, 4) AS margin,
                 a.notes,
                 CASE
@@ -460,6 +460,7 @@ class NewAuditReport extends PageLayoutA
             $description = $row['description'];
             $signDescription = $row['signDescription'];
             $cost = $row['cost'];
+            $ogCost = null;
             $adjcost = $row['adjcost'];
             $price = $row['price'];
             $sale = $row['sale'];
@@ -469,10 +470,14 @@ class NewAuditReport extends PageLayoutA
             $rsrp = round($row['rsrp'], 2);
             $srp = $rounder->round($rsrp);
             if ($adjcost != $cost) {
-                $cost = $adjcost;
+                $ogCost = "title=\"Cost before adjustments: $cost\"";
+                $cost = round($adjcost, 3);
                 $curMargin = round(100 * ($price - $cost) / $price, 3);
                 $rsrp = round($cost / (1 - ($margin/100)), 2);
                 $srp = $rounder->round($rsrp);
+                if ($upc == '0024238000000') {
+                    echo $margin; // this is incorrect
+                }
             }
             $prid = $row['priceRuleType'];
             $dept = $row['dept'];
@@ -495,7 +500,7 @@ class NewAuditReport extends PageLayoutA
             $td .= "<td class=\"sign-description editable editable-description hidden\" data-table=\"productUser\">$signDescription</td>";
             $td .= "<td class=\"size\">$size</td>";
             $td .= "<td class=\"units\">$units</td>";
-            $td .= "<td class=\"cost\">$cost</td>";
+            $td .= "<td class=\"cost\" $ogCost>$cost</td>";
             $td .= "<td class=\"price\">$price</td>";
             $td .= "<td class=\"sale\">$sale</td>";
             $diff = round($curMargin - $margin, 1);
