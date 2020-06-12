@@ -413,6 +413,7 @@ class NewAuditReport extends PageLayoutA
             <td data-column=\"\"class=\"column-filter\"></td>
             <td data-column=\"notes\"class=\"notes column-filter\"></td>
             <td data-column=\"\"class=\"column-filter\"></td>
+            <td><input type=\"checkbox\" id=\"check-all\"/></td>
         </tr>
         ";
         $th = "
@@ -437,7 +438,6 @@ class NewAuditReport extends PageLayoutA
             <th class=\"last_sold\">last_sold</th>
             <th class=\"reviewed\">reviewed</th>
             <th class=\"notes\">notes</th>
-            <th class=\"\"></th>
             <th class=\"\"></th>
             <th class=\"check\"></th>
         </tr>
@@ -1333,6 +1333,23 @@ $('#temp-btn').click(function(){
         } else {
             return false;
         }
+    }
+});
+
+$('#check-all').click(function(){
+    var checked = $(this).is(':checked');
+    if (checked == true) {
+        $('.row-check').each(function(){
+            if (!$(this).is(':checked')) {
+                $(this).trigger('click');
+            }
+        });
+    } else {
+        $('.row-check').each(function(){
+            if ($(this).is(':checked')) {
+                $(this).trigger('click');
+            }
+        });
     }
 });
 JAVASCRIPT;
