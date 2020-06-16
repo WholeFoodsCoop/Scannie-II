@@ -73,6 +73,13 @@ class NewAuditReport extends PageLayoutA
         return header("location: NewAuditReport.php$suff");
     }
 
+    private function getScaleItem($dbc, $upc)
+    {
+        $data = array();
+
+        return $data;
+    }
+
     private function getMovement($dbc, $upc)
     {
         $data = array();
@@ -443,8 +450,10 @@ class NewAuditReport extends PageLayoutA
         </tr>
         ";
         $result = $dbc->execute($prep, $args);
+        $upcs = array();
         while ($row = $dbc->fetch_row($result)) {
             $upc = $row['upc'];
+            $upcs[$upc] = $upc;
             $data = $this->getMovement($dbc, $upc);
             $lastSold = '';
             foreach ($data as $storeID => $bRow) {
@@ -523,6 +532,22 @@ class NewAuditReport extends PageLayoutA
         }
         $textarea .= "</textarea></div>";
         $rows = $dbc->numRows($result);
+
+        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            $upc = $row['upc'];
+            $uLink = '<a class="upc" href="../../../../git/fannie/item/ItemEditorPage.php?searchupc='.$upc.
+                '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
+            if (!in_array($upc, $upcs)) {
+                $td .= "<tr>";
+                $td .= "<td>$uLink</td>";
+                $td .= "<td></td><td></td><td><i>Unknown PLU / Create New Product</i></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>";
+                $td .= "</tr>";
+                $rows++;
+            }
+        }
+        echo $dbc->error();
 
         $ret = <<<HTML
 <input type="hidden" id="table-rows" value="$rows" />
@@ -606,7 +631,7 @@ HTML;
                 <div class=\"modal-dialog\" role=\"document\">
                     <div class=\"modal-content\">
                       <div class=\"modal-header\">
-                        <h3 class=\"modal-title\" style=\"color: #8c7b70\">Upload a list of UPCs to scan</h3>
+                        <h3 class=\"modal-title\" style=\"color: #8c7b70\">Entere a list of Barcodes</h3>
                         <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\"
                                 style=\"position: absolute; top:20; right: 20\">
                               <span aria-hidden=\"true\">&times;</span>
@@ -650,7 +675,7 @@ $modal
     <button id="clearAllInputB" class="btn btn-secondary btn-sm page-control">Clear Queue</button>
 </div>
 <div class="form-group dummy-form">
-    <button class="btn btn-secondary btn-sm page-control" data-toggle="modal" data-target="#upcs_modal">Upload a List</button>
+    <button class="btn btn-secondary btn-sm page-control" data-toggle="modal" data-target="#upcs_modal">Add Items</button>
 </div>
 <div class="form-group dummy-form">
     <form method="post" action="NewAuditReport.php">
