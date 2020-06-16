@@ -374,7 +374,11 @@ class NewAuditReport extends PageLayoutA
                 CASE
                     WHEN p.size <> 0 THEN p.size ELSE v.size
                 END AS size,
-                v.units
+                v.units,
+                c.previousCost,
+                c.newCost,
+                c.difference AS costChange,
+                c.date AS costChangeDate
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -387,6 +391,7 @@ class NewAuditReport extends PageLayoutA
                 LEFT JOIN vendorDepartments AS vd
                     ON vd.vendorID = p.default_vendor_id AND vd.posDeptID = p.department 
                 LEFT JOIN prodReview AS pr ON p.upc=pr.upc
+                LEFT JOIN productCostChanges AS c ON p.upc=c.upc
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
                 AND a.storeiD = ?
@@ -444,6 +449,7 @@ class NewAuditReport extends PageLayoutA
             <th class=\"vendor\">vendor</th>
             <th class=\"last_sold\">last_sold</th>
             <th class=\"reviewed\">reviewed</th>
+            <th class=\"costChange\">last cost change</th>
             <th class=\"notes\">notes</th>
             <th class=\"\"></th>
             <th class=\"check\"></th>
@@ -500,6 +506,8 @@ class NewAuditReport extends PageLayoutA
             $reviewed = $row['reviewed'];
             $size = $row['size'];
             $units = $row['units'];
+            $costChangeDate = $row['costChangeDate'];
+            $costChange = $row['costChange'];
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku editable editable-sku\">$sku</td>";
@@ -525,6 +533,8 @@ class NewAuditReport extends PageLayoutA
             $td .= "<td class=\"notes editable editable-notes\">$notes</td>";
             $td .= "<td class=\"last_sold\">$lastSold</td>";
             $td .= "<td class=\"reviewed\">$reviewed</td>";
+            $oper = ($costChange > 0) ? '+' : '-';
+            $td .= "<td class=\"costChange\">$oper$costChange - $costChangeDate</td>";
             $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td></td>";
             $td .= "<td class=\"check\"><input type=\"checkbox\" name=\"check\" class=\"row-check\" $checked/></td>";
             $td .= "</tr>";
@@ -540,9 +550,9 @@ class NewAuditReport extends PageLayoutA
             $uLink = '<a class="upc" href="../../../../git/fannie/item/ItemEditorPage.php?searchupc='.$upc.
                 '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
             if (!in_array($upc, $upcs)) {
-                $td .= "<tr>";
+                $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
                 $td .= "<td>$uLink</td>";
-                $td .= "<td></td><td></td><td><i>Unknown PLU / Create New Product</i></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>";
+                $td .= "<td></td><td></td><td><i>Unknown PLU / Create New Product</i></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>";
                 $td .= "</tr>";
                 $rows++;
             }
@@ -551,14 +561,16 @@ class NewAuditReport extends PageLayoutA
 
         $ret = <<<HTML
 <input type="hidden" id="table-rows" value="$rows" />
-<table class="table table-bordered table-sm small items" id="mytable">
-<thead>$th</thead>
-$pth
-<tbody id="mytablebody">
-    $td
-    <tr><td>$textarea</td></tr>
-</tbody>
-</table>
+<div class="table-responsive">
+    <table class="table table-bordered table-sm small items" id="mytable">
+    <thead>$th</thead>
+    $pth
+    <tbody id="mytablebody">
+        $td
+        <tr><td>$textarea</td></tr>
+    </tbody>
+    </table>
+</div>
 HTML;
 
         if (FormLib::get('fetch') == 'true') {
@@ -619,7 +631,7 @@ HTML;
         $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
 
         $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'cost', 'price',
-            'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'notes', 'reviewed');
+            'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'notes', 'reviewed', 'costChange');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         foreach ($columns as $column) {
             $columnCheckboxes .= "<span class=\"column-checkbox\"><label for=\"check-$column\">$column</label> <input type=\"checkbox\" name=\"column-checkboxes\" id=\"check-$column\" value=\"$column\" class=\"column-checkbox\" checked></span>";
@@ -1276,6 +1288,7 @@ $('#check-notes').trigger('click');
 $('#check-sale').trigger('click');
 $('#check-last_sold').trigger('click');
 $('#check-reviewed').trigger('click');
+$('#check-costChange').trigger('click');
 
 var resizes = 0;
 $('#calculator').keydown(function(e){
