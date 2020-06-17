@@ -472,7 +472,11 @@ HTML;
 </div>
 <div class="container-fluid" style="margin-top: 15px;">
     <div class="form-group">
-        <textarea id="textarea" style="border: 1px solid lightgrey">$upcStr</textarea>
+
+        <div style="position: relative">
+            <span class="status-popup" style="display: none;">Copied!</span>
+        <textarea id="textarea" class="copy-text" rows=5 cols=15 style="border: 1px solid lightgrey">$upcStr</textarea>
+        </div>
     </div>
     <div id="bottom-content"></div>
 </div>
@@ -630,6 +634,22 @@ JAVASCRIPT;
         return <<<HTML
 .queue-btn {
     width: 50px;
+}
+.status-popup {
+    display: none;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    background: white;
+    padding: 5px;
+    font-weight: bold;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-style: solid solid solid solid;
+    border-color: grey;
+    border-width: 1px;
+    box-shadow: 1px 1px slategrey;
 }
 HTML;
     }

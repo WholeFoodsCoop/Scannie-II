@@ -374,3 +374,12 @@ var countRows = function()
 }
 var rows = countRows() - 1;
 $('#extra-content').prepend('<div>Items in this queue: '+rows+'</div>');
+
+$('.copy-text').focus(function(){
+    $(this).select();
+    var status = document.execCommand('copy');
+    if (status == true) {
+        $(this).parent().find('.status-popup').show()
+            .delay(400).fadeOut(400);
+    }
+});
