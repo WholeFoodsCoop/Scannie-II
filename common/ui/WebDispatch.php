@@ -17,6 +17,7 @@ class WebDispatch
     protected $starttime = NULL;
     protected $loadtime = NULL;
     protected $config;
+    protected $cssFiles = array();
 
     function __construct() 
     {
@@ -24,7 +25,7 @@ class WebDispatch
         $this->config->getConfig();
     }
 
-    private function runPage($class)
+    private static function runPage($class)
     {
         if (!class_exists('FormLib')) {
             include(__DIR__.'/../lib/FormLib.php');
@@ -34,6 +35,9 @@ class WebDispatch
         }
         if(!class_exists('config')) {
             include(__DIR__.'/ConfigModule.php');
+        }
+        if(!class_exists('DataModel')) {
+            include(__DIR__.'/../lib/DataModel.php');
         }
         $obj = new $class();
         $obj->starttime = microtime(true);
@@ -47,6 +51,7 @@ class WebDispatch
             include(__DIR__.'/CoreNav.php');
         }
 
+        $this->addCssFile();
         $this->preflight();
         $this->preprocess();
         echo $this->header();
@@ -92,9 +97,10 @@ class WebDispatch
         }
         $test = session_id();
         $dbc = scanLib::getConObj('SCANALTDB');
-        $a = array(session_id());
-        $p = $dbc->prepare("INSERT IGNORE INTO ScannieConfig (session_id, scanBeep, time)
-            VALUES (?, 0, NOW());");
+        $auditReportSet = "{'check':1,'upc':1,'sku':1,'brand':1,'sign-brand':0,'description':1,'sign-description':0,'size':1,'units':1,'cost':1,'price':1,'sale':0,'margin_target_diff':0,'rsrp':1,'srp':1,'prid':1,'dept':1,'vendor':1,'last_sold':0,'notes':0,'reviewed':0,'costChange':0}";
+        $a = array(session_id(), $auditReportSet);
+        $p = $dbc->prepare("INSERT IGNORE INTO ScannieConfig (session_id, scanBeep, time, auditReportSet)
+            VALUES (?, 0, NOW(), ?);");
         $dbc->execute($p, $a);
         //echo $dbc->error();
         $hostname = $_SERVER['HTTP_HOST'];
@@ -133,6 +139,12 @@ class WebDispatch
         if ($this->ui == true) {
             $this->addScript("http://{$MY_ROOTDIR}/common/ui/search.js");
         }
+        $stylesheets = '';
+        if (count($this->cssFiles) > 0) {
+            foreach ($this->cssFiles as $file_url => $type) {
+                $stylesheets .= "<link rel=\"stylesheet\" href=\"$file_url\" type=\"text/css\">";
+            }
+        }
 
         return <<<HTML
 <html>
@@ -151,6 +163,7 @@ class WebDispatch
     <title>{$this->title}</title>
     <link rel="icon" href="http://{$MY_ROOTDIR}/common/src/icons/scannie_favicon.ico">
     <link rel="stylesheet" href="http://{$MY_ROOTDIR}/common/css/commonInterface.css?reload=always">
+    $stylesheets
 <style>
 {$this->cssContent()}
 </style>
@@ -243,6 +256,11 @@ HTML;
     protected function addScript($file_url, $type='text/javascript')
     {
         $this->scripts[$file_url] = $type;
+    }
+
+    protected function addCssFile($file_url)
+    {
+        $this->cssFiles[$file_url] = 'stylesheet';
     }
     
     protected function add_onload_command($str)
