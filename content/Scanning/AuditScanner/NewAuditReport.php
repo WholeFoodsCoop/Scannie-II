@@ -29,8 +29,26 @@ class NewAuditReport extends PageLayoutA
         $this->__routes[] = 'post<setNotes>';
         $this->__routes[] = 'post<checked>';
         $this->__routes[] = 'post<review>';
+        $this->__routes[] = 'post<columnSet>';
 
         return parent::preprocess();
+    }
+
+    public function postColumnSetHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $columnSet = FormLib::get('columnSet');
+        $json = array('error'=>'no-error','json'=>$columnSet);
+
+        $args = array($columnSet, session_id());
+        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.ScannieConfig 
+            SET auditReportSet = ? WHERE session_id = ?");
+        $res = $dbc->execute($prep, $args);
+        if ($er = $dbc->error())
+            $json['error'] = $er;
+        echo json_encode($json);
+
+        return false;
     }
 
     public function postReviewView()
@@ -409,9 +427,9 @@ class NewAuditReport extends PageLayoutA
             <td data-column=\"upc\"class=\"upc column-filter\"></td>
             <td data-column=\"sku\"class=\"sku column-filter\"></td>
             <td data-column=\"brand\"class=\"brand column-filter\"></td>
-            <td data-column=\"sign-brand\"class=\"sign-brand hidden column-filter\"></td>
+            <td data-column=\"sign-brand\"class=\"sign-brand column-filter\"></td>
             <td data-column=\"description\"class=\"column-filter\"></td>
-            <td data-column=\"sign-description\"class=\"sign-description hidden column-filter\"></td>
+            <td data-column=\"sign-description\"class=\"sign-description column-filter\"></td>
             <td data-column=\"size\"class=\"size column-filter\"></td>
             <td data-column=\"cost\"class=\"cost column-filter\"></td>
             <td data-column=\"price\"class=\"price column-filter\"></td>
@@ -433,9 +451,9 @@ class NewAuditReport extends PageLayoutA
             <th class=\"upc\">upc</th>
             <th class=\"sku\">sku</th>
             <th class=\"brand\">brand</th>
-            <th class=\"sign-brand hidden\">sign-brand</th>
+            <th class=\"sign-brand \">sign-brand</th>
             <th class=\"description\">description</th>
-            <th class=\"sign-description hidden\">sign-description</th>
+            <th class=\"sign-description \">sign-description</th>
             <th class=\"size\">size</th>
             <th class=\"units\">units</th>
             <th class=\"cost\">cost</th>
@@ -512,9 +530,9 @@ class NewAuditReport extends PageLayoutA
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku editable editable-sku\">$sku</td>";
             $td .= "<td class=\"brand editable editable-brand\" data-table=\"products\">$brand</td>";
-            $td .= "<td class=\"sign-brand editable editable-brand hidden\" data-table=\"productUser\">$signBrand</td>";
+            $td .= "<td class=\"sign-brand editable editable-brand \" data-table=\"productUser\">$signBrand</td>";
             $td .= "<td class=\"description editable editable-description\" data-table=\"products\">$description</td>";
-            $td .= "<td class=\"sign-description editable editable-description hidden\" data-table=\"productUser\">$signDescription</td>";
+            $td .= "<td class=\"sign-description editable editable-description \" data-table=\"productUser\">$signDescription</td>";
             $td .= "<td class=\"size\">$size</td>";
             $td .= "<td class=\"units\">$units</td>";
             $td .= "<td class=\"cost\" $ogCost>$cost</td>";
@@ -705,7 +723,7 @@ $columnCheckboxes
 <div class="row">
     <div class="col-lg-8">
         <div style="font-size: 12px; padding: 10px;">
-            <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label><input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="column-checkbox" checked>
+            <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label><input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="" checked>
         </div>
         <div id="countDisplay" style="font-size: 12px; padding: 10px; display: none;">
             <span id="checkedCount"></span> <b>/ 
@@ -762,7 +780,14 @@ HTML;
 
     public function javascriptContent()
     {
+        $dbc = ScanLib::getConObj();
+        $mod = new DataModel($dbc);
+        $jsonSettings = $mod->getAuditReportSet(session_id());
+        //$json = json_encode($jsonSettings);
+        $json = $jsonSettings;
+
         return <<<JAVASCRIPT
+var columnSet = $json;
 var tableRows = $('#table-rows').val();
 var storeID = $('#storeID').val();
 var username = $('#username').val();
@@ -1074,6 +1099,7 @@ $('.row-check').click(function(){
     }
     $('#percentComplete').html(Math.round(percent, 4) + '% Complete ' + strpercent);
 });
+
 $('.column-checkbox').change(function(){
     var checked = $(this).is(':checked');
     var column = $(this).val();
@@ -1082,22 +1108,27 @@ $('.column-checkbox').change(function(){
         $('.'+column).each(function(){
             $(this).show();
         }); 
+        columnSet[column] = 1;
     } else {
         // hide column
         $('.'+column).each(function(){
             $(this).hide();
         }); 
+        columnSet[column] = 0;
     }
-});
-
-$('.column-checkbox').each(function(){
-    var column = $(this).val();
-    if (column == 'sign-brand') {
-        $(this).prop('checked', false);
-    }
-    if (column == 'sign-description') {
-        $(this).prop('checked', false);
-    }
+    let sendJson = JSON.stringify(columnSet);
+    $.ajax({
+        type: 'post',
+        data: 'columnSet='+sendJson,
+        dataType: 'json',
+        url: 'NewAuditReport.php',
+        success: function(response)
+        {
+            if (response.error) {
+                console.log(response);
+            }
+        },
+    });
 });
 
 $('#check-pos-descript').click(function(){
@@ -1281,15 +1312,6 @@ $('#temp').click(function(){
     }
 });
 
-// uncheck column filter defaults
-$('#check-prid').trigger('click');
-$('#check-margin_target_diff').trigger('click');
-$('#check-notes').trigger('click');
-$('#check-sale').trigger('click');
-$('#check-last_sold').trigger('click');
-$('#check-reviewed').trigger('click');
-$('#check-costChange').trigger('click');
-
 var resizes = 0;
 $('#calculator').keydown(function(e){
     if (e.keyCode == 13) {
@@ -1388,6 +1410,16 @@ $('#check-all').click(function(){
                 $(this).trigger('click');
             }
         });
+    }
+});
+
+// uncheck columns by session_id settings 
+$(window).load(function(){
+    for (var k in columnSet) {
+        let set = columnSet[k];
+        if (set == 0) {
+            $('#check-'+k).trigger('click');
+        }
     }
 });
 JAVASCRIPT;
