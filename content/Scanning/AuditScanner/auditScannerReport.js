@@ -16,14 +16,16 @@ $("#notes").change( function() {
     });
     $("#mytable").each(function() {
         $(this).find("tr").each(function() {
-        var notecell = $(this).find(".notescell").text();
-            if (note != notecell) {
-                $(this).closest("tr").hide();
+            if (!$(this).parent('thead').is('thead')) {
+                var notecell = $(this).find(".notes").text();
+                if (note != notecell) {
+                    $(this).closest("tr").hide();
+                }
+                if (noteKey == "viewall") {
+                    $(this).show();
+                }
+                $(".blankrow").show();
             }
-            if (noteKey == "viewall") {
-                $(this).show();
-            }
-            $(".blankrow").show();
         });
     });
 });

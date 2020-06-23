@@ -493,7 +493,6 @@ HTML;
         $data = array('cost'=>$passcost,'price'=>$price,'desc'=>$desc,'brand'=>$brand,'vendor'=>$vd,'upc'=>$upc,
             'dept'=>$dept,'margin'=>$margin,'rsrp'=>$rSrp,'srp'=>$srp,'smarg'=>$sMargin,'warning'=>$sWarn,
             'pid'=>$pid,'dMargin'=>$dMargin,'storeID'=>$storeID,'username'=>$username);
-        //$ret .= $this->record_data_handler($data,$username,$storeID);
         $ret .= $this->recordData($upc, $username, $storeID);
 
         $warning = array();
@@ -672,7 +671,7 @@ HTML;
 
         //  Get easy re-use notes for this session
         $args = array($username,$storeID);
-        $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScanner WHERE username = ? AND store_id = ?");
+        $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE username = ? AND storeID = ?");
         $res = $dbc->execute($prep,$args);
         $notes = array();
         while ($row = $dbc->fetchRow($res)) {
@@ -775,53 +774,6 @@ HTML;
         } else {
             return false;
         }
-    }
-
-    private function record_data_handler($data,$username,$storeID)
-    {
-
-        $ret = '';
-        $dbc = scanLib::getConObj('SCANALTDB');
-        $argsA = array($data['upc'],$username,$storeID);
-        $prepA = $dbc->prepare("SELECT * FROM AuditScanner WHERE upc = ? AND username = ? AND store_id = ? LIMIT 1");
-        $resA = $dbc->execute($prepA,$argsA);
-
-        if ($dbc->numRows($resA) == 0) {
-            $args = array(
-                $data['upc'],
-                $data['brand'],
-                $data['desc'],
-                $data['price'],
-                $data['margin'],
-                $data['dMargin'],
-                $data['dept'],
-                $data['vendor'],
-                $data['rsrp'],
-                $data['srp'],
-                $data['pid'],
-                $data['warning'],
-                $data['cost'],
-                $data['storeID'],
-                $data['username']
-            );
-            $prep = $dbc->prepare("
-                INSERT INTO AuditScanner
-                (
-                    upc, brand, description, price, curMarg, desMarg, dept,
-                        vendor, rsrp, srp, prid, flag, cost, store_id,
-                        username
-                ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-                );
-            ");
-            $dbc->execute($prep,$args);
-            if ($dbc->error()) {
-                return '<div class="alert alert-danger">' . $dbc->error() . '</div>';
-            } else {
-                return false;
-            }
-        }
-
     }
 
     public function cssContent()

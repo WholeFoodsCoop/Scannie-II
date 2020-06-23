@@ -32,6 +32,15 @@ class AuditScannerReport extends PageLayoutA
     protected $ui = TRUE;
     protected $must_authenticate = TRUE;
 
+    private function reload_handler($dbc,$storeID,$username) {
+    }
+
+    static function getDbc()
+    {
+        $dbc = ScanLib::getConObj();
+        return $dbc;
+    }
+
     private function clear_scandata_handler($dbc,$storeID,$username)
     {
         $args = array($storeID,$username);
@@ -128,7 +137,8 @@ class AuditScannerReport extends PageLayoutA
                     pu.description AS signdesc,
                     pu.brand AS signbrand,
                     v.shippingMarkup,
-                    v.discountRate
+                    v.discountRate,
+                    vi.sku
                 FROM products AS p
                     LEFT JOIN productUser AS pu ON p.upc = pu.upc
                     LEFT JOIN departments AS d ON p.department=d.dept_no
@@ -161,6 +171,7 @@ class AuditScannerReport extends PageLayoutA
                 $narrow = $row['narrow'];
                 $markup = $row['shippingMarkup'];
                 $discount = $row['discountRate'];
+                $sku = $row['sku'];
 
                 $adjcost = $cost;
                 if ($markup > 0) $adjcost += $cost * $markup;
@@ -217,16 +228,17 @@ class AuditScannerReport extends PageLayoutA
                     $sWarn,
                     $cost,
                     $storeID,
-                    $username
+                    $username,
+                    $sku
                 );
                 $prep = $dbc->prepare("
                     INSERT INTO woodshed_no_replicate.AuditScanner
                     (
                         upc, brand, description, price, curMarg, desMarg, dept,
                             vendor, rsrp, srp, prid, flag, cost, store_id,
-                            username
+                            username, sku
                     ) VALUES (
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                     );
                 ");
                 $dbc->execute($prep,$args);
@@ -252,7 +264,6 @@ class AuditScannerReport extends PageLayoutA
         $this->addScript('../../../common/javascript/tablesorter/js/jquery.metadata.js');
 
         $rounder = new PriceRounder();
-        //$dbc = new SQLManager($SCANHOST, 'pdo_mysql', $SCANDB, $SCANUSER, $SCANPASS);
         $dbc = ScanLib::getConObj();
         $storeID = scanLib::getStoreID();
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
@@ -267,7 +278,8 @@ class AuditScannerReport extends PageLayoutA
             'cleardata' => 'clear_scandata_handler',
             'update' => 'update_scandata_handler',
             'clearNotes' => 'clear_notes_handler',
-            'list_upcs' => 'list_upcs_handler'
+            'list_upcs' => 'list_upcs_handler',
+            'reload' => 'reload_handler',
         );
         foreach ($routes as $post => $function) {
             if ($_POST[$post]) {
@@ -276,9 +288,6 @@ class AuditScannerReport extends PageLayoutA
         }
 
         $ret .= $this->form_content();
-
-        //delete me later
-        $ret .= '<div id="resp"></div>';
 
         $options = $this->get_notes_options($dbc,$storeID,$username);
         $noteStr = '';
@@ -292,20 +301,12 @@ class AuditScannerReport extends PageLayoutA
         // new addition, filter all columns test
         $colStr .= '<span id="filter-options"></span>';
 
-        $ret .= '
-            <table class="table table-bordered table-sm small" style="width: 500px; margin-top: 5px; margin-left: 5px;">
-                <tr class="key"><td>Key</td><td>
-                </td></tr>
-                <tr class="key"><td id="grey-toggle" style="background-color: lightgrey">&nbsp;</td><td>Product Missing Cost</td>
-                <td id="blue-toggle" style="background-color: lightblue; width: 30px">&nbsp;</td><td>Price Above Margin</td></tr>
-                <tr class="key"><td id="yellow-toggle" style="background-color: #FFF457">&nbsp;</td><td>Price Below Margin (M)</td>
-                <td id="red-toggle" style="background-color: tomato; width: 30px; ">&nbsp;</td><td>Price Below Margin (L)</td></tr>
-            </table>
-        ';
-        //$ret .= $btnUpdate;
+        $ret .= "<br/><br/>";
         $args = array($username,$storeID);
         $query = $dbc->prepare("
-        	SELECT id, upc, brand, description, cost, price, curMarg, desMarg, rsrp, srp, prid, flag, dept, vendor, notes, store_id, username
+        	SELECT upc, sku, brand, description, cost, price, 
+                CONCAT(curMarg, ' / ', desMarg, ' (', ROUND(100 * (curMarg - desMarg)), ')') AS margin_target_diff,
+                rsrp, srp, prid, dept, vendor, notes 
 			FROM woodshed_no_replicate.AuditScanner
             WHERE username = ?
                 AND store_id = ?
@@ -347,9 +348,9 @@ class AuditScannerReport extends PageLayoutA
             } elseif ($margOff < 0.95 && $margOff > 0.90
                 && $srp != $price
                 && $srp >= $price) {
-                $flags['warning'][] = $i;
+                //$flags['warning'][] = $i;
             } elseif ($srp != $price && $srp >= $price) {
-                $flags['danger'][] = $i;
+                //$flags['danger'][] = $i;
             }
             $i++;
         }
@@ -363,8 +364,8 @@ class AuditScannerReport extends PageLayoutA
             </style>
         ';
 
-        $ret .= '<div style="font-size: 12px; padding-bottom: 10px;"><b>Filter by Notes</b>:'.$noteStr.'</div>';
-        $ret .= '<div style="font-size: 12px; padding-bottom: 10px;"><b>Filter by column</b>: '.$colStr.'</div>';
+        $ret .= '<div style="font-size: 12px; padding: 10px;"><b>Note Filter</b>:'.$noteStr.'</div>';
+        //$ret .= '<div style="font-size: 12px; padding-bottom: 10px;"><b>Filter by column</b>: '.$colStr.'</div>';
         $ret .=  '<div class="panel panel-default table-responsive">
             <table class="table table-condensed table-sm small table-bordered tablesorter" id="dataTable">';
         $ret .=  '<thead class="key" id="dataTableThead">
@@ -416,9 +417,9 @@ class AuditScannerReport extends PageLayoutA
 
             if($prevKey != $k) {
                 if ($data[$k+1]['cost'] == 0) {
-                    $ret .=  '</tr><tr id="tr'.$curUpc.'" class="highlight grey rowz" style="background-color:lightgrey">';
+                    $ret .=  '</tr><tr id="tr'.$curUpc.'" class="highlight grey rowz">';
                 } elseif (in_array(($k+1),$flags['danger']) && $data[$k+1]['prid'] == 0) {
-                    $ret .=  '</tr><tr id="tr'.$curUpc.'"  class="highlight red rowz" style="background-color:tomato; color:#700404">';
+                    $ret .=  '</tr><tr id="tr'.$curUpc.'"  class="highlight red rowz">';
 	            } elseif (in_array(($k+1),$flags['warning']) && $data[$k+1]['prid'] == 0) {
                     $ret .=  '</tr><tr id="tr'.$curUpc.'"  class="highlight yellow rowz" style="background-color:#FFF457; color: #635d00">';
                 } elseif (in_array(($k+1),$flags['info']) && $data[$k+1]['prid'] == 0) {
@@ -579,6 +580,9 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
+$('tr').each(function(){
+    $(this).attr('background', 'blue');
+});
 var table_id = 'dataTable';
 var getNumCols = function(table_id) {
     var length = $('#'+table_id).find('tr')[0].cells.length;
@@ -651,6 +655,20 @@ $('.column-filter-control').change(function(){
         }
     });
 });
+$('tr').each(function(){
+    $(this).attr('background', 'blue');
+});
+//var rowCount = 0;
+//$.ajax({
+//    type: 'post', 
+//    url: 'asrAjax.php',
+//    data: 'reload=1',
+//    success: function(response){
+//        alert(response);
+//        if (response == 'reload')
+//            location.reload(); 
+//    },
+//});
 JAVASCRIPT;
     }
 
