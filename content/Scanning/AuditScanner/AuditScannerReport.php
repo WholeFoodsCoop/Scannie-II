@@ -658,17 +658,6 @@ $('.column-filter-control').change(function(){
 $('tr').each(function(){
     $(this).attr('background', 'blue');
 });
-//var rowCount = 0;
-//$.ajax({
-//    type: 'post', 
-//    url: 'asrAjax.php',
-//    data: 'reload=1',
-//    success: function(response){
-//        alert(response);
-//        if (response == 'reload')
-//            location.reload(); 
-//    },
-//});
 JAVASCRIPT;
     }
 
