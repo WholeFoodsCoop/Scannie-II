@@ -97,7 +97,7 @@ class WebDispatch
         }
         $test = session_id();
         $dbc = scanLib::getConObj('SCANALTDB');
-        $auditReportSet = "{'check':1,'upc':1,'sku':1,'brand':1,'sign-brand':0,'description':1,'sign-description':0,'size':1,'units':1,'cost':1,'price':1,'sale':0,'margin_target_diff':0,'rsrp':1,'srp':1,'prid':1,'dept':1,'vendor':1,'last_sold':0,'notes':0,'reviewed':0,'costChange':0}";
+        $auditReportSet = "{'check':1,'upc':1,'sku':1,'brand':1,'sign-brand':0,'description':1,'sign-description':0,'size':1,'units':1,'cost':1,'price':1,'sale':0,'margin_target_diff':0,'rsrp':1,'srp':1,'prid':0,'dept':1,'vendor':1,'last_sold':0,'notes':0,'reviewed':0,'costChange':0}";
         $a = array(session_id(), $auditReportSet);
         $p = $dbc->prepare("INSERT IGNORE INTO ScannieConfig (session_id, scanBeep, time, auditReportSet)
             VALUES (?, 0, NOW(), ?);");
