@@ -130,8 +130,8 @@ img.icon {
     background-size: cover;
 }
 .scanicon-sm {
-    height: 5px;
-    width: 5px;
+    height: 15px;
+    width: 15px;
     background-size: 15px;
     background-position: center; 
 }
@@ -316,6 +316,9 @@ div.infoContainer {
 /*
     Bootstrap-mods
 */
+.close {
+    cursor: pointer;
+}
 .input-default, .textarea-default {
     background-color: #b7b4cc;
 }

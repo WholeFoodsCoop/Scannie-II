@@ -23,7 +23,10 @@ class Home extends PageLayoutA
         return <<<HTML
 <div align="center" style="padding-top: 35vh; font-size: 22px; font-weight: bold; text-shadow: 1px 1px lightgrey;">
     Scannie - version 2.0
-    <div>Home Page</div>
+    <div>&nbsp;</div>
+    <div style="font-size: 14">by Corey Sather</div>
+    <div style="font-size: 14">Duluth, MN</div>
+    <div style="font-size: 14">&copy; Whole Foods Community Co-op 2020</div>
 </div>
 <div><a href=""></a></div>
 HTML;
