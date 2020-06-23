@@ -68,7 +68,7 @@ HTML;
     {
         $links = array(
             'Scan More Items'  => 'SCS.php',
-            'Audit (Alt.) Scanner' => '../AuditScanner/AuditScanner.php',
+            'Audit (Alt.) Scanner' => '../AuditScanner/ProductScanner.php',
             'View Queues' => 'BatchCheckQueues.php',
             'Coop Deals Item Check' => '../../../../../git/IS4C/fannie/item/CoopDealsLookupPage.php',
             'Chat IM' => 'BatchCheckChat.php',

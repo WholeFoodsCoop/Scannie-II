@@ -74,13 +74,14 @@ HTML;
     {
         $session = FormLib::get('session');
         $links = array(
-            'Scan More Items'  => 'SCS.php',
-            'Audit (Alt.) Scanner' => '../AuditScanner/AuditScanner.php',
-            'View Queues' => 'newpage.php?queue=2&session='.$session,
+            'Batch Check - Scan Items'  => 'SCS.php',
+            'Alternate Scanner (Audie)' => '../AuditScanner/ProductScanner.php',
+            'Batch Check - View Queues' => 'newpage.php?queue=2&session='.$session,
             'Coop Deals Item Check' => '../../../../../git/IS4C/fannie/item/CoopDealsLookupPage.php',
             'Chat IM' => 'BatchCheckChat.php#page-bottom',
             //'ScannieV2.0 Home' => '../../',
             'Sign Out' => 'newpage.php?login=1',
+            'Fannie - Mobile' => '../../../../../mobile/',
             '*Cleanup*<br>Delete Sessions' => 'newMenu.php?delete=1',
             '*Cleanup*<br>Delete Chat' => 'BatchCheckChat.php?delete=1',
             //'testpage' => '../../page.php',

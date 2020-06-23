@@ -742,7 +742,7 @@ $modal
     </form>
 </div>
 <div class="form-group dummy-form">
-    <a class="btn btn-info btn-sm page-control" href="AuditScanner.php ">Scanner</a>
+    <a class="btn btn-info btn-sm page-control" href="ProductScanner.php ">Scanner</a>
 </div>
 $nFilter
 $columnCheckboxes

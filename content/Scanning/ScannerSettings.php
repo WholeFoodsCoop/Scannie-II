@@ -63,7 +63,7 @@ class ScannerSettings extends PageLayoutA
     <label>Go To:</label>
     <ul>
         <li><a href="AuditScanner/QuickScanner.php">Quick Scanner</a></li>
-        <li><a href="AuditScanner/AuditScanner.php">Audit Scanner</a></li>
+        <li><a href="AuditScanner/ProductScanner.php">Audit Scanner</a></li>
         <li><a href="BatchCheck/SCS.php">Batch Check</a></li>
     </ul>
     <form method="post">
