@@ -98,6 +98,27 @@ class NewAuditReport extends PageLayoutA
         return $data;
     }
 
+    private function getScaleData($dbc, $upc)
+    {
+        $args = array($upc);
+        $prep = $dbc->prepare("SELECT 
+            CASE 
+                WHEN bycount = 0 THEN 'Random'
+                WHEN bycount = 1 THEN 'Fixed'
+                ELSE 'not in scale'
+            END AS bycount
+            FROM scaleItems 
+            WHERE plu = ?");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $value = $row['bycount'];
+            $bycount = ($value > -1) ? $value : 5;
+        }
+        echo $dbc->error();
+
+        return $bycount;
+    }
+
     private function getMovement($dbc, $upc)
     {
         $data = array();
@@ -441,9 +462,10 @@ class NewAuditReport extends PageLayoutA
             <td data-column=\"dept\"class=\"dept column-filter\"></td>
             <td data-column=\"vendor\"class=\"vendor column-filter\"></td>
             <td data-column=\"\"class=\"column-filter\"></td>
+            <td data-column=\"scaleItem\"class=\"scaleItem column-filter\"></td>
             <td data-column=\"notes\"class=\"notes column-filter\"></td>
-            <td data-column=\"\"class=\"column-filter\"></td>
-            <td><input type=\"checkbox\" id=\"check-all\"/></td>
+            <td data-column=\"\" class=\"column-filter\"></td>
+            <td data-column=\"check\" class=\"column-filter\"><input type=\"checkbox\" id=\"check-all\"/></td>
         </tr>
         ";
         $th = "
@@ -466,6 +488,7 @@ class NewAuditReport extends PageLayoutA
             <th class=\"dept\">dept</th>
             <th class=\"vendor\">vendor</th>
             <th class=\"last_sold\">last_sold</th>
+            <th class=\"scaleItem\">scale</th>
             <th class=\"reviewed\">reviewed</th>
             <th class=\"costChange\">last cost change</th>
             <th class=\"notes\">notes</th>
@@ -479,6 +502,8 @@ class NewAuditReport extends PageLayoutA
             $upc = $row['upc'];
             $upcs[$upc] = $upc;
             $data = $this->getMovement($dbc, $upc);
+            $bycount = null;
+            $bycount = $this->getScaleData($dbc, $upc);
             $lastSold = '';
             foreach ($data as $storeID => $bRow) {
                 $inUse = ($bRow['inUse'] != 1) ? 'alert-danger' : 'alert-success';
@@ -550,6 +575,7 @@ class NewAuditReport extends PageLayoutA
             $td .= "<td class=\"vendor\" data-vendorID=\"$vendorID\">$vendor</td>";
             $td .= "<td class=\"notes editable editable-notes\">$notes</td>";
             $td .= "<td class=\"last_sold\">$lastSold</td>";
+            $td .= "<td class=\"scaleItem\">$bycount</td>";
             $td .= "<td class=\"reviewed\">$reviewed</td>";
             $oper = ($costChange > 0) ? '+' : '-';
             $td .= "<td class=\"costChange\">$oper$costChange - $costChangeDate</td>";
@@ -569,8 +595,9 @@ class NewAuditReport extends PageLayoutA
                 '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
             if (!in_array($upc, $upcs)) {
                 $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
-                $td .= "<td>$uLink</td>";
-                $td .= "<td></td><td></td><td><i>Unknown PLU / Create New Product</i></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>";
+                $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
+                $td .= "<td></td><td></td><td><i>Unknown PLU / Create New Product</i></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>";
+                $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td><td></td>";
                 $td .= "</tr>";
                 $rows++;
             }
@@ -649,7 +676,7 @@ HTML;
         $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
 
         $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'cost', 'price',
-            'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'notes', 'reviewed', 'costChange');
+            'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed', 'costChange');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         foreach ($columns as $column) {
             $columnCheckboxes .= "<span class=\"column-checkbox\"><label for=\"check-$column\">$column</label> <input type=\"checkbox\" name=\"column-checkboxes\" id=\"check-$column\" value=\"$column\" class=\"column-checkbox\" checked></span>";
@@ -746,7 +773,7 @@ $columnCheckboxes
         </div>
     </div>
     <div class="col-lg-4">
-        <div class="card" style="margin: 5px">
+        <div class="card" style="margin: 5px; box-shadow: 1px 1px lightgrey;">
             <div class="card-body">
                 <h6 class="card-title">Simple Input Calculator &trade;</h6>
                 <div class="row">
