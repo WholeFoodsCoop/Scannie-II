@@ -469,7 +469,7 @@ HTML;
                     WHERE method = 'badPriceCheck'   
                         AND page = 'Dashboard'
                 )
-                AND (normal_price = 0 OR normal_price > 99.99 OR normal_price < cost)
+                AND (normal_price = 0 OR normal_price > 129.99 OR normal_price < cost)
                 AND last_sold is not NULL
                 AND p.price_rule_id = 0
                 AND wicable = 0
