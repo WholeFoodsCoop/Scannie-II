@@ -38,7 +38,7 @@ class BatchSaleReviewPage extends PageLayoutA
     {
         $dbc = scanLib::getConObj();
         $curPage = basename($_SERVER['PHP_SELF']);
-        $FANNIE_ROOTDIR = $this->config['FANNIE_ROOTDIR'];
+        $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
         
         $id = $_GET['id'];
         $batchname = "";
