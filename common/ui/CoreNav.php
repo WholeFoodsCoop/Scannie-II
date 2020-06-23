@@ -123,6 +123,7 @@ HTML;
           <div class="nav-item nav-label" align=""><span class="nav-label">Reports</span></div>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/Batches/BatchReview/BatchReviewPage.php">Batch Review Report</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/BatchHistory.php">Batch Activity Report (All)</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/DeliReusePluReport.php">Deli, Find PLUs to Reuse</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/PriceRuleTypeReport.php">Price Rule Report</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/Batches/CoopDeals/CoopDealsReview.php">Q.A. & Breakdowns</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/WeeklySalesByWeek.php">Weekly Sales By Week</a>
