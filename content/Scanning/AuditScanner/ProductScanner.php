@@ -660,7 +660,7 @@ HTML;
                             <a class="btn btn-primary" style="width: 100%; " href="AuditReport.php ">View Report</a>
                         </div>
                         <div class="col-4">
-                            <a class="btn btn-default" style="background: lightgrey; color: black;" href="http://'.$FANNIE_ROOTDIR.'/modules/plugins2.0/ShelfProduct/SaMenuPage.php">Menu</a>
+                            <a class="btn btn-default" style="background: lightgrey; color: black;" href="http://'.$FANNIE_ROOTDIR.'/modules/plugins2.0/ShelfAudit/SaMenuPage.php">Menu</a>
                         </div>
                     </div>
                 </div>
