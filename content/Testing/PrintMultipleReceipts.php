@@ -6,76 +6,109 @@ if (!class_exists('PageLayoutA')) {
 if (!class_exists('SQLManager')) {
     include_once(dirname(__FILE__).'/../../../common/sqlconnect/SQLManager.php');
 }
-if (!class_exists('RenderReceiptPage')) {
-    include_once('/var/www/html/git/IS4C/fannie/admin/LookupReceipt/RenderReceiptPage.php');
-}
-
 /**
- *  @class PrintMultipleReceipts  - print multiple receipts from 
- *  one page. 
+ *  @class PrintMultipleReceipts - print multiple receipts with 
+ *  one click. 
  *  usage - in PIK detail, control click-copy the first 2 columns
  *  (date, full-trans-no). Paste these into the textarea and click
- *  submit. Sometimes this page doesn't work, I don't know why.
+ *  submit and wait for ajax to load the results.
  */
 class PrintMultipleReceipts extends PageLayoutA 
 {
 
-    public function body_content()
+    public function preprocess()
     {
-        $ret = '';
+        $this->displayFunction = $this->pageContent();
+        $this->__routes[] = 'get<receipts>';
+        $this->__routes[] = 'post<text>';
 
-        $receipts = FormLib::get('receipts');
-        $formd = $receipts;
-        $receipts = explode("\n", $receipts);
-        $i = 0;
+        return parent::preprocess();
+    }
 
-        foreach ($receipts as $receipt) {
-            $id = "id$i";
-            $receipt = preg_split('/\s+/', $receipt);
-            $trans = $receipt[1];
-            $date = $receipt[0];
-            $transaction = $trans;
-            $trans = preg_split('#-#', $trans);
-            $empNo = $trans[0];
-            $regNo = $trans[1];
-            $transNo = $trans[2];
-            $date = preg_split('#/#', $date);
-            $m = $date[0];
-            $d = $date[1];
-            $y = $date[2];
-            $ret .= "<iframe id=\"$id\" src=\"http://key/git/fannie/admin/LookupReceipt/RenderReceiptPage.php?receipt=$transaction&month=$m&day=$d&year=$y\" ></iframe>";
-            $ret .= "<div class=\"divider\"></div>";
-            $i++;
+    public function postTextHandler()
+    {
+        $text = FormLib::get('text');
+        $json = array();
+
+        $lines = array();
+        $chunks = explode("\n", $text);
+        foreach ($chunks as $key => $str) {
+            $lines[] = $str;
+        }
+        $array = array();
+        foreach ($lines as $k => $line) {
+            $parts = explode("\t", $line);
+            $date = $parts[0];
+            $transNum = $parts[1];
+            $d2 = new DateTime($date);
+            $d2 = $d2->format('Y-m-d');
+            $json[$d2][] = $transNum;
         }
 
+        echo json_encode($json);
+
+        return false; 
+    }
+
+    public function pageContent()
+    {
         return <<<HTML
-<div>
-    <form name="receipts">
-        <label>Paste List of Receipts Here</label>
-        <div><textarea name="receipts" rows=10 class="form-control">
-----leavethislineblank----
-$formd 
-        </textarea></div>
-        <button class="btn btn-default" type="submit">Submit</button>
-    </form>
-    <div id="contents"></div>
-    $ret
+<div class="row">
+    <div class="col-lg-2"></div>
+    <div class="col-lg-8">
+        <div class="no-print">
+            <form name="receipts">
+                <h4>Paste List of Receipts </h4>
+                <p>in Firefox, copy receipts from PI Purchases Page while holding down CTRL</p>
+            <div>
+                <textarea name="receipts" rows=10 class="form-control" id="receipts">$formd</textarea>
+            </div>
+                <span class="btn btn-default" type="submit" id="submit">Submit</span>
+            </form>
+        </div>
+        <div id="contents"></div>
+    </div>
+    <div class="col-lg-2"></div>
+
 </div>
 HTML;
     }
 
+
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
-var contents = "";
-$('iframe').each(function(){
-    var curcontents = $(this).contents().find("html").html();
-    contents = contents + curcontents;
-    alert(contents);
-});
-$(document).ready(function(){
-    //alert(contents);
-    $('#contents').append(contents);
+var transactions = {};
+var year = null;
+var day = null;
+var month = null;
+$('#submit').click(function(e){
+    e.preventDefault();
+    var text = $('#receipts').val();
+    $.ajax({
+        type: 'post',
+        url: 'PrintMultipleReceipts.php',
+        data: 'text='+text,
+        success: function(response){
+            transactions = JSON.parse(response);
+            $.each(transactions, function(d, arr) {
+                year = d.substr(0,4);
+                month = d.substr(5,2);
+                day = d.substr(8,2);
+                $.each(arr, function(k, transnum) {
+                    console.log('receipt='+transnum+'&month='+month+'&day='+day+'&year='+year);
+                    $.ajax({
+                        type: 'get',
+                        url: 'http://key/git/fannie/admin/LookupReceipt/RenderReceiptPage.php',
+                        data: 'receipt='+transnum+'&month='+month+'&day='+day+'&year='+year,
+                        success: function(response) {
+                            $('#contents').append(response);
+                        },
+                    });  
+                });
+            });
+        }
+    });
 });
 JAVASCRIPT;
     }
@@ -83,26 +116,10 @@ JAVASCRIPT;
     public function cssContent()
     {
         return <<<HTML
-iframe {
-    border: none;
-    width: 100%;
-    height: 100%;
-    display: block;
-    overflow: visible;  
-    display: none;
-}
-.divider {
-    height: 15px;
-    background: grey;
-}
 @media print {
-    iframe {
-        width: 100%;
-        height: 100%;
-        display: block;
-        width: auto;
-        height: auto;
-        overflow: visible;  
+    .no-print, .no-print *
+    {
+        display: none !important;
     }
 }
 HTML;
