@@ -37,14 +37,17 @@ class AuditReport extends PageLayoutA
     public function postColumnSetHandler()
     {
         $dbc = ScanLib::getConObj();
-        $columnSet = FormLib::get('columnSet');
-        $json = array('error'=>'no-error','json'=>$columnSet);
+        $column = FormLib::get('columnSet');
+        $column = 23 - $column;
+        $set = FormLib::get('set');
+        $change = ($set == "true") ? " | (1 << $column)" : " & ~(1 << $column)";
 
-        $args = array($columnSet, session_id());
-        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.ScannieConfig 
-            SET auditReportSet = ? WHERE session_id = ?");
+        $args = array(session_id());
+        $query = "UPDATE woodshed_no_replicate.ScannieConfig SET auditReportOpt = auditReportOpt $change  WHERE session_id = ?";
+        $prep = $dbc->prepare($query);
         $res = $dbc->execute($prep, $args);
-        if ($er = $dbc->error())
+        $json = array();
+        if ($err = $dbc->error())
             $json['error'] = $er;
         echo json_encode($json);
 
@@ -453,6 +456,7 @@ class AuditReport extends PageLayoutA
             <td data-column=\"sign-description\"class=\"sign-description column-filter\"></td>
             <td data-column=\"size\"class=\"size column-filter\"></td>
             <td data-column=\"cost\"class=\"cost column-filter\"></td>
+            <td data-column=\"recentPurchase\"class=\"recentPurchase column-filter\"></td>
             <td data-column=\"price\"class=\"price column-filter\"></td>
             <td data-column=\"sale\"class=\"sale column-filter\"></td>
             <td data-column=\"\"class=\"margin_target_diff column-filter\"></td>
@@ -479,6 +483,7 @@ class AuditReport extends PageLayoutA
             <th class=\"size\">size</th>
             <th class=\"units\">units</th>
             <th class=\"cost\">cost</th>
+            <th class=\"recentPurchase\">PO-unit</th>
             <th class=\"price\">price</th>
             <th class=\"sale\">sale</th>
             <th class=\"margin_target_diff\">margin / target (diff)</th>
@@ -513,6 +518,7 @@ class AuditReport extends PageLayoutA
             $uLink = '<a class="upc" href="../../../../git/fannie/item/ItemEditorPage.php?searchupc='.$upc.
                 '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
             $sku = $row['sku'];
+            $recentPurchase = $this->getRecentPurchase($dbc,$sku);
             $brand = $row['brand'];
             $signBrand = $row['signBrand'];
             $description = $row['description'];
@@ -561,6 +567,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"size\">$size</td>";
             $td .= "<td class=\"units\">$units</td>";
             $td .= "<td class=\"cost\" $ogCost>$cost</td>";
+            $td .= "<td class=\"recentPurchase\">$recentPurchase</td>";
             $td .= "<td class=\"price\">$price</td>";
             $td .= "<td class=\"sale\">$sale</td>";
             $diff = round($curMargin - $margin, 1);
@@ -593,14 +600,14 @@ class AuditReport extends PageLayoutA
             $upc = $row['upc'];
             $uLink = '<a class="upc" href="../../../../git/fannie/item/ItemEditorPage.php?searchupc='.$upc.
                 '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
-            if (!in_array($upc, $upcs)) {
-                $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
-                $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
-                $td .= "<td></td><td></td><td><i>Unknown PLU / Create New Product</i></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>";
-                $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td><td></td>";
-                $td .= "</tr>";
-                $rows++;
-            }
+            //if (!in_array($upc, $upcs)) {
+            //    $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
+            //    $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
+            //    $td .= "<td></td><td></td><td><i>Unknown PLU / Create New Product</i></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>";
+            //    $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td><td></td>";
+            //    $td .= "</tr>";
+            //    $rows++;
+            //}
         }
         echo $dbc->error();
 
@@ -625,6 +632,24 @@ HTML;
             return $ret;
         }
 
+    }
+
+    private function getRecentPurchase($dbc,$sku)
+    {
+        $args = array($sku);
+        $prep = $dbc->prepare("SELECT
+            sku, internalUPC, brand, description, receivedDate,
+            caseSize, receivedTotalCost AS cost,
+            unitCost, ROUND(receivedTotalCost/caseSize,3) AS mpcost
+            FROM PurchaseOrderItems WHERE sku = ?
+            ORDER BY receivedDate DESC
+            limit 1");
+        $result = $dbc->execute($prep,$args);
+        $options = array();
+        $row = $dbc->fetch_row($result);
+        $unitCost = $row['unitCost'];
+        echo $dbc->error();
+        return $unitCost;
     }
 
     private function getNotesOpts($dbc,$storeID,$username)
@@ -675,11 +700,15 @@ HTML;
         $noteStr .= "</select>";
         $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
 
-        $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'cost', 'price',
-            'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed', 'costChange');
+        $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'cost', 'recentPurchase', 
+            'price', 'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed', 
+            'costChange');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
+        $i = count($columns) - 1;
+        //$i = 0;
         foreach ($columns as $column) {
-            $columnCheckboxes .= "<span class=\"column-checkbox\"><label for=\"check-$column\">$column</label> <input type=\"checkbox\" name=\"column-checkboxes\" id=\"check-$column\" value=\"$column\" class=\"column-checkbox\" checked></span>";
+            $columnCheckboxes .= "<span class=\"column-checkbox\"><label for=\"check-$column\">$column</label> <input type=\"checkbox\" name=\"column-checkboxes\" id=\"check-$column\" data-colnum=\"$i\" value=\"$column\" class=\"column-checkbox\" checked></span>";
+            $i--;
         }
         $columnCheckboxes .= "</div>";
 
@@ -809,12 +838,14 @@ HTML;
     {
         $dbc = ScanLib::getConObj();
         $mod = new DataModel($dbc);
-        $jsonSettings = $mod->getAuditReportSet(session_id());
+        //$jsonSettings = $mod->getAuditReportSet(session_id());
+        $config = $mod->getAuditReportOpt(session_id());
         //$json = json_encode($jsonSettings);
-        $json = $jsonSettings;
+        //$json = $jsonSettings;
 
         return <<<JAVASCRIPT
-var columnSet = $json;
+var startup = 1;
+var columnSet = $config;
 var tableRows = $('#table-rows').val();
 var storeID = $('#storeID').val();
 var username = $('#username').val();
@@ -823,7 +854,7 @@ var stripeTable = function(){
         $(this).removeClass('stripe');
     });
     $('tr.prod-row').each(function(i = 0){
-        if ($(this).is(':visible')) {
+        if ($(this).is(':visible')) {;
             if (i % 2 == 0) {
                 $(this).addClass('stripe');
             } else {
@@ -835,6 +866,7 @@ var stripeTable = function(){
 
     return false;
 };
+/*
 $.ajax({
     type: 'post',
     data: 'test=true',
@@ -845,14 +877,9 @@ $.ajax({
         console.log("ajax test: "+response.test);
     },
 });
+*/
 stripeTable();
 setInterval('stripeTable()', 1000);
-//$(document).mouseup(function(){
-//    stripeTable();
-//});
-//$(document).mousedown(function(){
-//    stripeTable();
-//});
 $('#clearNotesInputB').click(function() {
     var c = confirm("Are you sure?");
     if (c == true) {
@@ -862,7 +889,6 @@ $('#clearNotesInputB').click(function() {
             dataType: 'json',
             url: 'AuditReport.php',
             success: function(response) {
-                //fetchTable();
                 location.reload();
             },
             error: function(response) {
@@ -879,7 +905,6 @@ $('#clearAllInputB').click(function() {
             dataType: 'json',
             url: 'AuditReport.php',
             success: function(response) {
-                //fetchTable();
                 location.reload();
             },
             error: function(response) {
@@ -955,7 +980,6 @@ $('.editable-notes').focusout(function(){
     var notes= $(this).text();
     var upc = $(this).parent().parent().find('.upc').attr('data-upc');
     if (lastNotes != notes) {
-        //alert(lastNotes+','+notes+','+upc+','+storeID+','+username);
         $.ajax({
             type: 'post',
             data: 'setNotes=true&upc='+upc+'&storeID='+storeID+'&username='+username+'&notes='+notes,
@@ -1066,8 +1090,6 @@ $('.editable-description.sign-description').focusout(function(){
                     // alert user of error
                 }
                 var test = $(this).parent();
-                //var test = $(this);
-                console.log(test);
             },
         });
     }
@@ -1085,7 +1107,6 @@ $(document).mousedown(function(e){
     if (e.which == 1 && $('#keydown').val() == 16) {
         e.preventDefault();
         // SHIFT + LEFT CLICK
-        //console.log(e.target);
         var target = $(e.target);
         if (target.closest('tr').hasClass('highlight')) {
             target.closest('tr').removeClass('highlight');
@@ -1129,33 +1150,41 @@ $('.row-check').click(function(){
 
 $('.column-checkbox').change(function(){
     var checked = $(this).is(':checked');
+    var set = checked;
     var column = $(this).val();
+    let columnName = "."+column;
+    if (columnName == ".") 
+        return false;
+    var colnum = $(this).attr('data-colnum');
     if (checked == true) {
         // show column
-        $('.'+column).each(function(){
+        $(columnName).each(function(){
             $(this).show();
         }); 
-        columnSet[column] = 1;
     } else {
         // hide column
-        $('.'+column).each(function(){
+        $(columnName).each(function(){
             $(this).hide();
         }); 
-        columnSet[column] = 0;
     }
-    let sendJson = JSON.stringify(columnSet);
-    $.ajax({
-        type: 'post',
-        data: 'columnSet='+sendJson,
-        dataType: 'json',
-        url: 'AuditReport.php',
-        success: function(response)
-        {
-            if (response.error) {
-                console.log(response);
-            }
-        },
-    });
+    if (startup == 0) {
+        $.ajax({
+            type: 'post',
+            data: 'columnSet='+colnum+'&set='+set,
+            dataType: 'json',
+            url: 'AuditReport.php',
+            success: function(response)
+            {
+                if (response.error) {
+                    console.log(response);
+                }
+            },
+            error: function(response, errorThrown)
+            {
+                console.log(errorThrown);
+            },
+        });
+    }
 });
 
 $('#check-pos-descript').click(function(){
@@ -1187,7 +1216,6 @@ var fetchNewRows = function()
     });
 }
 setInterval('fetchNewRows()', 1000);
-//fetchTable();
 
 $('[id]').each(function(){
     var ids = $('[id="'+this.id+'"]');
@@ -1343,7 +1371,6 @@ var resizes = 0;
 $('#calculator').keydown(function(e){
     if (e.keyCode == 13) {
         // Enter key pressed
-        //alert('enter');
         var arr = $('#calculator').val();
         arr = arr.split(" ");
         if (arr.length == 3) {
@@ -1395,8 +1422,6 @@ $('#calculator').keydown(function(e){
         resizes += 1;
     }
     if (e.keyCode == 8) {
-        // "Backspace"
-        //$('#calculator').val('');
     }
 });
 
@@ -1442,19 +1467,24 @@ $('#check-all').click(function(){
 
 // uncheck columns by session_id settings 
 $(window).load(function(){
-    for (var k in columnSet) {
-        let set = columnSet[k];
-        if (set == 0) {
-            $('#check-'+k).trigger('click');
+    let bin = (columnSet >>> 0).toString(2);
+    bin = bin.padStart(24, '0');
+    for (let i = bin.length; i >= 0; i--) {
+        if (bin.charAt(i) == 0) {
+            $('.column-checkbox[data-colnum='+i+']').trigger('click');
         }
     }
 });
+window.onload = function() {startup = 0;};
 JAVASCRIPT;
     }
 
     public function cssContent()
     {
         return <<<HTML
+.btn {
+    cursor: pointer;
+}
 .dept-text {
     cursor: pointer;
 }
@@ -1486,7 +1516,7 @@ span.column-checkbox {
     padding: 5px; 
 }
 tr, td {
-    position: relative;
+    //position: relative;
 }
 tr.highlight {
     background-color: plum;
