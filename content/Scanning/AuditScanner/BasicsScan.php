@@ -78,7 +78,7 @@ class BasicsScan extends PageLayoutA
         $scanned = array();
         $argsB = array($username,$storeID);
         $prepB = $dbc->prepare("
-            SELECT upc FROM woodshed_no_replicate.AuditScanner WHERE username = ? and store_id = ?
+            SELECT upc FROM woodshed_no_replicate.AuditScan WHERE username = ? and storeID = ?
         ");
         $resB = $dbc->execute($prepB,$argsB);
         while ($row = $dbc->fetchRow($resB))  {
