@@ -201,6 +201,9 @@ HTML;
     {
         return <<<JAVASCRIPT
 function navbarSupportedContent() {
+    $('.dropdown-menu').each(function(){
+        $(this).hide();
+    });
     if ($('#navbarSupportedContent').is(':visible')) {
         $('#navbarSupportedContent').hide();
     } else {
@@ -210,6 +213,9 @@ function navbarSupportedContent() {
     return false;
 }
 function dropdownMenuClick(target) {
+    $('.dropdown-menu').each(function(){
+        $(this).hide();
+    });
     if ($('#'+target).is(':visible')) {
         $('#'+target).hide();
     } else {
