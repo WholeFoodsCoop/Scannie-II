@@ -107,6 +107,10 @@ class Dashboard extends PageLayoutA
                 'handler' => self::badDeliDepts($dbc),
                 'ranges' => array(1, 2, 999),
             ),
+            array(
+                'handler' => self::organicFlags($dbc),
+                'ranges' => array(1, 10, 999),
+            ),
         );
 
         $muData = $this->multiStoreDiscrepCheck($dbc);
@@ -420,7 +424,7 @@ HTML;
         $cols = array('batchID', 'batchName', 'owner');
         $data = array();
         while ($row = $dbc->fetchRow($r)) {
-            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+            foreach ($cols as $col) $data[$row['batchID']][$col] = $row[$col];
         }
         if ($er = $dbc->error()) echo "<div class='alert alert-danger'>$er</div>";
 
@@ -438,6 +442,24 @@ HTML;
             ORDER BY upc;");
         $r = $dbc->execute($p);
         $cols = array('upc', 'brand', 'description', 'department');
+        $data = array();
+        while ($row = $dbc->fetchRow($r)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+        }
+        if ($er = $dbc->error()) echo "<div class='alert alert-danger'>$er</div>";
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
+
+    static function organicFlags($dbc)
+    {
+        $desc = 'Products Missing Organic Flag';
+        $p = $dbc->prepare("SELECT upc, brand, description, numflag FROM products 
+            WHERE description LIKE '%,OG%' AND NOT numflag & (1<<16) <> 0;");
+        $r = $dbc->execute($p);
+        $cols = array('upc', 'brand', 'description');
         $data = array();
         while ($row = $dbc->fetchRow($r)) {
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
