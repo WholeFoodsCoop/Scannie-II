@@ -79,6 +79,10 @@ FROM woodshed_no_replicate.CMWFile
 WHERE CASE WHEN WhsAvail like '%T%' THEN 'yes' ELSE 'no' END = 'yes'
                 </span>
             </li>
+            <li><a href='#' class="quick_query">Get Coop Basics File</a>
+                <span class="query">SELECT * FROM woodshed_no_replicate.BasicsFiles
+                </span>
+            </li>
             <li><a href='#' class="quick_query">Get Current Sales</a>
                 <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
 FROM batchList AS bl
@@ -212,6 +216,18 @@ WHERE
 m.floorSectionID = 8
 AND p.inUse = 1
 GROUP BY upc
+            </li>
+            <li><a href='#' class="quick_query">Review Sale Sign Info Info</a>
+                <span class="query">
+SELECT u.brand, p.brand, p.department, bl.upc, bl.salePrice, bl.batchID,  p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
+FROM batchList AS bl
+LEFT JOIN products AS p ON bl.upc=p.upc
+LEFT JOIN batches AS b ON bl.batchID=b.batchID
+LEFT JOIN productUser as u on p.upc=u.upc
+WHERE bl.batchID IN ( SELECT batchID FROM batches WHERE '2020-09-13' BETWEEN startDate AND endDate)
+GROUP BY bl.upc
+order by u.brand 
+
             </li>
         </ul>
         <h4>Additional Features</h4>
