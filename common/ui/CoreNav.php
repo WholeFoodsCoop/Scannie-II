@@ -213,12 +213,12 @@ function navbarSupportedContent() {
     return false;
 }
 function dropdownMenuClick(target) {
-    $('.dropdown-menu').each(function(){
-        $(this).hide();
-    });
     if ($('#'+target).is(':visible')) {
         $('#'+target).hide();
     } else {
+        $('.dropdown-menu').each(function(){
+            $(this).hide();
+        });
         $('#'+target).show();
     }
     
