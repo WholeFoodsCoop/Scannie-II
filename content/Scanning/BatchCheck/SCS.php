@@ -579,10 +579,28 @@ HTML;
         return false;
     }
 
+    private function setInUse($dbc, $upc, $storeID)
+    {
+        $args = array($upc, $storeID);
+        $prep = $dbc->prepare("UPDATE products SET inUse = 1, modified = NOW() WHERE upc = ? AND store_id = ?");
+        $res = $dbc->execute($prep, $args);
+
+        return false;
+    }
+
     public function view($dbc)
     {
 
         $deviceType = $this->deviceType;
+        $upc = FormLib::get('upc');
+        if ($upc < 999999 && $upc > 99999) {
+            $upc = ltrim($upc, '0');
+            $upc = $this->skuToUpc($upc);
+        }
+        $upc = scanLib::upcPreparse($upc);
+        $storeID = $_SESSION['storeID'];
+
+        $this->setInUse($dbc, $upc, $storeID);
 
         $lastMsg = $_SESSION['lastMsg'];
         $prep = $dbc->prepare("SELECT max(id) AS maxid FROM woodshed_no_replicate.batchCheckChat;");
@@ -608,21 +626,10 @@ HTML;
             ");
         }
 
-        $upc = FormLib::get('upc');
-        // fix: confirmed, this does not work.
-        // scans should also be able to convert UPCs to
-        // scale items. 
-        if ($upc < 999999 && $upc > 99999) {
-            echo "hi";
-            $upc = ltrim($upc, '0');
-            $upc = $this->skuToUpc($upc);
-        }
-        $upc = scanLib::upcPreparse($upc);
         $store = '<i>no store selected</i>';
         $touchicon = "<img class=\"scanicon-pointer\" src=\"../../../common/src/img/icons/pointer.png\"/>";
         $stores = array(1=>'[H]',2=>'[D]');
         $store = $stores[$_SESSION['storeID']];
-        $storeID = $_SESSION['storeID'];
         $session = '<i>no session selected</i>';
         $session = $_SESSION['sessionName'];
         $name = (!is_null($this->data[$upc]['pudesc'])) ? $this->data[$upc]['pudesc'] : $this->data[$upc]['pdesc'];
