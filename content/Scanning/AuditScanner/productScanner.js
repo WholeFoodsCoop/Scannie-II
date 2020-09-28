@@ -176,7 +176,7 @@ $('#mod-narrow').click(function(){
     var upc = $('#upc').val();
     $.ajax({
         type: 'post',
-        url: 'AuditScanner.php',
+        url: 'ProductScanner.php',
         data: 'upc='+upc+'&action=mod-narrow',
         success: function(resp)
         {
@@ -193,7 +193,7 @@ $('#mod-in-use').click(function(){
     var upc = $('#upc').val();
     $.ajax({
         type: 'post',
-        url: 'AuditScanner.php',
+        url: 'ProductScanner.php',
         data: 'upc='+upc+'&action=mod-in-use',
         success: function(resp)
         {
@@ -222,7 +222,7 @@ $('.edit-btn').click(function(){
         if (newtext != null) {
             $.ajax({
                 type: 'post',
-                url: 'AuditScanner.php',
+                url: 'ProductScanner.php',
                 data: 'upc='+upc+'&action=mod-edit&newtext='+newtext+'&table='+table+'&column='+column,
                 success: function(resp)
                 {
