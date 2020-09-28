@@ -110,6 +110,10 @@ from products where inUse = 1 and store_id = 1 and scale = 1 and department > 25
 order by department, upc
                 </span>
             </li>
+            <li><a href='#' class="quick_query">Get Items Created</a>
+                <span class="query">select upc, brand, description from products where created > '2020-09-25 09:00:00' 
+group by upc</span>
+            </li>
             <li><a href='#' class="quick_query">Get Missing Sub-Locations</a>
                 <span class="query">select i.upc, f.subSection, s.name, p.department, m.super_name
 FROM PickupOrderItems as i 
