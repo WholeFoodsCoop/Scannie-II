@@ -540,7 +540,7 @@ class AuditReport extends PageLayoutA
                 $rsrp = round($cost / (1 - ($margin/100)), 2);
                 $srp = $rounder->round($rsrp);
                 if ($upc == '0024238000000') {
-                    echo $margin; // this is incorrect
+                    //echo $margin; // this is incorrect
                 }
             }
             $prid = $row['priceRuleType'];
@@ -1007,7 +1007,15 @@ $('.editable-notes').each(function(){
     $(this).attr('contentEditable', true);
     $(this).attr('spellCheck', false);
 });
+$('.editable-description').each(function(){
+    $(this).attr('contentEditable', true);
+    $(this).attr('spellCheck', false);
+});
 $('.editable-description.sign-description').each(function(){
+    $(this).attr('contentEditable', true);
+    $(this).attr('spellCheck', false);
+});
+$('.editable-brand').each(function(){
     $(this).attr('contentEditable', true);
     $(this).attr('spellCheck', false);
 });
@@ -1046,10 +1054,10 @@ $('.editable-brand.sign-brand').each(function(){
 //
 //});
 var lastBrand = null;
-$('.editable-brand.sign-brand').click(function(){
+$('.editable-brand').click(function(){
     lastBrand = $(this).text();
 });
-$('.editable-brand.sign-brand').focusout(function(){
+$('.editable-brand').focusout(function(){
     var table = $(this).attr('data-table');
     var upc = $(this).parent().find('td.upc').attr('data-upc');
     var brand = $(this).text();
@@ -1070,10 +1078,10 @@ $('.editable-brand.sign-brand').focusout(function(){
     }
 });
 var lastDescription = null;
-$('.editable-description.sign-description').click(function(){
+$('.editable-description').click(function(){
     lastDescription = $(this).text();
 });
-$('.editable-description.sign-description').focusout(function(){
+$('.editable-description').focusout(function(){
     var table = $(this).attr('data-table');
     var upc = $(this).parent().find('td.upc').attr('data-upc');
     var description = encodeURIComponent($(this).text());
@@ -1209,7 +1217,7 @@ var fetchNewRows = function()
             if (newCount > tableRows) {
                 //fetchTable();
                 tableRows = newCount;
-                location.reload();
+                //location.reload();
                 //console.log(document);
             }
         },
