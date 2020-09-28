@@ -62,7 +62,7 @@ class PriceRuleTypeReport extends PageLayoutA
         <div class="col-lg-4">
             {$this->formContent()}
             <iframe src="http://key/Scannie/content/Item/MarginCalculator.php"
-                frameBorder=0 height="100%"></iframe>
+                frameBorder=0 height="500px"></iframe>
         </div>
     </div>
 </div>

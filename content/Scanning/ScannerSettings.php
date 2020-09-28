@@ -62,9 +62,9 @@ class ScannerSettings extends PageLayoutA
 <div class="container-fluid" style="margin-top: 25px;">
     <label>Go To:</label>
     <ul>
-        <li><div class="form-group"><a href="AuditScanner/QuickScanner.php" class="btn btn-default">Quick Scanner</a></div></li>
-        <li><div class="form-group"><a href="AuditScanner/ProductScanner.php" class="btn btn-default">Audit Scanner</a></div></li>
-        <li><div class="form-group"><a href="BatchCheck/SCS.php" class="btn btn-default">Batch Check</a></div></li>
+        <li><div class="form-group"><a href="AuditScanner/QuickScanner.php" class="btn btn-default form-control">Quick Scanner</a></div></li>
+        <li><div class="form-group"><a href="AuditScanner/ProductScanner.php" class="btn btn-default form-control">Audit Scanner</a></div></li>
+        <li><div class="form-group"><a href="BatchCheck/SCS.php" class="btn btn-default form-control">Batch Check</a></div></li>
     </ul>
     <form method="post">
     <label>Add Linea Sound on Scan:</label>
