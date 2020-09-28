@@ -717,7 +717,7 @@ HTML;
                 <div class=\"modal-dialog\" role=\"document\">
                     <div class=\"modal-content\">
                       <div class=\"modal-header\">
-                        <h3 class=\"modal-title\" style=\"color: #8c7b70\">Entere a list of Barcodes</h3>
+                        <h3 class=\"modal-title\" style=\"color: #8c7b70\">Enter a list of Barcodes</h3>
                         <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\"
                                 style=\"position: absolute; top:20; right: 20\">
                               <span aria-hidden=\"true\">&times;</span>
