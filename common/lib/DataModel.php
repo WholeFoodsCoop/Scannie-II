@@ -25,6 +25,20 @@ class DataModel
         return $json;
     }
 
+    public function getAuditReportOpt($session_id)
+    {
+        $int = 0;
+        $args = array($session_id);
+        $prep = $this->connection->prepare("SELECT auditReportOpt FROM woodshed_no_replicate.ScannieConfig
+            WHERE session_id = ?");
+        $res = $this->connection->execute($prep, $args);
+        while ($row = $this->connection->fetchRow($res)) {
+            $int = $row['auditReportOpt'];
+        }
+
+        return $int;
+    }
+
     public function setSku($vendorID, $sku=null, $upc=null, $value=null)
     {
         $field = null;
