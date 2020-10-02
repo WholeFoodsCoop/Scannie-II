@@ -434,6 +434,7 @@ HTML;
             $size = $row['size'];
             // Hillside multiplier = 3, Denfeld = 7
             $weekPar = $row['auto_par'] * $multiplier;
+            $auto_par = $row['auto_par'];
             $weekPar = round($weekPar, 1);
             $ret .= " <div class=\"margin-top: 15px;\">&nbsp;</div>";
             $ret .= '<input type="hidden" id="auto_par_value" value="'.$weekPar.'"/>';
@@ -441,7 +442,9 @@ HTML;
             $ret .= "
                 <div id=\"auditPar\">
                     <table class=\"table table-borderless table-sm small\">
-                        <tr><td>PAR</td><td>$weekPar</td><td><i>avg. sold in $multiplier days</i></td></tr>
+                        <tr><td>PAR</td><td>$weekPar</td><td><i>avg. sold in $multiplier days</i></td>
+                            <td><span style=\"font-size: 10px;\">auto_par: ".round($auto_par, 1)."</span></td>
+                            </tr>
                     </table>
                 </div>
             ";
