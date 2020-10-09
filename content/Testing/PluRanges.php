@@ -9,6 +9,7 @@ if (!class_exists('SQLManager')) {
 /*
 **  @class PluRanges
 **  find "pockets" of null, potential new UPCs
+**  also find open 1-4 digit PLUs
 */
 class PluRanges extends PageLayoutA
 {
@@ -49,23 +50,40 @@ class PluRanges extends PageLayoutA
                 $ret .= "starting upc: $upc, pocket: $pocket<span class='size' style='width: $size;'></span><br/>";
             }
         }
-        /*
-        $all = array();
-        $total = 0;
-        for ($i = 1; $i < 9999; $i++) {
-            $upc_str = str_pad($i,4,"0",STR_PAD_LEFT);
-            $upc = "002".$upc_str."000000";
-            if (!in_array($upc,$upcs)) {
-                $total++;
-                //echo "$upc<br/>";
+
+        $upcs = array();
+        $usables = array();
+        $freePlus = '<table ><tr>';
+        $prep = $dbc->prepare("SELECT upc FROM products WHERE upc <= 9999 GROUP BY upc;");
+        $res = $dbc->execute($prep);
+        $temp = null;
+        while ($row = $dbc->fetchRow($res)) {
+            $upc = intval($row['upc']);
+            $upcs[$upc] = 1;
+        }
+        $j = 0;
+        for ($i=1; $i<=9999;$i++) {
+            if (array_key_exists($i, $upcs) == false) {
+                $freePlus .= "<td>$i</td>";
+                if ($j % 19 == 0 && $j > 2) {
+                    $freePlus .= "</tr><tr>";
+                }
+                $j++;
             }
         }
-        echo "TOTAL OPEN PLUS: $total<br/>";
-        */
+        $freePlus .= '</tr></table>';
+
         
         return <<<HTML
-<div class="container-fluim">
-$ret
+<div class="row" style="padding: 25px;">
+    <div class="col-lg-4">
+        <div><label><strong>Open PLU Ranges</strong> (Scale Item PLUs)</label></div>
+        $ret
+    </div>
+    <div class="col-lg-4">
+        <div><label><strong>Free PLUs</strong></label> (Unused PLUs)</div>
+        $freePlus
+    </div>
 </div>
 HTML;
     }
@@ -79,6 +97,9 @@ HTML;
     public function cssContent()
     {
         return <<<HTML
+table, tr, td {
+    border: 1px dotted grey;
+}
 HTML;
     }
 
