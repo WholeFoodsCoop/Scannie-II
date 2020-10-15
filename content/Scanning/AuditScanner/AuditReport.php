@@ -446,6 +446,7 @@ class AuditReport extends PageLayoutA
             <span class=\"status-popup\">Copied!</span>
             <textarea class=\"copy-text\" rows=3 cols=10>";
 
+        // this is the second thead row (filters)
         $pth = "
         <tr id=\"filter-tr\">
             <td data-column=\"upc\"class=\"upc column-filter\"></td>
@@ -455,23 +456,29 @@ class AuditReport extends PageLayoutA
             <td data-column=\"description\"class=\"column-filter\"></td>
             <td data-column=\"sign-description\"class=\"sign-description column-filter\"></td>
             <td data-column=\"size\"class=\"size column-filter\"></td>
+            <td data-column=\"units\"class=\"units column-filter\"></td>
+            <td data-column=\"netCost\"class=\"netCost column-filter\"></td>
             <td data-column=\"cost\"class=\"cost column-filter\"></td>
             <td data-column=\"recentPurchase\"class=\"recentPurchase column-filter\"></td>
             <td data-column=\"price\"class=\"price column-filter\"></td>
             <td data-column=\"sale\"class=\"sale column-filter\"></td>
-            <td data-column=\"\"class=\"margin_target_diff column-filter\"></td>
+            <td data-column=\"margin_target_diff\"class=\"margin_target_diff column-filter\"></td>
             <td data-column=\"srp\"class=\"srp column-filter\"></td>
             <td data-column=\"rsrp\"class=\"rsrp column-filter\"></td>
             <td data-column=\"prid\"class=\"prid column-filter\"></td>
             <td data-column=\"dept\"class=\"dept column-filter\"></td>
             <td data-column=\"vendor\"class=\"vendor column-filter\"></td>
-            <td data-column=\"\"class=\"column-filter\"></td>
+            <td data-column=\"last_sold\"class=\"last_sold column-filter\"></td>
             <td data-column=\"scaleItem\"class=\"scaleItem column-filter\"></td>
+            <td data-column=\"reviewed\"class=\"reviewed column-filter\"></td>
+            <td data-column=\"costChange\"class=\"costChange column-filter\"></td>
             <td data-column=\"notes\"class=\"notes column-filter\"></td>
-            <td data-column=\"\" class=\"column-filter\"></td>
-            <td data-column=\"check\" class=\"column-filter\"><input type=\"checkbox\" id=\"check-all\"/></td>
+            <td data-column=\"check\" class=\"check column-filter\"></td>
+            <td data-column=\"unknown\" class=\"unknown column-filter\"></td>
         </tr>
         ";
+
+        // this is the first thead row (column sorting)
         $th = "
         <tr>
             <th class=\"upc\">upc</th>
@@ -482,6 +489,7 @@ class AuditReport extends PageLayoutA
             <th class=\"sign-description \">sign-description</th>
             <th class=\"size\">size</th>
             <th class=\"units\">units</th>
+            <th class=\"netCost\">netCost</th>
             <th class=\"cost\">cost</th>
             <th class=\"recentPurchase\">PO-unit</th>
             <th class=\"price\">price</th>
@@ -497,8 +505,8 @@ class AuditReport extends PageLayoutA
             <th class=\"reviewed\">reviewed</th>
             <th class=\"costChange\">last cost change</th>
             <th class=\"notes\">notes</th>
-            <th class=\"\"></th>
             <th class=\"check\"></th>
+            <th class=\"\"></th>
         </tr>
         ";
         $result = $dbc->execute($prep, $args);
@@ -523,6 +531,7 @@ class AuditReport extends PageLayoutA
             $signBrand = $row['signBrand'];
             $description = $row['description'];
             $signDescription = $row['signDescription'];
+            $netCost = $row['cost'];
             $cost = $row['cost'];
             $ogCost = null;
             $adjcost = $row['adjcost'];
@@ -566,6 +575,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"sign-description editable editable-description \" data-table=\"productUser\">$signDescription</td>";
             $td .= "<td class=\"size\">$size</td>";
             $td .= "<td class=\"units\">$units</td>";
+            $td .= "<td class=\"netCost\">$netCost</td>";
             $td .= "<td class=\"cost\" $ogCost>$cost</td>";
             $td .= "<td class=\"recentPurchase\">$recentPurchase</td>";
             $td .= "<td class=\"price\">$price</td>";
@@ -700,7 +710,7 @@ HTML;
         $noteStr .= "</select>";
         $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
 
-        $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'cost', 'recentPurchase', 
+        $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase', 
             'price', 'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed', 
             'costChange');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
@@ -1380,6 +1390,8 @@ $('#calculator').keydown(function(e){
     if (e.keyCode == 13) {
         // Enter key pressed
         var arr = $('#calculator').val();
+        arr = arr.replace('$', '');
+        arr = arr.replace('CS', '');
         arr = arr.split(" ");
         if (arr.length == 3) {
             var val_1 = parseFloat(arr[0], 10);
