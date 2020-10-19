@@ -137,7 +137,7 @@ class BasicsScan extends PageLayoutA
             }
         }
         $tableA .=  '</tbody></table>';
-        $tableA .=  '<textarea class="form-control" rows="6" cols="15">' . "MISSING\r\n" . $missingCopyPaste . '</textarea><br />';
+        $tableA .=  '<textarea class="form-control copy-text" rows="6" cols="15">' . "MISSING\r\n" . $missingCopyPaste . '</textarea><br />';
 
         $tableB .=  '<table class="table table-condensed small"><thead>';
         $tableB .=  '<tr><th colspan="3">These signs are on the sales floor and should be taken down</th></tr></thead><tbody>';
@@ -172,6 +172,20 @@ class BasicsScan extends PageLayoutA
 HTML;
 
         return $html;
+    }
+
+    public function javascriptContent()
+    {
+        return <<<JAVASCRIPT
+$('.copy-text').focus(function(){
+    $(this).select();
+    var status = document.execCommand('copy');
+    if (status == true) {
+        $(this).parent().find('.status-popup').show()
+            .delay(400).fadeOut(400);
+    }
+});
+JAVASCRIPT;
     }
 
 }
