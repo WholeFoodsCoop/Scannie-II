@@ -1585,11 +1585,42 @@ thead {
 HTML;
     }
 
-//    public function helpContent()
-//    {
-//        return <<<HTML
-//HTML;
-//    }
+    public function helpContent()
+    {
+        return <<<HTML
+<ul>
+    <li>Definition of Columns</li>
+    <ul>
+        <li><strong>Check</strong> Show checkboxes for each row.</li>
+        <li><strong>UPC</strong> Numerical barcode for each item.</li>
+        <li><strong>SKU</strong> Current SKU for each item in respect to the default vendor ID.</li>
+        <li><strong>Brand*</strong> POS brand that shows up on shelf tags.</li>
+        <li><strong>Sign-Brand*</strong> Brand that shows up on Sale/special signage.</li>
+        <li><strong>Description*</strong> POS description on shelf tags.</li>
+        <li><strong>Sign-Description*</strong> Special sign description.</li>
+        <li><strong>Size</strong> Size of 1 unit of products.</li>
+        <li><strong>Units</strong> Case size from vendor.</li>
+        <li><strong>NetCost</strong> POS cost before adjustments for shipping or discounts.</li>
+        <li><strong>Cost</strong> POS cost <i>after</i> adjustments.</li>
+        <li><strong>Recent Purchase / PO-Cost</strong> Most recent cost found in Purchase Order Items.</li>
+        <li><strong>Price</strong> Current normal price in POS.</li>
+        <li><strong>Sale</strong> Corrent sale price of item, if any.</li>
+        <li><strong>Margin Target Diff</strong> Lists current margin, then target margin based on vendor and department, then the difference between the two.</li>
+        <li><strong>RSRP</strong> Our WFC calculated SRP before applying rounding rules.</li>
+        <li><strong>SRP</strong> SRP after rounding.</li>
+        <li><strong>PRID</strong> Price rule ID.</li>
+        <li><strong>Dept</strong> Department.</li>
+        <li><strong>Vendor</strong> Default vendor.</li>
+        <li><strong>Last Sold</strong> Show the date each item was last sold at each store.</li>
+        <li><strong>Scale Item</strong> Scale item type.</li>
+        <li><strong>Notes*</strong> Notes can be entered for each product from the Audit Scanner, or from this page.</li>
+        <li><strong>Reviewed</strong> Shows the last time each product was reviewed, in respect to Fannie Product Review.</li>
+        <li><strong>Cost Change</strong> Most recent cost change, taken only from when the <i>Review</i> button option is used.</li>
+        <li><strong>*<strong> Columns with an asterisk in this list are editable fields.</li>
+    </ul>
+</ul>
+HTML;
+    }
 
 }
 WebDispatch::conditionalExec();
