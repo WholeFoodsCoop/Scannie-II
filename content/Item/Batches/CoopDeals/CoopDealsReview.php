@@ -151,8 +151,14 @@ HTML;
             $td .= "<tr><td>{$row['upc']}</td></tr>";
             $rUpcs[] = $row['upc'];
         }
+
         $ret = "<p><b>Print as Narrow Signs</b></p>";
-        $ret .= "<textarea class='form-control'>";
+        $ret .= "<div style=\"position: absolute; width: 84%; display:none; 
+                background: #80BDFF; padding: 15px; color: white; font-weight: bold;
+                top: -14px\"
+                class=\"status-popup\">
+            <span>Copied!</span></div>";
+        $ret .= "<textarea class='form-control copy-text'>";
         foreach ($rUpcs as $upc) {
             $ret .= $upc."\r\n";
         }
@@ -432,6 +438,16 @@ HTML;
     public function javascriptContent()
     {
         return <<<HTML
+
+$('.copy-text').focus(function(){
+    $(this).select();
+    var status = document.execCommand('copy');
+    if (status == true) {
+        $(this).parent().find('.status-popup').show()
+            .delay(400).fadeOut(400);
+    }
+});
+
 function hideNoSales()
 {
     $('#signText').find('td').each(function() {
