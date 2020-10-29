@@ -449,32 +449,32 @@ class AuditReport extends PageLayoutA
         // this is the second thead row (filters)
         $pth = "
         <tr id=\"filter-tr\">
-            <td data-column=\"upc\"class=\"upc column-filter\"></td>
-            <td data-column=\"sku\"class=\"sku column-filter\"></td>
-            <td data-column=\"brand\"class=\"brand column-filter\"></td>
-            <td data-column=\"sign-brand\"class=\"sign-brand column-filter\"></td>
-            <td data-column=\"description\"class=\"column-filter\"></td>
-            <td data-column=\"sign-description\"class=\"sign-description column-filter\"></td>
-            <td data-column=\"size\"class=\"size column-filter\"></td>
-            <td data-column=\"units\"class=\"units column-filter\"></td>
-            <td data-column=\"netCost\"class=\"netCost column-filter\"></td>
-            <td data-column=\"cost\"class=\"cost column-filter\"></td>
-            <td data-column=\"recentPurchase\"class=\"recentPurchase column-filter\"></td>
-            <td data-column=\"price\"class=\"price column-filter\"></td>
-            <td data-column=\"sale\"class=\"sale column-filter\"></td>
-            <td data-column=\"margin_target_diff\"class=\"margin_target_diff column-filter\"></td>
-            <td data-column=\"srp\"class=\"srp column-filter\"></td>
-            <td data-column=\"rsrp\"class=\"rsrp column-filter\"></td>
-            <td data-column=\"prid\"class=\"prid column-filter\"></td>
-            <td data-column=\"dept\"class=\"dept column-filter\"></td>
-            <td data-column=\"vendor\"class=\"vendor column-filter\"></td>
-            <td data-column=\"last_sold\"class=\"last_sold column-filter\"></td>
-            <td data-column=\"scaleItem\"class=\"scaleItem column-filter\"></td>
-            <td data-column=\"reviewed\"class=\"reviewed column-filter\"></td>
-            <td data-column=\"costChange\"class=\"costChange column-filter\"></td>
-            <td data-column=\"notes\"class=\"notes column-filter\"></td>
-            <td data-column=\"check\" class=\"check column-filter\"></td>
-            <td data-column=\"unknown\" class=\"unknown column-filter\"></td>
+            <td title=\"upc\" data-column=\"upc\"class=\"upc column-filter\"upc</td>
+            <td title=\"sku\" data-column=\"sku\"class=\"sku column-filter\"></td>
+            <td title=\"band\" data-column=\"brand\"class=\"brand column-filter\"></td>
+            <td title=\"sign-brand\" data-column=\"sign-brand\"class=\"sign-brand column-filter\"></td>
+            <td title=\"description\" data-column=\"description\"class=\"column-filter\"></td>
+            <td title=\"sign-description\" data-column=\"sign-description\"class=\"sign-description column-filter\"></td>
+            <td title=\"size\" data-column=\"size\"class=\"size column-filter\"></td>
+            <td title=\"units\" data-column=\"units\"class=\"units column-filter\"></td>
+            <td title=\"netCost\" data-column=\"netCost\"class=\"netCost column-filter\"></td>
+            <td title=\"cost\" data-column=\"cost\"class=\"cost column-filter\"></td>
+            <td title=\"recentPurchases\" data-column=\"recentPurchase\"class=\"recentPurchase column-filter\"></td>
+            <td title=\"price\" data-column=\"price\"class=\"price column-filter\"></td>
+            <td title=\"sale\" data-column=\"sale\"class=\"sale column-filter\"></td>
+            <td title=\"margin_target_diff\" data-column=\"margin_target_diff\"class=\"margin_target_diff column-filter\"></td>
+            <td title=\"srp\" data-column=\"srp\"class=\"srp column-filter\"></td>
+            <td title=\"rsrp\" data-column=\"rsrp\"class=\"rsrp column-filter\"></td>
+            <td title=\"prid\" data-column=\"prid\"class=\"prid column-filter\"></td>
+            <td title=\"dept\" data-column=\"dept\"class=\"dept column-filter\"></td>
+            <td title=\"vendor\" data-column=\"vendor\"class=\"vendor column-filter\"></td>
+            <td title=\"last_sold\" data-column=\"last_sold\"class=\"last_sold column-filter\"></td>
+            <td title=\"scaleItem\" data-column=\"scaleItem\"class=\"scaleItem column-filter\"></td>
+            <td title=\"reviewed\" data-column=\"reviewed\"class=\"reviewed column-filter\"></td>
+            <td title=\"costChange\" data-column=\"costChange\"class=\"costChange column-filter\"></td>
+            <td title=\"notes\" data-column=\"notes\"class=\"notes column-filter\"></td>
+            <td title=\"check\" data-column=\"check\" class=\"check column-filter\"></td>
+            <td title=\"unknown\" data-column=\"unknown\" class=\"unknown column-filter\"></td>
         </tr>
         ";
 
@@ -814,7 +814,7 @@ $columnCheckboxes
     <div class="col-lg-4">
         <div class="card" style="margin: 5px; box-shadow: 1px 1px lightgrey;">
             <div class="card-body">
-                <h6 class="card-title">Simple Input Calculator &trade;</h6>
+                <h6 class="card-title" title="JK">Simple Input Calculator &trade;</h6>
                 <div class="row">
                     <div class="col-lg-9">
                         <input type="text" id="calculator" name="calculator" style="font-size: 12px" class="form-control small" autofocus>
