@@ -610,14 +610,14 @@ class AuditReport extends PageLayoutA
             $upc = $row['upc'];
             $uLink = '<a class="upc" href="../../../../git/fannie/item/ItemEditorPage.php?searchupc='.$upc.
                 '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
-            //if (!in_array($upc, $upcs)) {
-            //    $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
-            //    $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
-            //    $td .= "<td></td><td></td><td><i>Unknown PLU / Create New Product</i></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>";
-            //    $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td><td></td>";
-            //    $td .= "</tr>";
-            //    $rows++;
-            //}
+            if (!in_array($upc, $upcs)) {
+                $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
+                $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
+                $td .= "<td></td><td></td><td><i>Unknown PLU / Create New Product</i></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>";
+                $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td><td></td>";
+                $td .= "</tr>";
+                $rows++;
+            }
         }
         echo $dbc->error();
 
