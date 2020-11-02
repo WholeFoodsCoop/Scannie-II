@@ -590,12 +590,12 @@ class AuditReport extends PageLayoutA
                 <span class=\"dept-select hidden\">$deptOpts</span>
                 </td>";
             $td .= "<td class=\"vendor\" data-vendorID=\"$vendorID\">$vendor</td>";
-            $td .= "<td class=\"notes editable editable-notes\">$notes</td>";
             $td .= "<td class=\"last_sold\">$lastSold</td>";
             $td .= "<td class=\"scaleItem\">$bycount</td>";
             $td .= "<td class=\"reviewed\">$reviewed</td>";
             $oper = ($costChange > 0) ? '+' : '-';
             $td .= "<td class=\"costChange\">$oper$costChange - $costChangeDate</td>";
+            $td .= "<td class=\"notes editable editable-notes\">$notes</td>";
             $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td></td>";
             $td .= "<td class=\"check\"><input type=\"checkbox\" name=\"check\" class=\"row-check\" $checked/></td>";
             $td .= "</tr>";
