@@ -526,7 +526,7 @@ class AuditReport extends PageLayoutA
             $uLink = '<a class="upc" href="../../../../git/fannie/item/ItemEditorPage.php?searchupc='.$upc.
                 '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
             $sku = $row['sku'];
-            $recentPurchase = $this->getRecentPurchase($dbc,$sku);
+            list($recentPurchase, $received) = $this->getRecentPurchase($dbc,$sku);
             $brand = $row['brand'];
             $signBrand = $row['signBrand'];
             $description = $row['description'];
@@ -577,7 +577,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"units\">$units</td>";
             $td .= "<td class=\"netCost\">$netCost</td>";
             $td .= "<td class=\"cost\" $ogCost>$cost</td>";
-            $td .= "<td class=\"recentPurchase\">$recentPurchase</td>";
+            $td .= "<td class=\"recentPurchase\" title=\"$received\">$recentPurchase</td>";
             $td .= "<td class=\"price\">$price</td>";
             $td .= "<td class=\"sale\">$sale</td>";
             $diff = round($curMargin - $margin, 1);
@@ -648,18 +648,20 @@ HTML;
     {
         $args = array($sku);
         $prep = $dbc->prepare("SELECT
-            sku, internalUPC, brand, description, receivedDate,
+            sku, internalUPC, brand, description, DATE(receivedDate) AS receivedDate,
             caseSize, receivedTotalCost AS cost,
             unitCost, ROUND(receivedTotalCost/caseSize,3) AS mpcost
             FROM PurchaseOrderItems WHERE sku = ?
+                AND unitCost > 0
             ORDER BY receivedDate DESC
             limit 1");
         $result = $dbc->execute($prep,$args);
         $options = array();
         $row = $dbc->fetch_row($result);
         $unitCost = $row['unitCost'];
-        echo $dbc->error();
-        return $unitCost;
+        $received = $row['receivedDate'];
+
+        return array($unitCost, $received);
     }
 
     private function getNotesOpts($dbc,$storeID,$username)
