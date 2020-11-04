@@ -58,7 +58,8 @@ class DBA extends PageLayoutA
             <span id="watch_v" style="position: absolute; top: 40px; left: 10px; background: white; color: red;">OFF</span>
         </div>
         <h4>Saved Queries</h4>
-        <ul style="font-size: 12px">
+        <input type="text" id="saved-queries-filter" class="form-control form-control-sm small">
+        <ul style="font-size: 12px" id="saved-queries">
             <li><a href='#' class="quick_query">Get Bulk Sale Items</a>
                 <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
 FROM batchList AS bl
@@ -452,6 +453,27 @@ function watch_query()
 {
    $('#submit').trigger('click');
 }
+
+$('#saved-queries-filter').keyup(function(){
+    var text = $(this).val();
+    if (text == '') {
+        $('.quick_query').each(function(){
+            $(this).closest('li').show();
+        });
+    } else {
+        $('.quick_query').each(function(){
+            $(this).closest('li').show();
+        });
+        $('.quick_query').each(function(){
+            var line = $(this).text(); 
+            line = line.toUpperCase();
+            text = text.toUpperCase();
+            if (!line.includes(text)) {
+                $(this).closest('li').hide();
+            }
+        });
+    }
+});
 
 JAVASCRIPT;
     }
