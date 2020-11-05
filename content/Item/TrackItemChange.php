@@ -57,6 +57,8 @@ HTML;
         $ret = '';
         $dbc = scanLib::getConObj();
         $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
+        $upc = FormLib::get('upc');
+        $upc = scanLib::upcParse($upc);
 
         if (!class_exists(LastSoldDates)) {
             include('LastSoldDates.php');
@@ -73,6 +75,16 @@ HTML;
         }
         $lastSold .= '</tr></tbody></table>';
 
+        $prep = $dbc->prepare("SELECT DATE(created) AS created FROM products WHERE upc = ? 
+            AND created IS NOT NULL GROUP BY upc");
+        $res = $dbc->execute($prep, $upc);
+        $row = $dbc->fetchRow($res);
+        $created = $row['created'];
+        $today = new DateTime();
+        $cdate = new DateTime($created);
+        $diff = $today->diff($cdate);
+        $age = $diff->format("%a");
+
         $col1 =  self::form_content();
         $desc = array();
         $salePrice = array();
@@ -85,7 +97,6 @@ HTML;
         $name = array();
         $realName = array();
         $uid = array();
-        $upc = FormLib::get('upc');
         if($upc = scanLib::upcParse($upc)) {
             $args = array($upc);
             $prep = $dbc->prepare("SELECT pu.description,
@@ -132,6 +143,7 @@ HTML;
                 . $upc . "&ntype=UPC&searchBtn=' target='_blank'>{$upc}</a></div>";
             $col1 .=  "<div>" . $upcLink . " <b>" . $desc[max(array_keys($desc))] . "</b></div>";
             $col1 .=  "<div><a href='LastSoldDates.php?paste_list=1'>LAST SOLD PAGE</a></div>";
+            $col1 .= "<div>Created: $created <span style=\"font-size: 12px\">($age days old)</span></div>";
             $col1 .= scanLib::getDbcError($dbc);
 
             $table = '';
