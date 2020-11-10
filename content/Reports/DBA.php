@@ -140,6 +140,12 @@ GROUP BY p.upc
 ORDER BY p.default_vendor_id
                 </span>
             </li>
+            <li><a href='#' class="quick_query">Get Single_Item_Movement 90</a>
+                <span class="query">SELECT upc, DATE(tdate), SUM(quantity) FROM is4c_trans.dlog_90_view WHERE upc = '0074599850009' GROUP BY date_id;</span>
+            </li>
+            <li><a href='#' class="quick_query">Get Single_Item_Movement All</a>
+                <span class="query">SELECT upc, DATE(datetime), SUM(quantity), unitPrice FROM trans_archive.bigArchive WHERE upc = '0007349012827' GROUP BY date_id;</span>
+            </li>
             <li><a href='#' class="quick_query">Get Vendor Changes</a>
                 <span class="query">SELECT t.upc, v.sku, t.cost as previousCost, p.cost as newCost, (p.cost - t.cost) AS difference,
 p.brand, p.description, p.department as dept, m.super_name
