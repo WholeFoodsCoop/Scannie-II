@@ -30,8 +30,72 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<checked>';
         $this->__routes[] = 'post<review>';
         $this->__routes[] = 'post<columnSet>';
+        $this->__routes[] = 'post<saveAs>';
+        $this->__routes[] = 'post<loadList>';
+        $this->__routes[] = 'post<deleteList>';
 
         return parent::preprocess();
+    }
+
+    public function postDeleteListHandler()
+    { 
+
+        $dbc = ScanLib::getConObj('SCANALTDB');
+        $delete = FormLib::get('deleteList');
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+
+        $args = array($username, $storeID, $delete);
+        $prep = $dbc->prepare("DELETE FROM AuditScan WHERE username = ?
+            AND storeID = ? AND savedAs = ? OR savedAs = 'default'");
+        $res = $dbc->execute($prep, $args);
+
+        return header("location: AuditReport.php");
+    }
+
+    public function postLoadListHandler()
+    { 
+
+        $dbc = ScanLib::getConObj('SCANALTDB');
+        $load = FormLib::get('loadList');
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+
+        $args = array($username, $storeID);
+        $prep = $dbc->prepare("DELETE FROM AuditScan WHERE username = ?
+            AND storeID = ? AND savedAs = 'default'");
+        $res = $dbc->execute($prep, $args);
+
+        $args = array($username, $storeID, $load);
+        $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs) 
+            SELECT NOW(), upc, username, storeID, 'default' FROM AuditScan WHERE username = ? 
+            AND storeID = ? AND savedAs = ?");
+        $res = $dbc->execute($prep, $args);
+
+        return header("location: AuditReport.php?loaded=$load");
+    }
+
+    public function postSaveAsHandler()
+    { 
+
+        $dbc = ScanLib::getConObj('SCANALTDB');
+        $saveAs = FormLib::get('saveAs');
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+        $list = FormLib::get('list');
+        $upcs = explode("\r\n", $list);
+        $f = fopen('test.txt', 'w');
+        foreach($upcs as $upc) {
+            $args = array($upc, $username, $storeID, $saveAs);
+            $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs) 
+                VALUES (NOW(), ?, ?, ?, ?)");
+            $res = $dbc->execute($prep, $args);
+            //file_put_contents('test.txt', $upc);
+            fwrite($f, $upc, 1000);
+        }
+        $er = $dbc->error();
+
+        return header('location: AuditReport.php');
     }
 
     public function postColumnSetHandler()
@@ -299,7 +363,7 @@ class AuditReport extends PageLayoutA
         $storeID = FormLib::get('storeID');
         $username = FormLib::get('username');
         $args = array($storeID, $username);
-        $query = $dbc->prepare("DELETE FROM woodshed_no_replicate.AuditScan WHERE storeID = ? AND username = ?");
+        $query = $dbc->prepare("DELETE FROM woodshed_no_replicate.AuditScan WHERE storeID = ? AND username = ? AND savedAs = 'default'");
         $dbc->execute($query, $args);
 
         $json = array('test'=>'successful');
@@ -436,7 +500,8 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN productCostChanges AS c ON p.upc=c.upc
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
-                AND a.storeiD = ?
+                AND a.storeID = ?
+                AND a.savedAS = 'default'
             GROUP BY a.upc
             ORDER BY a.date DESC
         ");
@@ -444,7 +509,7 @@ class AuditReport extends PageLayoutA
         $td = "";
         $textarea = "<div style=\"position: relative\">
             <span class=\"status-popup\">Copied!</span>
-            <textarea class=\"copy-text\" rows=3 cols=10>";
+            <textarea class=\"copy-text\" id=\"list\" name=\"list\" rows=3 cols=10>";
 
         // this is the second thead row (filters)
         $pth = "
@@ -604,7 +669,9 @@ class AuditReport extends PageLayoutA
         $textarea .= "</textarea></div>";
         $rows = $dbc->numRows($result);
 
-        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan");
+        $args = array($usename, $storeID);
+        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan 
+            WHERE username = ? AND storeID = ? AND savedAs = 'default'");
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
             $upc = $row['upc'];
@@ -684,7 +751,32 @@ HTML;
         $dbc = scanLib::getConObj();
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
         $storeID = scanLib::getStoreID();
+        $loaded = FormLib::get('loaded');
         $test = new DataModel($dbc);
+
+        $args = array($username, $storeID);
+        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan 
+            WHERE username = ? AND storeID = ? AND savedAs = 'default'");
+        $res = $dbc->execute($prep, $args);
+        $list = '<textarea name="list" style="display: none;">';
+        while ($row = $dbc->fetchRow($res)) {
+            $list .= $row['upc'] . "\r\n";
+        }
+        $list .= '</textarea>';
+            
+        $args = array($username, $storeID);
+        $prep = $dbc->prepare("SELECT savedAs FROM woodshed_no_replicate.AuditScan 
+            WHERE username = ? AND storeID = ? AND savedAs != 'default' GROUP BY savedAs");
+        $res = $dbc->execute($prep, $args);
+        $savedLists = "";
+        $datalist = "<datalist id=\"savedLists\">";
+        while ($row = $dbc->fetchRow($res)) {
+            $saved = $row['savedAs'];
+            $sel = ($saved == $loaded) ? ' selected ' : '';
+            $savedLists .= "<option value=\"$saved\" $sel>$saved</option>";
+            $datalist .= "<option value=\"$saved\">";
+        }
+        $datalist .= "</datalist>";
 
         $prep = $dbc->prepare("SELECT * FROM woodshed_no_replicate.temp");
         $res = $dbc->execute($prep);
@@ -754,6 +846,17 @@ HTML;
                 </div>
         ";
 
+        $deleteList = '';
+        if (strlen($loaded) > 0) {
+            // show the delete button IF a list was recently selected
+            $deleteList = "
+                <div class=\"form-group dummy-form\">
+                    <span class=\"btn btn-danger btn-sm\" 
+                        onclick=\"var c = confirm('Delete list?'); if (c == true) { document.forms['deleteListForm'].submit(); }\">Delete</span>
+                </div> | 
+            ";
+        }
+
         $this->addScript('../../../common/javascript/tablesorter/js/jquery.tablesorter.min.js');
         $this->addScript('../../../common/javascript/tablesorter/js/jquery.metadata.js');
         $this->addOnloadCommand("$('#mytable').tablesorter();");
@@ -784,7 +887,39 @@ $modal
 </div>
 <div class="form-group dummy-form">
     <a class="btn btn-info btn-sm page-control" href="ProductScanner.php ">Scanner</a>
-</div>
+</div> 
+<div></div>
+<form name="load" id="loadList" method="post" action="AuditReport.php" style="display: inline-block">
+    <input name="username" type="hidden" value="$username" />
+    <input name="storeID" type="hidden" value="$storeID" />
+    <div class="form-group dummy-form">
+        <select name="loadList" class="form-control form-control-sm">
+            <option val=0>Saved Lists</option>
+            $savedLists
+        </select>
+    </div>
+    <div class="form-group dummy-form">
+        <button class="btn btn-default btn-sm" type="submit">Load</button>
+    </div> | 
+    $deleteList
+    $datalist
+</form>
+<form name="deleteListForm" method="post" action="AuditReport.php" style="display: inline-block">
+    <input name="username" type="hidden" value="$username" />
+    <input name="storeID" type="hidden" value="$storeID" />
+    <input name="deleteList" type="hidden" value="$loaded" />
+</form>
+<form name="save" id="saveList" method="post" action="AuditReport.php" style="display: inline-block">
+    <input name="username" type="hidden" value="$username" />
+    <input name="storeID" type="hidden" value="$storeID" />
+    $list
+    <div class="form-group dummy-form">
+        <input name="saveAs" class="form-control form-control-sm" list="savedLists" placeholder="Save List As" autocomplete="off"/>
+    </div>
+    <div class="form-group dummy-form">
+        <button class="btn btn-default btn-sm" type="submit">Save</button>
+    </div>
+</form>
 $nFilter
 $columnCheckboxes
 
@@ -917,7 +1052,7 @@ $('#clearAllInputB').click(function() {
             dataType: 'json',
             url: 'AuditReport.php',
             success: function(response) {
-                location.reload();
+                location.href = 'AuditReport.php';
             },
             error: function(response) {
                 alert('error');
