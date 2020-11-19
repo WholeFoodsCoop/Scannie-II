@@ -985,10 +985,7 @@ HTML;
     {
         $dbc = ScanLib::getConObj();
         $mod = new DataModel($dbc);
-        //$jsonSettings = $mod->getAuditReportSet(session_id());
         $config = $mod->getAuditReportOpt(session_id());
-        //$json = json_encode($jsonSettings);
-        //$json = $jsonSettings;
 
         return <<<JAVASCRIPT
 var startup = 1;
@@ -1013,18 +1010,6 @@ var stripeTable = function(){
 
     return false;
 };
-/*
-$.ajax({
-    type: 'post',
-    data: 'test=true',
-    dataType: 'json',
-    url: 'AuditReport.php',
-    success: function(response)
-    {
-        console.log("ajax test: "+response.test);
-    },
-});
-*/
 stripeTable();
 setInterval('stripeTable()', 1000);
 $('#clearNotesInputB').click(function() {
@@ -1170,36 +1155,6 @@ $('.editable-brand.sign-brand').each(function(){
     $(this).attr('contentEditable', true);
     $(this).attr('spellCheck', false);
 });
-//$('.editable').click(function(){
-//    $(this).addClass('currentEdit');
-//});
-//$('.editable').focusout(function(){
-//    $(this).removeClass('currentEdit');
-//});
-//
-//$('.editable-sku').click(function(){
-//    lastSku = $(this).text();
-//});
-//$('.editable-sku').focusout(function(){
-//    var sku = $(this).text();
-//    var vendorID = $(this).parent().find('td.vendor').attr('data-vendorID');
-//    var upc = $(this).parent().parent().find('.upc').attr('data-upc');
-//    $.ajax({
-//        type: 'post',
-//        data: 'setSku=true&lastSku='+lastSku+'&sku='+sku+'&vendorID='+vendorID+'&upc='+upc,
-//        dataType: 'json',
-//        url: 'AuditReport.php',
-//        success: function(response)
-//        {
-//            console.log(response);
-//            if (response.saved != true) {
-//                // alert user of error
-//            } else {
-//            }
-//        },
-//    });
-//
-//});
 var lastBrand = null;
 $('.editable-brand').click(function(){
     lastBrand = $(this).text();
@@ -1360,12 +1315,8 @@ var fetchNewRows = function()
         success: function(response)
         {
             var newCount = response.count;
-            //console.log(tableRows+', '+newCount);
             if (newCount > tableRows) {
-                //fetchTable();
                 tableRows = newCount;
-                //location.reload();
-                //console.log(document);
             }
         },
     });
