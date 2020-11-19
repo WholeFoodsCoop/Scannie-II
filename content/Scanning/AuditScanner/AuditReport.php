@@ -347,7 +347,7 @@ class AuditReport extends PageLayoutA
 
         $dbc = ScanLib::getConObj();
         $args = array($upc, $storeID, $username);
-        $prep = $dbc->prepare('DELETE FROM woodshed_no_replicate.AuditScan WHERE upc = ? AND storeID = ? AND username = ?');
+        $prep = $dbc->prepare('DELETE FROM woodshed_no_replicate.AuditScan WHERE upc = ? AND storeID = ? AND username = ? AND savedAs = "default"');
         $dbc->execute($prep, $args);
         if ($er = $dbc->error()) {
             $json['dbc-error'] = $er;
@@ -405,8 +405,8 @@ class AuditReport extends PageLayoutA
         foreach ($plus as $upc) {
             if ($upc != 0) {
                 $args = array($upc, $username, $storeID);
-                $prep = $dbc->prepare("INSERT IGNORE INTO woodshed_no_replicate.AuditScan (upc, username, storeID, date)
-                    VALUES (?, ?, ?, NOW());");
+                $prep = $dbc->prepare("INSERT IGNORE INTO woodshed_no_replicate.AuditScan (upc, username, storeID, date, savedAs)
+                    VALUES (?, ?, ?, NOW(), 'default');");
                 $res = $dbc->execute($prep, $args);
             }
         }
@@ -492,7 +492,7 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN PriceRuleTypes AS t ON r.priceRuleTypeID=t.priceRuleTypeID
                 LEFT JOIN departments AS d ON p.department=d.dept_no
                 LEFT JOIN vendors AS e ON p.default_vendor_id=e.vendorID
-                RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON p.upc=a.upc
+                RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON p.upc=a.upc AND p.store_id=a.storeID
                 LEFT JOIN deptMargin AS dm ON p.department=dm.dept_ID
                 LEFT JOIN vendorDepartments AS vd
                     ON vd.vendorID = p.default_vendor_id AND vd.posDeptID = p.department 
@@ -500,7 +500,7 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN productCostChanges AS c ON p.upc=c.upc
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
-                AND a.storeID = ?
+                AND p.store_id = ?
                 AND a.savedAS = 'default'
             GROUP BY a.upc
             ORDER BY a.date DESC
@@ -1007,8 +1007,8 @@ var stripeTable = function(){
             } else {
                 $(this).removeClass('stripe');
             }
-        }
         i++;
+        }
     });
 
     return false;
