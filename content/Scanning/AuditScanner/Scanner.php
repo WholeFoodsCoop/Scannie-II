@@ -14,9 +14,9 @@ class Scanner extends PageLayoutA
     protected $enable_linea = true;
     protected $must_authenticate = TRUE;
 
-    protected $columns = array('par', 'inUse', 'posBrand', 'posDesc', 'signBrand', 
-        'signDesc', 'narrow', 'cost', 'adj', 'PO', 'price', 'vendor', 'dept', 'size', 
-        'units', 'curMargin', 'prid', 'location', 'note');
+    protected $columns = array('par', 'inUse', 'lastSold', 'posBrand', 'posDesc', 
+        'signBrand', 'signDesc', 'narrow', 'cost', 'adj', 'PO', 'price', 'vendor', 
+        'dept', 'size', 'units', 'curMargin', 'prid', 'location', 'note');
 
     public function preprocess()
     {
@@ -24,8 +24,59 @@ class Scanner extends PageLayoutA
         $this->__routes[] = 'post<test>';
         $this->__routes[] = 'post<setcolumn>';
         $this->__routes[] = 'post<note>';
+        $this->__routes[] = 'post<modInUse>';
+        $this->__routes[] = 'post<mod><narrow>';
 
         return parent::preprocess();
+    }
+
+    private function mod_narrow_handler($upc)
+    {
+        $dbc = scanLib::getConObj();
+        $args = array($upc);
+        $prep = $dbc->prepare("SELECT upc FROM productUser WHERE upc = ? AND narrow = 1");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $narrow = $row['upc'];
+        }
+        echo $narrow;
+        if ($narrow > 0) {
+            $prep = $dbc->prepare("UPDATE productUser SET narrow = 0 WHERE upc = ?");
+            $res = $dbc->execute($prep, $args);
+        } else {
+            $prep = $dbc->prepare("UPDATE productUser SET narrow = 1 WHERE upc = ?");
+            $res = $dbc->execute($prep, $args);
+        }
+
+        return false;
+    }
+
+    private function postModInUseHandler()
+    {
+        $dbc = scanLib::getConObj();
+        $storeID = FormLib::get('storeID');
+        $upc = FormLib::get('upc');
+        $inUse = FormLib::get('inUse');
+
+        $args = array($upc, $storeID);
+        $prep = $dbc->prepare("SELECT inUse FROM products WHERE upc = ? AND store_id = ?;");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $inUse = $row['inUse'];
+        }
+        if ($inUse == 0) {
+            $prep = $dbc->prepare("UPDATE products SET inUse = 1 WHERE upc = ? AND store_id = ?");
+            $res = $dbc->execute($prep, $args);
+        } else {
+            $prep = $dbc->prepare("UPDATE products SET inUse = 0 WHERE upc = ? AND store_id = ?");
+            $res = $dbc->execute($prep, $args);
+            $args = array($upc, $storeID);
+            $prep = $dbc->prepare("INSERT INTO woodshed_no_replicate.exceptionItems (upc, note, timestamp, storeID)
+                VALUES (?, 'Item un-used', NOW(), ?)");
+            $res = $dbc->execute($prep, $args);
+        }
+
+        return false;
     }
 
     public function postNoteHandler()
@@ -47,13 +98,9 @@ class Scanner extends PageLayoutA
     public function postSetcolumnHandler()
     {
         $active = FormLib::get('active');
-        $col = FormLib::get('col');
         $_SESSION['view'][$col] = $active;
 
-        //echo $col . ', ' . $active;
-
         return false;
-        //return header('location: ' . $_SERVER['REQUEST_URI']);
     }
 
     public function postColumnSetHandler()
@@ -385,6 +432,7 @@ class Scanner extends PageLayoutA
             FROM woodshed_no_replicate.AuditScan
             WHERE username = ?
                 AND storeID = ?
+                AND savedAs = 'default'
         ");
         $result = $dbc->execute($query, $args);
         $json['count'] = $dbc->numRows($result);
@@ -718,7 +766,7 @@ HTML;
     {
         $args = array($username,$storeID);
         $prep = $dbc->prepare("SELECT count(*) FROM woodshed_no_replicate.AuditScan
-            WHERE username = ? AND storeID = ?");
+            WHERE username = ? AND storeID = ? AND savedAs = 'default'");
         $res = $dbc->execute($prep,$args);
         $count = $dbc->fetchRow($res);
         return $count[0];
@@ -736,7 +784,7 @@ HTML;
         $_SESSION['view']['test'] = 'Successful';
         $hiddenColumnSelector = <<<HTML
 <div id="hiddenColumnSelector">
-    <div id="hiddenColumnSelectorClose" onclick="window.location.reload(); $('#hiddenColumnSelector').hide();"><</div>
+    <div id="hiddencolumnselectorclose" onclick="document.forms['main_form'].submit(); $('#hiddencolumnselector').hide();"><</div>
 HTML;
         foreach ($this->columns as $col) {
             $inUse = ($_SESSION['view'][$col] == 1) ? 'active' : '';
@@ -747,6 +795,7 @@ HTML;
 $hiddenColumnSelector .= "</div>";
 
         $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
+        $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
 
         $dbc = scanLib::getConObj();
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
@@ -791,7 +840,8 @@ $hiddenColumnSelector .= "</div>";
 
         $args = array($upc, $storeID);
         $prep = $dbc->prepare("SELECT *, 
-            (100 * (normal_price - cost) / normal_price) AS curMargin
+            (100 * (normal_price - cost) / normal_price) AS curMargin,
+            DATE(last_sold) AS last_sold
             FROM products AS p
                 LEFT JOIN departments AS d ON p.department=d.dept_no
             WHERE p.upc = ? AND p.store_id = ?");
@@ -809,6 +859,7 @@ $hiddenColumnSelector .= "</div>";
             $department = $row['department'];
             $deptName = $row['dept_name'];
             $inUse = $row['inUse'];
+            $lastSold = $row['last_sold'];
         }
 
         $args = array($upc);
@@ -842,8 +893,10 @@ $hiddenColumnSelector .= "</div>";
 
         list($recentPurchase, $received) = $this->getRecentPurchase($dbc,$sku);
 
-        $args = array($upc);
-        $prep = $dbc->prepare("SELECT * FROM batchList AS b LEFT JOIN batches AS ba ON b.batchID=ba.batchID WHERE upc = ? AND NOW() >= startDate AND NOW() <= endDate");
+        $args = array($upc, $storeID);
+        $prep = $dbc->prepare("SELECT * FROM batchList AS b LEFT JOIN batches AS ba ON b.batchID=ba.batchID 
+            LEFT JOIN StoreBatchMap AS m ON m.batchID=b.batchID  WHERE upc = ? AND NOW() >= startDate 
+                AND NOW() <= endDate AND m.storeID = ?");
         $res = $dbc->execute($prep, $args);
         while ($row = $dbc->fetchRow($res)) {
             $salePrice = $row['salePrice'];
@@ -981,8 +1034,8 @@ $hiddenB
             <div class="col-8" align="right">
                 <span>$count</span>
                 <span style="text-shadow: 1px 1px white">$username</span>
-                <input class="input-sm info" name="upc" id="upc" value="$upc" autofocus
-                    style="text-align: center;" pattern="\d*">
+                <input class="input-sm info" name="upc" id="upc" value="$upc" autofocus 
+                    onfocus="this.select()" style="text-align: center;" pattern="\d*">
             </div>
             <div class="col-2" align="left">
                 <div>&nbsp;</div>
@@ -1010,12 +1063,13 @@ $hiddenB
         </div>
     </div>
 </div>
-<div class="info-row $inUseAlert" data-name="inUse" data-table="products" data-column="inUse">$inUse</div>
+<div class="info-row $inUseAlert" data-name="inUse" data-table="products" data-column="inUse" id="inUse">$inUse</div>
+<div class="info-row" data-name="lastSold" data-table="" data-column="lastSold">$lastSold</div>
 <div class="info-row" data-name="posBrand" data-table="products" data-column="brand">$brand</div>
 <div class="info-row" data-name="posDesc" data-table="products" data-column="description">$description</div>
 <div class="info-row" data-name="signBrand" data-table="productUser" data-column="brand">$signBrand</div>
 <div class="info-row" data-name="signDesc" data-table="productUser" data-column="description">$signDescription</div>
-<div class="info-row $narrowAlert" data-name="narrow" data-table="productUser" data-column="narrow">$narrow</div>
+<div class="info-row $narrowAlert" data-name="narrow" data-table="productUser" data-column="narrow" id="narrow">$narrow</div>
 <div class="row">
     <div class="col-4">
         <div class="info-row inline-row" data-name="cost" data-table="products" data-column="cost">$cost</div>
@@ -1030,7 +1084,7 @@ $hiddenB
 </div>
 <div class="row">
     <div class="col-4">
-        <div class="info-row" data-name="price" data-table="productUser" data-column="price">$normal_price</div>
+        <div class="info-row" data-name="price" data-table="productUser" data-column="price"><strong>$normal_price</strong></div>
     </div>
     <div class="col-4">
         <div class="info-row success $salePriceVis" data-name="salePrice" data-table="productUser" data-column="salePrice">$salePrice</div>
@@ -1068,7 +1122,7 @@ location module
                             <button class="btn btn-pencil" style="" onclick="$('#notepad').show();" style="width: 100%;">
                                 <span class="scanicon scanicon-pencil-white"></span>
                             </button></div>
-                        <div class="col-4  clear "><a class="btn btn-success" style="width: 100%; height: 44px; font-weight: bold;" href="http://'.$MY_ROOTDIR.'/content/Scanning/BatchCheck/SCS.php">B.C.</a></div>
+                        <div class="col-4  clear "><a class="btn btn-success" style="width: 100%; height: 44px; font-weight: bold;" href="http://$MY_ROOTDIR/content/Scanning/BatchCheck/SCS.php">B.C.</a></div>
                     </div>
                     <div class="row">
                         <div class="col-4">
@@ -1127,7 +1181,7 @@ $('#submit-note').click(function(){
         url: window.location.href,
         data: 'note='+note+'&upc='+upc+'&username='+username,
         success: function(response) {
-            window.location.reload();
+            document.forms['main_form'].submit();
         }
     });
 });
@@ -1153,6 +1207,28 @@ $('.col-select').click(function(){
             console.log('success');
         }
     });
+});
+$('#inUse').click(function(){
+    var upc = $('#upc').val();
+    var storeID = $('#storeID').val();
+    var val = $(this).text();
+    var inUse = (val == 'inUse:1 (is in use)') ? 1 : 0;
+    //alert(inUse);
+    $.ajax({
+        type: 'post',
+        url: window.location.href,
+        data: 'modInUse=1&inUse='+inUse+'&upc='+upc+'&storeID='+storeID,
+        success: function(response) {
+            console.log('success');
+            alert('success');
+            //alert(response);
+        },
+        complete: function(response) {
+            //alert('complete');
+        },
+    });
+});
+$('#narrow').click(function(){
 });
 JAVASCRIPT;
     }
