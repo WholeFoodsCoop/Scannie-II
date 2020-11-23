@@ -1163,6 +1163,7 @@ $('.editable-brand').focusout(function(){
     var table = $(this).attr('data-table');
     var upc = $(this).parent().find('td.upc').attr('data-upc');
     var brand = $(this).text();
+    brand = encodeURIComponent(brand);
     if (brand != lastBrand) {
         $.ajax({
             type: 'post',
