@@ -84,6 +84,10 @@ WHERE CASE WHEN WhsAvail like '%T%' THEN 'yes' ELSE 'no' END = 'yes'
                 <span class="query">SELECT * FROM woodshed_no_replicate.BasicsFiles
                 </span>
             </li>
+            <li><a href='#' class="quick_query">Get Coop Basics Items From List</a>
+                <span class="query">select * from woodshed_no_replicate.BasicsFiles where upc in (1234) and month = 'November'
+                </span>
+            </li>
             <li><a href='#' class="quick_query">Get Current Sales</a>
                 <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
 FROM batchList AS bl
@@ -115,6 +119,9 @@ order by department, upc
                 <span class="query">select upc, brand, description from products where created > '2020-09-25 09:00:00' 
 group by upc</span>
             </li>
+            <li><a href='#' class="quick_query">Get Linked PLU</a>
+                <span class="query">select plu, itemdesc, linkedPLU from scaleItems where linkedPLU = 0000000000864</span>
+            </li>
             <li><a href='#' class="quick_query">Get Missing Sub-Locations</a>
                 <span class="query">select i.upc, f.subSection, s.name, p.department, m.super_name
 FROM PickupOrderItems as i 
@@ -141,10 +148,12 @@ ORDER BY p.default_vendor_id
                 </span>
             </li>
             <li><a href='#' class="quick_query">Get Single_Item_Movement 90</a>
-                <span class="query">SELECT upc, DATE(tdate), SUM(quantity) FROM is4c_trans.dlog_90_view WHERE upc = '0074599850009' GROUP BY date_id;</span>
+                <span class="query">SELECT upc, DATE(tdate), SUM(quantity) FROM is4c_trans.dlog_90_view WHERE upc = '0074599850009' 
+AND store_id = 2 GROUP BY date_id;</span>
             </li>
             <li><a href='#' class="quick_query">Get Single_Item_Movement All</a>
-                <span class="query">SELECT upc, DATE(datetime), SUM(quantity), unitPrice FROM trans_archive.bigArchive WHERE upc = '0007349012827' GROUP BY date_id;</span>
+                <span class="query">SELECT upc, DATE(datetime), SUM(quantity), unitPrice FROM trans_archive.bigArchive WHERE upc = '0007349012827' 
+AND store_id = 2 GROUP BY date_id;</span>
             </li>
             <li><a href='#' class="quick_query">Get Vendor Changes</a>
                 <span class="query">SELECT t.upc, v.sku, t.cost as previousCost, p.cost as newCost, (p.cost - t.cost) AS difference,
