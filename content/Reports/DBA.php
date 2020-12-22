@@ -147,6 +147,9 @@ GROUP BY p.upc
 ORDER BY p.default_vendor_id
                 </span>
             </li>
+            <li><a href='#' class="quick_query">Get Scale LinkedPLU in Batch</a>
+                <span class="query">SELECT plu, price, itemDesc, linkedPLU FROM scaleItems WHERE linkedPLU IN (SELECT upc FROM batchList WHERE batchID = 16411)</span>
+            </li>
             <li><a href='#' class="quick_query">Get Single_Item_Movement 90</a>
                 <span class="query">SELECT upc, DATE(tdate), SUM(quantity) FROM is4c_trans.dlog_90_view WHERE upc = '0074599850009' 
 AND store_id = 2 GROUP BY date_id;</span>
