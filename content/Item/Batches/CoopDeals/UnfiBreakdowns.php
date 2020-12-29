@@ -43,6 +43,7 @@ class UnfiBreakdowns extends WebDispatch
                 AND b.batchID <= ?
                 AND m.superID <> 1
             GROUP BY bl.upc
+            ORDER BY bl.batchID
         ");
         $res = $dbc->execute($prep, $args);
         $batchList = array();
