@@ -355,7 +355,8 @@ HTML;
         // get batchList info
         $sbmIDs = array();
         list($in_str, $args) = $dbc->safeInClause($batches);
-        $prep = $dbc->prepare("SELECT upc, salePrice, b.batchName, b.batchType, b.batchID
+        $prep = $dbc->prepare("SELECT upc, salePrice, b.batchName, b.batchType, b.batchID,
+            b.startDate, b.endDate
             FROM batchList AS bl
                 LEFT JOIN batches AS b ON bl.batchID=b.batchID
             WHERE b.batchID IN ($in_str)");
@@ -377,6 +378,8 @@ HTML;
             $data[$upc]['batchID'] = $batchID;
             $data[$upc]['sbmID'] = $this->batches[$row['batchID']]['storeBatchMapID'];
             $data[$upc]['singleStoreBatch'] = 0;
+            $data[$upc]['startDate'] = $row['startDate'];
+            $data[$upc]['endDate'] = $row['endDate'];
             $sbmIDs[] = $this->batches[$row['batchID']]['storeBatchMapID'];
         }
         if ($er = $dbc->error()) echo $er;
@@ -403,6 +406,8 @@ HTML;
                 $batchID = $row['batchID'];
                 $upc = $row['upc'];
                 $queues = '';
+                $start = substr($row['startDate'], 0, 10);
+                $end = substr($row['endDate'], 0, 10);
                 $extraData = "
 [lastsold] {$row['last_sold']}\r\n
 [batch] {$row['batchName']}\r\n
@@ -411,6 +416,7 @@ HTML;
 [pos] {$row['description']}\r\n
 [sign] {$row['ubrand']}\r\n
 [sign] {$row['udesc']}\r\n
+[start] {$start} [end] {$end}\r\n
                 ";
                 foreach ($row['queues'] as $queued) {
                     $queues .= $queued[0].", ";
