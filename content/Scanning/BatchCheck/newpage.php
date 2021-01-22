@@ -256,6 +256,7 @@ HTML;
         }
 
         list($in_str, $args) = $dbc->safeInClause($this->upcs);
+        $args[] = $storeID;
 
         // get product information
         $cols = array('upc', 'brand', 'description', 'cost',
@@ -265,7 +266,8 @@ HTML;
                 p.size, DATE(p.last_sold) AS last_sold
             FROM products AS p
                 LEFT JOIN productUser AS u ON p.upc=u.upc
-            WHERE p.upc IN ($in_str)");
+            WHERE p.upc IN ($in_str)
+            AND store_id = ?");
         $res = $dbc->execute($prep, $args);
         while ($row = $dbc->fetchRow($res)) {
             $upc = $row['upc'];
@@ -409,14 +411,14 @@ HTML;
                 $start = substr($row['startDate'], 0, 10);
                 $end = substr($row['endDate'], 0, 10);
                 $extraData = "
-[lastsold] {$row['last_sold']}\r\n
-[batch] {$row['batchName']}\r\n
-[size] {$row['size']}\r\n
-[pos] {$row['brand']}\r\n
-[pos] {$row['description']}\r\n
-[sign] {$row['ubrand']}\r\n
-[sign] {$row['udesc']}\r\n
-[start] {$start} [end] {$end}\r\n
+[lastsold]   {$row['last_sold']}\r\n
+[batch]      {$row['batchName']}\r\n
+[size]         {$row['size']}\r\n
+[pos]          {$row['brand']}\r\n
+[pos]          {$row['description']}\r\n
+[sign]         {$row['ubrand']}\r\n
+[sign]         {$row['udesc']}\r\n
+[start]        {$start}          [end] {$end}\r\n
                 ";
                 foreach ($row['queues'] as $queued) {
                     $queues .= $queued[0].", ";
