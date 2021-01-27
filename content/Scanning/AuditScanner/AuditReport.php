@@ -669,7 +669,7 @@ class AuditReport extends PageLayoutA
         $textarea .= "</textarea></div>";
         $rows = $dbc->numRows($result);
 
-        $args = array($usename, $storeID);
+        $args = array($username, $storeID);
         $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan 
             WHERE username = ? AND storeID = ? AND savedAs = 'default'");
         $res = $dbc->execute($prep);
@@ -689,7 +689,7 @@ class AuditReport extends PageLayoutA
         echo $dbc->error();
 
         $ret = <<<HTML
-<input type="hidden" id="table-rows" value="$rows" />
+<input type="hidden" id="table-rows" val(ue)="$rows" />
 <div class="table-responsive">
     <table class="table table-bordered table-sm small items" id="mytable">
     <thead>$th</thead>
