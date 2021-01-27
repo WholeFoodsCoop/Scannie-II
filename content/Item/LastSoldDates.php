@@ -93,7 +93,8 @@ class LastSoldDates extends PageLayoutA
             <th>Description</th>
             <th>Brand</th>
         ';
-        foreach ($plus as $upc) {
+        foreach ($plus as $k => $upc) {
+            $trcol = ($k % 2 == 0) ? 'FFFFCC' : 'white';
             $args = array($upc);
             $prep = $dbc->prepare("
                     SELECT
@@ -113,7 +114,7 @@ class LastSoldDates extends PageLayoutA
                     $last_sold = '<span class="text-'.$class.'">' . $last_sold = substr($last_sold,0,10) . '</span>';
                 }
                 $upcLink = '<a href="http://'.$FANNIE_ROOTDIR.'/item/ItemEditorPage.php?searchupc=' . $upc . '" target="_blank">' . $upc . '</a>';
-                $ret .= "<tr>";
+                $ret .= "<tr style=\"background-color: $trcol;\">";
                 $ret .= "<td class='clickToAdd'>" . $upcLink . "</td><td>" . $last_sold . "</td><td class='store_id'>" . $row['store_id'] . "</td><td>" . $row['description'] . "</td><td>" . $row['brand'] . "</td>";
                 $ret .= "</tr>";
             }
