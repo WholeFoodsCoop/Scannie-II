@@ -46,12 +46,14 @@ class WebDispatch
 
     private function draw_page()
     {
+        $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
+
         $this->deviceType = $this->getDeviceType();
         if (!class_exists('coreNav')) {
             include(__DIR__.'/CoreNav.php');
         }
 
-        $this->addCssFile();
+        $this->addCssFile("http://{$MY_ROOTDIR}/common/css/commonInterface.css");
         $this->preflight();
         $this->preprocess();
         echo $this->header();
@@ -147,7 +149,7 @@ class WebDispatch
         return <<<HTML
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="http://{$MY_ROOTDIR}/common/bootstrap4/css/bootstrap.min.css">
     <link rel="stylesheet" href="http://{$MY_ROOTDIR}/common/jqueryui/jquery-ui.theme.css" type="text/css">
     <link rel="stylesheet" href="http://{$MY_ROOTDIR}/common/jqueryui/jquery-ui.min.css" type="text/css">
