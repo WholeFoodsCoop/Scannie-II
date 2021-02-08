@@ -18,6 +18,7 @@ class WebDispatch
     protected $loadtime = NULL;
     protected $config;
     protected $cssFiles = array();
+    protected $__routes = array();
 
     function __construct() 
     {
