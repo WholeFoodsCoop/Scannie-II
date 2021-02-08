@@ -71,7 +71,9 @@ HTML;
     }
 
 }
-if ($_GET['search']) {
-    $obj = new search();
-    echo $obj->run();
+if (isset($_GET['search'])) {
+    if ($_GET['search']) {
+        $obj = new search();
+        echo $obj->run();
+    }
 }
