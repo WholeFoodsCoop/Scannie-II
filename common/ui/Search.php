@@ -45,7 +45,7 @@ class Search
             $this->getList();
         }
 
-        return $ret;
+        return false;
     }
 
     public function run()
