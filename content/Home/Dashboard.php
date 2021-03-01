@@ -493,9 +493,8 @@ HTML;
                 )
                 AND (normal_price = 0 OR normal_price > 129.99 OR normal_price < cost)
                 AND last_sold is not NULL
-                AND p.price_rule_id = 0
                 AND wicable = 0
-                AND m.superID IN (1,13,9,4,8,17,5,18) 
+                AND m.superID IN (1,3,13,9,4,8,17,5,18) 
             GROUP BY upc
         "
         );
