@@ -38,7 +38,7 @@ class AuditReport extends PageLayoutA
     }
 
     public function postDeleteListHandler()
-    { 
+    {
 
         $dbc = ScanLib::getConObj('SCANALTDB');
         $delete = FormLib::get('deleteList');
@@ -54,7 +54,7 @@ class AuditReport extends PageLayoutA
     }
 
     public function postLoadListHandler()
-    { 
+    {
 
         $dbc = ScanLib::getConObj('SCANALTDB');
         $load = FormLib::get('loadList');
@@ -67,8 +67,8 @@ class AuditReport extends PageLayoutA
         $res = $dbc->execute($prep, $args);
 
         $args = array($username, $storeID, $load);
-        $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs) 
-            SELECT NOW(), upc, username, storeID, 'default' FROM AuditScan WHERE username = ? 
+        $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs)
+            SELECT NOW(), upc, username, storeID, 'default' FROM AuditScan WHERE username = ?
             AND storeID = ? AND savedAs = ?");
         $res = $dbc->execute($prep, $args);
 
@@ -76,7 +76,7 @@ class AuditReport extends PageLayoutA
     }
 
     public function postSaveAsHandler()
-    { 
+    {
 
         $dbc = ScanLib::getConObj('SCANALTDB');
         $saveAs = FormLib::get('saveAs');
@@ -87,7 +87,7 @@ class AuditReport extends PageLayoutA
         $f = fopen('test.txt', 'w');
         foreach($upcs as $upc) {
             $args = array($upc, $username, $storeID, $saveAs);
-            $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs) 
+            $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs)
                 VALUES (NOW(), ?, ?, ?, ?)");
             $res = $dbc->execute($prep, $args);
             //file_put_contents('test.txt', $upc);
@@ -129,19 +129,19 @@ class AuditReport extends PageLayoutA
             $prep = $dbc->prepare("INSERT INTO woodshed_no_replicate.temp (upc,cost) SELECT upc, cost FROM products WHERE UPC in (SELECT upc FROM woodshed_no_replicate.AuditScan WHERE username = ?) GROUP BY upc;");
             $res = $dbc->execute($prep, array($username));
         } elseif ($review == 'close') {
-            $prep = $dbc->prepare("INSERT INTO productCostChanges (upc, previousCost, newCost, difference, date) 
-                SELECT 
-                t.upc AS upc, 
-                t.cost as previousCost, 
-                p.cost as newCost, 
-                (p.cost - t.cost) AS difference, 
-                DATE(NOW()) AS date 
-                FROM woodshed_no_replicate.temp AS t 
-                LEFT JOIN products AS p ON t.upc = p.upc 
+            $prep = $dbc->prepare("INSERT INTO productCostChanges (upc, previousCost, newCost, difference, date)
+                SELECT
+                t.upc AS upc,
+                t.cost as previousCost,
+                p.cost as newCost,
+                (p.cost - t.cost) AS difference,
+                DATE(NOW()) AS date
+                FROM woodshed_no_replicate.temp AS t
+                LEFT JOIN products AS p ON t.upc = p.upc
                 RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON p.upc=a.upc
-                WHERE (p.cost - t.cost) <> 0 
+                WHERE (p.cost - t.cost) <> 0
                 AND a.username = ?
-                GROUP BY p.upc 
+                GROUP BY p.upc
                 ON DUPLICATE KEY UPDATE previousCost=VALUES(previousCost), newCost=VALUES(newCost), difference=VALUES(difference), date=VALUES(date);
             ");
             $res = $dbc->execute($prep, array($username));
@@ -152,7 +152,7 @@ class AuditReport extends PageLayoutA
         }
         $suff = '';
         if ($er = $dbc->error())
-            $suff = "?$er"; 
+            $suff = "?$er";
 
 
         return header("location: AuditReport.php$suff");
@@ -169,13 +169,13 @@ class AuditReport extends PageLayoutA
     {
         $bycount = null;
         $args = array($upc);
-        $prep = $dbc->prepare("SELECT 
-            CASE 
+        $prep = $dbc->prepare("SELECT
+            CASE
                 WHEN bycount = 0 THEN 'Random'
                 WHEN bycount = 1 THEN 'Fixed'
                 ELSE 'not in scale'
             END AS bycount
-            FROM scaleItems 
+            FROM scaleItems
             WHERE plu = ?");
         $res = $dbc->execute($prep, $args);
         while ($row = $dbc->fetchRow($res)) {
@@ -223,7 +223,7 @@ class AuditReport extends PageLayoutA
             $departments .= "<option value=\"$num\" $sel>$num - $name</option>";
         }
         $departments .= "</select>";
-         
+
         return $departments;
     }
 
@@ -291,7 +291,7 @@ class AuditReport extends PageLayoutA
 
         return false;
     }
-     
+
     public function postSetDescriptionHandler()
     {
         $upc = FormLib::get('upc');
@@ -445,31 +445,31 @@ class AuditReport extends PageLayoutA
 
         $args = array($username, $storeID);
         $prep = $dbc->prepare("
-            SELECT 
+            SELECT
                 p.upc,
-                v.sku, 
-                p.brand, 
+                v.sku,
+                p.brand,
                 u.brand AS signBrand,
                 p.description AS description,
                 u.description AS signDescription,
                 p.cost,
-                CASE 
+                CASE
                     WHEN e.shippingMarkup > 0 THEN p.cost + (p.cost * e.shippingMarkup) ELSE p.cost
                 END AS adjcost,
-                p.normal_price AS price, 
+                p.normal_price AS price,
                 p.special_price AS sale,
-                t.description AS priceRuleType, 
+                t.description AS priceRuleType,
                 CONCAT(p.department, ' - ', d.dept_name) AS dept,
-                d.dept_no, 
-                d.dept_name, 
-                e.vendorID, 
+                d.dept_no,
+                d.dept_name,
+                e.vendorID,
                 CONCAT(e.vendorID, ' - ', e.vendorName) AS vendor,
                 e.vendorID AS vendorID,
                 a.date,
                 a.username,
                 100 * (p.normal_price - p.cost) / p.normal_price AS curMargin,
                 100 * ROUND(CASE
-                    WHEN vd.margin > 0.01 THEN vd.margin ELSE d.margin 
+                    WHEN vd.margin > 0.01 THEN vd.margin ELSE d.margin
                 END, 4) AS margin,
                 a.notes,
                 CASE
@@ -496,7 +496,7 @@ class AuditReport extends PageLayoutA
                 RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON p.upc=a.upc AND p.store_id=a.storeID
                 LEFT JOIN deptMargin AS dm ON p.department=dm.dept_ID
                 LEFT JOIN vendorDepartments AS vd
-                    ON vd.vendorID = p.default_vendor_id AND vd.posDeptID = p.department 
+                    ON vd.vendorID = p.default_vendor_id AND vd.posDeptID = p.department
                 LEFT JOIN prodReview AS pr ON p.upc=pr.upc
                 LEFT JOIN productCostChanges AS c ON p.upc=c.upc
             WHERE p.upc != '0000000000000'
@@ -676,7 +676,7 @@ class AuditReport extends PageLayoutA
         $rows = $dbc->numRows($result);
 
         $args = array($username, $storeID);
-        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan 
+        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan
             WHERE username = ? AND storeID = ? AND savedAs = 'default'");
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
@@ -761,7 +761,7 @@ HTML;
         $test = new DataModel($dbc);
 
         $args = array($username, $storeID);
-        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan 
+        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan
             WHERE username = ? AND storeID = ? AND savedAs = 'default'");
         $res = $dbc->execute($prep, $args);
         $list = '<textarea name="list" style="display: none;">';
@@ -769,9 +769,9 @@ HTML;
             $list .= $row['upc'] . "\r\n";
         }
         $list .= '</textarea>';
-            
+
         $args = array($username, $storeID);
-        $prep = $dbc->prepare("SELECT savedAs FROM woodshed_no_replicate.AuditScan 
+        $prep = $dbc->prepare("SELECT savedAs FROM woodshed_no_replicate.AuditScan
             WHERE username = ? AND storeID = ? AND savedAs != 'default' GROUP BY savedAs");
         $res = $dbc->execute($prep, $args);
         $savedLists = "";
@@ -810,8 +810,8 @@ HTML;
         $noteStr .= "</select>";
         $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
 
-        $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase', 
-            'price', 'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed', 
+        $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
+            'price', 'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed',
             'costChange');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         $i = count($columns) - 1;
@@ -857,9 +857,9 @@ HTML;
             // show the delete button IF a list was recently selected
             $deleteList = "
                 <div class=\"form-group dummy-form\">
-                    <span class=\"btn btn-danger btn-sm\" 
+                    <span class=\"btn btn-danger btn-sm\"
                         onclick=\"var c = confirm('Delete list?'); if (c == true) { document.forms['deleteListForm'].submit(); }\">Delete</span>
-                </div> | 
+                </div> |
             ";
         }
 
@@ -893,7 +893,7 @@ $modal
 </div>
 <div class="form-group dummy-form">
     <a class="btn btn-info btn-sm page-control" href="ProductScanner.php ">Scanner</a>
-</div> 
+</div>
 <div></div>
 <form name="load" id="loadList" method="post" action="AuditReport.php" style="display: inline-block">
     <input name="username" type="hidden" value="$username" />
@@ -906,7 +906,7 @@ $modal
     </div>
     <div class="form-group dummy-form">
         <button class="btn btn-default btn-sm" type="submit">Load</button>
-    </div> | 
+    </div> |
     $deleteList
     $datalist
 </form>
@@ -935,9 +935,9 @@ $columnCheckboxes
             <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label><input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="" checked>
         </div>
         <div id="countDisplay" style="font-size: 12px; padding: 10px; display: none;">
-            <span id="checkedCount"></span> <b>/ 
-            <span id="itemCount"></span></b> -> 
-            <span id="percentComplete"></span> 
+            <span id="checkedCount"></span> <b>/
+            <span id="itemCount"></span></b> ->
+            <span id="percentComplete"></span>
         </div>
         <div style="font-size: 12px; padding: 10px;">
             <div class="form-group dummy-form">
@@ -1022,7 +1022,7 @@ $('#clearNotesInputB').click(function() {
     var c = confirm("Are you sure?");
     if (c == true) {
         $.ajax({
-            type: 'post', 
+            type: 'post',
             data: 'storeID='+storeID+'&username='+username+'&notes=true',
             dataType: 'json',
             url: 'AuditReport.php',
@@ -1038,7 +1038,7 @@ $('#clearAllInputB').click(function() {
     var c = confirm("Are you sure?");
     if (c == true) {
         $.ajax({
-            type: 'post', 
+            type: 'post',
             data: 'storeID='+storeID+'&username='+username+'&clear=true',
             dataType: 'json',
             url: 'AuditReport.php',
@@ -1091,7 +1091,7 @@ $('.scanicon-trash').click( function(event) {
     var rowclicked = $(this).parent().parent().closest('tr').attr('id');
     var r = confirm('Remove '+upc+' from Queue?');
     if (r == true) {
-        $.ajax({        
+        $.ajax({
             url: 'AuditReport.php',
             type: 'post',
             dataType: 'json',
@@ -1270,19 +1270,19 @@ $('.column-checkbox').change(function(){
     var set = checked;
     var column = $(this).val();
     let columnName = "."+column;
-    if (columnName == ".") 
+    if (columnName == ".")
         return false;
     var colnum = $(this).attr('data-colnum');
     if (checked == true) {
         // show column
         $(columnName).each(function(){
             $(this).show();
-        }); 
+        });
     } else {
         // hide column
         $(columnName).each(function(){
             $(this).hide();
-        }); 
+        });
     }
     if (startup == 0) {
         $.ajax({
@@ -1465,11 +1465,11 @@ $('.dept-text').click(function(){
     $(this).hide();
 });
 $('.dept-select').change(function(){
-    setTimeout(function(){location.reload(); 
+    setTimeout(function(){location.reload();
     }, 500);
 });
 $('.dept-select').focusout(function(){
-    setTimeout(function(){location.reload(); 
+    setTimeout(function(){location.reload();
     }, 500);
 });
 
@@ -1510,20 +1510,20 @@ $('#calculator').keydown(function(e){
             var val_1 = arr[0];
             var val_2 = arr[1];
         }
-        
+
         var ans = '';
         switch (oper) {
             case '+':
-                ans = parseFloat(val_1) + parseFloat(val_2); 
+                ans = parseFloat(val_1) + parseFloat(val_2);
                 break;
             case '-':
-                ans = val_1 - val_2; 
+                ans = val_1 - val_2;
                 break;
             case '*':
-                ans = val_1 * val_2; 
+                ans = val_1 * val_2;
                 break;
             case '/':
-                ans = val_1 / val_2; 
+                ans = val_1 / val_2;
                 break;
         }
         var val = $('#calculator').val(ans.toFixed(3));
@@ -1580,7 +1580,7 @@ $('#check-all').click(function(){
     }
 });
 
-// uncheck columns by session_id settings 
+// uncheck columns by session_id settings
 $(window).load(function(){
     let bin = (columnSet >>> 0).toString(2);
     bin = bin.padStart(24, '0');
@@ -1634,7 +1634,7 @@ th, .editable {
     display: none;
 }
 span.column-checkbox {
-    padding: 5px; 
+    padding: 5px;
 }
 tr, td {
     //position: relative;
