@@ -167,6 +167,7 @@ class AuditReport extends PageLayoutA
 
     private function getScaleData($dbc, $upc)
     {
+        $bycount = null;
         $args = array($upc);
         $prep = $dbc->prepare("SELECT 
             CASE 
@@ -559,7 +560,7 @@ class AuditReport extends PageLayoutA
             <th class=\"recentPurchase\">PO-unit</th>
             <th class=\"price\">price</th>
             <th class=\"sale\">sale</th>
-            <th class=\"margin_target_diff\">margin / target (diff)</th>
+            <th class=\"margin_target_diff\">margin, target, diff</th>
             <th class=\"srp\">srp</th>
             <th class=\"rsrp\">round srp</th>
             <th class=\"prid\">prid</th>
@@ -646,7 +647,12 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"price\">$price</td>";
             $td .= "<td class=\"sale\">$sale</td>";
             $diff = round($curMargin - $margin, 1);
-            $td .= "<td class=\"margin_target_diff\">$curMargin / $margin ($diff)</td>";
+            $curMargin = round($curMargin, 1);
+            $td .= "<td class=\"margin_target_diff\">
+                <span class=\"margin-container\">$curMargin</span>
+                <span class=\"margin-container\">$margin</span>
+                <span class=\"margin-container\">$diff</span>
+            </td>";
             $td .= "<td class=\"rsrp\">$rsrp</td>";
             $td .= "<td class=\"srp\">$srp</td>";
             $td .= "<td class=\"prid\">$prid</td>";
@@ -1110,7 +1116,7 @@ $('.editable-notes').click(function(){
 });
 $('.editable-notes').focusout(function(){
     var notes= $(this).text();
-    var upc = $(this).parent().parent().find('.upc').attr('data-upc');
+    var upc = $(this).parent().find('.upc').attr('data-upc');
     if (lastNotes != notes) {
         $.ajax({
             type: 'post',
@@ -1591,6 +1597,12 @@ JAVASCRIPT;
     public function cssContent()
     {
         return <<<HTML
+span.margin-container {
+    width: 38px;
+    display: inline-block;
+    border: 1px solid lightgrey;
+    text-align: right;
+}
 .btn {
     cursor: pointer;
 }
