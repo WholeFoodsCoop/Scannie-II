@@ -111,6 +111,15 @@ class Dashboard extends PageLayoutA
                 'handler' => self::organicFlags($dbc),
                 'ranges' => array(1, 10, 999),
             ),
+            array(
+                'handler' => self::getZeroScaleItems($dbc),
+                'ranges' => array(1, 10, 9999),
+            ),
+            array(
+                'handler' => self::getOneScaleItems($dbc),
+                'ranges' => array(1, 10, 9999),
+            ),
+            //
         );
 
         $muData = $this->multiStoreDiscrepCheck($dbc);
@@ -552,7 +561,7 @@ HTML;
                         AND s.storeID=p.store_id
             )
                 AND inUse = 1
-                AND p.department NOT IN (240, 241)
+                AND p.department NOT IN (240, 241, 250)
                 AND m.superID IN (1,13,9,4,8,17,5,18) 
         ");
         $r = $dbc->execute($p, $a);
@@ -599,42 +608,116 @@ HTML;
             'desc'=>$desc);
     }
 
-    public function getVendorSkuDiscrep($dbc)
+    public function getOneScaleItems($dbc)
     {
-        $desc = "Products with multiple SKUs by Vendor";
-        $p = $dbc->prepare("SELECT vendorID FROM vendors
-            WHERE vendorID NOT IN (1, 2, 285) ;");
+        $desc = "scale items set to scale and should not be";
+        $p = $dbc->prepare("SELECT upc, brand, description, department, last_sold, weight,
+            CASE
+                WHEN weight = 0 THEN 'Random'
+                WHEN weight = 1 THEN 'Fixed'
+                ELSE 'not in scale'
+            END AS weightType 
+            FROM products AS p 
+            LEFT JOIN scaleItems AS s ON p.upc=s.plu
+            LEFT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
+            WHERE upc LIKE '002%'
+            AND scale = 1
+            AND weight = 1
+            AND upc NOT IN (
+                0020140000000,
+                0020130000000,
+                0020120000000
+            )
+            AND m.superID IN (18,1,3,13,9,4,8,17,5)
+            ;");
+        /*
+            I then also need to check for scale items set to 1 that are set to scale = 1 
+            also, do not include produce items!!!
+        */
+        $r = $dbc->execute($p);
+        $cols = array('upc', 'brand', 'description', 'department', 'last_sold', 'weight');
+        $data = array();
+        while ($row = $dbc->fetchrow($r)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
+    public function getZeroScaleItems($dbc)
+    {
+        $desc = "scale items not set to scale and should be";
+        $p = $dbc->prepare("SELECT upc, brand, description, department, last_sold, weight,
+            CASE
+                WHEN weight = 0 THEN 'Random'
+                WHEN weight = 1 THEN 'Fixed'
+                ELSE 'not in scale'
+            END AS weightType 
+            FROM products AS p 
+            LEFT JOIN scaleItems AS s ON p.upc=s.plu
+            LEFT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
+            WHERE upc LIKE '002%'
+            AND scale = 0
+            AND weight = 0
+            AND upc NOT IN (
+                0020140000000,
+                0020130000000,
+                0020120000000
+            )
+            AND m.superID IN (18,1,3,13,9,4,8,17,5)
+            ;");
+        /*
+            I then also need to check for scale items set to 1 that are set to scale = 1 
+            also, do not include produce items!!!
+        */
+        $r = $dbc->execute($p);
+        $cols = array('upc', 'brand', 'description', 'department', 'last_sold', 'weight');
+        $data = array();
+        while ($row = $dbc->fetchrow($r)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
+    public function getvendorskudiscrep($dbc)
+    {
+        $desc = "products with multiple skus by vendor";
+        $p = $dbc->prepare("select vendorid from vendors
+            where vendorid not in (1, 2, 285) ;");
         $r = $dbc->execute($p);
         $vendors = array();
-        while ($row = $dbc->fetchRow($r)) {
-            $vendors[] = $row['vendorID'];
+        while ($row = $dbc->fetchrow($r)) {
+            $vendors[] = $row['vendorid'];
         }
         $data = array();
         foreach ($vendors as $vid) {
             $a = array($vid, $vid);
-            /** query to get vendorItemID of items with 2+ skus and one sku matches the UPC. 
+            /** query to get vendoritemid of items with 2+ skus and one sku matches the upc. 
             $p = $dbc->prepare("
-                SELECT v.sku, v.upc, v.description, v.cost, v.modified, v.vendorID, v.vendorItemID
-                FROM vendorItems AS v 
-                    LEFT JOIN products AS p ON p.upc=v.upc
-                    INNER JOIN (SELECT * FROM vendorItems WHERE vendorID = ? GROUP BY upc HAVING COUNT(upc)>1) dup ON v.upc = dup.upc WHERE v.vendorID=?
-                AND v.upc <> 0 
-                AND p.upc=v.sku
+                select v.sku, v.upc, v.description, v.cost, v.modified, v.vendorid, v.vendoritemid
+                from vendoritems as v 
+                    left join products as p on p.upc=v.upc
+                    inner join (select * from vendoritems where vendorid = ? group by upc having count(upc)>1) dup on v.upc = dup.upc where v.vendorid=?
+                and v.upc <> 0 
+                and p.upc=v.sku
             ");
             */
             $p = $dbc->prepare("
-                SELECT v.sku, v.upc, v.description, v.cost, v.modified, v.vendorID
-                FROM vendorItems AS v 
-                    INNER JOIN products AS p ON v.upc=p.upc AND p.default_vendor_id = v.vendorID
-                    LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
-                    INNER JOIN (SELECT * FROM vendorItems WHERE vendorID = ? GROUP BY upc HAVING COUNT(upc)>1) dup ON v.upc = dup.upc WHERE v.vendorID=?
-                AND v.upc <> 0 
-                AND m.superID NOT IN (0, 6)
+                select v.sku, v.upc, v.description, v.cost, v.modified, v.vendorid
+                from vendoritems as v 
+                    inner join products as p on v.upc=p.upc and p.default_vendor_id = v.vendorid
+                    left join mastersuperdepts as m on p.department=m.dept_id
+                    inner join (select * from vendoritems where vendorid = ? group by upc having count(upc)>1) dup on v.upc = dup.upc where v.vendorid=?
+                and v.upc <> 0 
+                and m.superid not in (0, 6)
             ");
             $r = $dbc->execute($p,$a);
-            $cols = array('upc', 'description', 'modified', 'sku', 'vendorID');
+            $cols = array('upc', 'description', 'modified', 'sku', 'vendorid');
             $dm = array();
-            while ($row = $dbc->fetchRow($r)) {
+            while ($row = $dbc->fetchrow($r)) {
                 foreach ($cols as $col) $data[$row['sku']][$col] = $row[$col];
                 $dm[$row['upc']][] = $row['sku'];
             }
