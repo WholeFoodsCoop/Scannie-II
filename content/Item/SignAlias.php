@@ -96,7 +96,7 @@ class SignAlias extends PageLayoutA
         echo $dbc->error();
 
         $td2 = "";
-        $prep = $dbc->prepare("SELECT * FROM signAlias");
+        $prep = $dbc->prepare("SELECT * FROM signAlias ORDER BY brand");
         $res = $dbc->execute($prep);
         $types = array('', 'Abbreviated Signage', 'List Signage');
         while ($row = $dbc->fetchRow($res)) {
@@ -131,7 +131,7 @@ class SignAlias extends PageLayoutA
 
         return <<<HTML
 <div class="row" style="padding: 15px;">
-    <div class="col-lg-4">
+    <div class="col-lg-6">
         <h4>Sign Alias View</h4>
         <table class="table table-bordered table-sm small"><thead></thead><tbody>$td</tbody></table>
         <h4>Sign Alias Table</h4>
@@ -139,7 +139,7 @@ class SignAlias extends PageLayoutA
         <h4>Sign Alias Map</h4>
         <table class="table table-bordered table-sm small"><thead></thead><tbody>$td3</tbody></table>
     </div>
-    <div class="col-lg-4">
+    <div class="col-lg-3">
         <h4>Add items to alias</h4>
         <form name="addlisttoalias" method="post" action="SignAlias.php">
             <div class="form-group">
@@ -155,7 +155,7 @@ class SignAlias extends PageLayoutA
             </div>
         </form>
     </div>
-    <div class="col-lg-4">
+    <div class="col-lg-3">
         <h4>Create New Alias</h4>
         <form name="createnewalias" method="post" action="SignAlias.php">
             <div class="form-group">
