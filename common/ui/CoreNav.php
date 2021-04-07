@@ -23,6 +23,7 @@ Class coreNav
 var hidden = $('#help-contents').is(':visible');
 if (hidden == false) {
     $('#help-contents').show();
+    $('.dropdown-menu').hide();
 } else {
     $('#help-contents').hide();
 }
@@ -111,6 +112,7 @@ HTML;
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/FloorSectionMapper.php">Floor Section Mapper</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/LastSoldDates.php?paste_list=1">Last Sold</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/PendingAction.php">Pending Action</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/SignAlias.php">Sign Alias</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/CheckUnfiWhs.php">UNFI Warehouse</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/NaturalizeProdInfo.php">Update Sign Info</a>
         </div>
@@ -128,6 +130,7 @@ HTML;
           <div class="nav-item nav-label" align=""><span class="nav-label">Reports</span></div>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/Batches/BatchReview/BatchReviewPage.php">Batch Review Report</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/BatchHistory.php">Batch Activity Report (All)</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/TransCommentView.php">CM Transaction Review</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/DeliReusePluReport.php">Deli, Find PLUs to Reuse</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/PriceRuleTypeReport.php">Price Rule Report</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/Batches/CoopDeals/CoopDealsReview.php">Q.A. & Breakdowns</a>
@@ -165,7 +168,7 @@ HTML;
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/Popups.php">Popups</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Links/Links.php">Useful Links</a>
           <div class="nav-item nav-label" align=""><span class="nav-label">Help</span></div>
-          <a class="dropdown-item" onclick="{$helptoggle}" >Help</a>
+          <a class="dropdown-item" onclick="{$helptoggle}" ><strong>Help!</strong></a>
         </div>
       <!--
       <li class="nav-item">
@@ -200,6 +203,7 @@ HTML;
     private function js()
     {
         return <<<JAVASCRIPT
+var checkifclosenav = 0;
 function navbarSupportedContent() {
     $('.dropdown-menu').each(function(){
         $(this).hide();
@@ -220,10 +224,18 @@ function dropdownMenuClick(target) {
             $(this).hide();
         });
         $('#'+target).show();
+        checkifclosenav = 1;
     }
     
     return false;
 }
+$(document).mouseup(function(e) {
+    var container = $('.dropdown-menu');
+
+    if (!container.is(e.target) && container.has(e.target).length === 0) {
+        container.hide();
+    }
+});
 JAVASCRIPT;
     }
 
