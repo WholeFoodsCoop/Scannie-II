@@ -79,17 +79,21 @@ class SignAlias extends PageLayoutA
         $ret = '';
         $dbc = scanLib::getConObj('SCANALTDB');
 
+        $types = array('', 'Abbr', 'List');
         $td = "";
         $aliases = array();
         $aliasSelect = "";
         $prep = $dbc->prepare("SELECT * FROM signAliasView ORDER BY brand");
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
+            $row[5] = $types[$row[5]];
             $td .= "<tr>";
             $td .= "<td>{$row[1]}</td>";
             $td .= "<td>{$row[2]}</td>";
+            $td .= "<td>{$row[4]}</td>";
             $td .= "<td>{$row[3]}</td>";
             $td .= "<td>{$row[0]}</td>";
+            $td .= "<td>{$row[5]}</td>";
             $td .= "</tr>";
             $td .= "</tr>";
         }
@@ -98,7 +102,6 @@ class SignAlias extends PageLayoutA
         $td2 = "";
         $prep = $dbc->prepare("SELECT * FROM signAlias ORDER BY brand");
         $res = $dbc->execute($prep);
-        $types = array('', 'Abbreviated Signage', 'List Signage');
         while ($row = $dbc->fetchRow($res)) {
             $row[3] = $types[$row[3]];
             $td2 .= "<tr>";
@@ -184,6 +187,19 @@ HTML;
     {
         return <<<JAVASCRIPT
 JAVASCRIPT;
+    }
+
+    public function helpContent()
+    {
+        return <<<HTML
+<strong>Alias Type Key</strong>
+<table class="table table-bordered"><tbody>
+    <tr>
+        <td><b>Abby</b></td><td>Abbreviated Signage. Only one sale sign needs to be printed for items with this alias.</td>
+        <td><b>List</b></td><td>List Signage. Use ItemList2UpP or ItemList4UpP layouts when printing signs for items with this alias.</td>
+    </tr>
+</tbody></table>
+HTML;
     }
 
 }
