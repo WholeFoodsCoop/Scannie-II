@@ -462,7 +462,7 @@ HTML;
         if ($dbc->error()) echo $dbc->error();
         $args = array($upc, $username);
         $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE upc = ?
-            AND username = ?");
+            AND username = ? AND savedAs = 'default'");
         $res = $dbc->execute($prep, $args);
         $notes = "";
         while ($row = $dbc->fetchRow($res)) {
@@ -674,7 +674,8 @@ HTML;
 
         //  Get easy re-use notes for this session
         $args = array($username,$storeID);
-        $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE username = ? AND storeID = ?");
+        $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE username = ? AND storeID = ?
+            AND savedAs = 'default'");
         $res = $dbc->execute($prep,$args);
         $notes = array();
         while ($row = $dbc->fetchRow($res)) {
@@ -731,7 +732,7 @@ HTML;
     {
         $args = array($username,$storeID);
         $prep = $dbc->prepare("SELECT count(*) FROM woodshed_no_replicate.AuditScan
-            WHERE username = ? AND storeID = ?");
+            WHERE username = ? AND storeID = ? AND savedAS = 'default'");
         $res = $dbc->execute($prep,$args);
         $count = $dbc->fetchRow($res);
         return $count[0];
