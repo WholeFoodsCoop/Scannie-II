@@ -169,10 +169,12 @@ class AuditReport extends PageLayoutA
     {
         $bycount = null;
         $args = array($upc);
+//                WHEN bycount = 0 THEN 'Random'
+//                WHEN bycount = 1 THEN 'Fixed'
         $prep = $dbc->prepare("SELECT
             CASE
-                WHEN bycount = 0 THEN 'Random'
-                WHEN bycount = 1 THEN 'Fixed'
+                WHEN weight = 0 THEN 'Random'
+                WHEN weight = 1 THEN 'Fixed'
                 ELSE 'not in scale'
             END AS bycount
             FROM scaleItems
