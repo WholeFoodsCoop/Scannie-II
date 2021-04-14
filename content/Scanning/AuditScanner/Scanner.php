@@ -53,6 +53,8 @@ class Scanner extends PageLayoutA
 
     private function postModInUseHandler()
     {
+        echo "heya!";
+        return false;
         $dbc = scanLib::getConObj();
         $storeID = FormLib::get('storeID');
         $upc = FormLib::get('upc');
@@ -75,6 +77,7 @@ class Scanner extends PageLayoutA
                 VALUES (?, 'Item un-used', NOW(), ?)");
             $res = $dbc->execute($prep, $args);
         }
+
 
         return false;
     }
@@ -734,7 +737,8 @@ HTML;
     private function getNotesOpts($dbc,$storeID,$username)
     {
         $args = array($storeID,$username);
-        $query = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE storeID = ? AND username = ? GROUP BY notes;");
+        $query = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE storeID = ? AND username = ? 
+            AND savedAS = 'default' GROUP BY notes;");
         $result = $dbc->execute($query,$args);
         $options = array();
         while ($row = $dbc->fetch_row($result)) {
@@ -812,6 +816,7 @@ $hiddenColumnSelector .= "</div>";
         $r = $dbcB->execute($p, session_id());
         $scannerConfig = array();
         /*
+        */
         $cols = array('scanBeep', 'auditPar', 'auditCost', 'auditSrp',
             'auditProdInfo', 'auditVendorInfo', 'auditSize', 'auditSignInfo',
             'auditSaleInfo', 'auditLocations', 'socketDevice');
@@ -820,7 +825,6 @@ $hiddenColumnSelector .= "</div>";
                 $scannerConfig[$col] = $row[$col];
             }
         }
-        */
         $beep = $scannerConfig['scanBeep'];
         if ($beep == true) {
             $this->addOnloadCommand("
@@ -982,7 +986,8 @@ $hiddenColumnSelector .= "</div>";
 
         // Enter Notes Chunk
         $args = array($username, $storeID);
-        $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE username = ? AND storeID = ?");
+        $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE username = ? AND storeID = ? 
+            AND savedAs = 'default'");
         $res = $dbc->execute($prep,$args);
         $notes = array();
         while ($row = $dbc->fetchRow($res)) {
@@ -1213,7 +1218,7 @@ $('#inUse').click(function(){
     var storeID = $('#storeID').val();
     var val = $(this).text();
     var inUse = (val == 'inUse:1 (is in use)') ? 1 : 0;
-    //alert(inUse);
+    //alert(upc+', '+storeID+','+val+','+inUse);
     $.ajax({
         type: 'post',
         url: window.location.href,
@@ -1225,6 +1230,7 @@ $('#inUse').click(function(){
         },
         complete: function(response) {
             //alert('complete');
+            alert(response);
         },
     });
 });
