@@ -34,12 +34,12 @@ class DBA extends PageLayoutA
         */
 
         return <<<HTML
-<div id="processing" style="display: none; cursor: wait; color: white; z-index: 999; position: fixed; top: 63px; left: 45vw; width: 50px; height: 25; border-radius: 3px; background-color: slategrey">
-    <!--<img class="scanicon-processing" border="none"/>-->
+<!--<div id="processing" style="display: none; cursor: wait; color: white; z-index: 999; position: fixed; top: 63px; left: 45vw; width: 50px; height: 25; border-radius: 3px; background-color: slategrey"> 
     <div class="progress">
         <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; height: 25px"></div>
     </div>
 </div>
+-->
 <div class="row">
     <div class="col-lg-10">
         <span id="filter-options"></span>
@@ -60,6 +60,9 @@ class DBA extends PageLayoutA
         <h4>Saved Queries</h4>
         <input type="text" id="saved-queries-filter" class="form-control form-control-sm small">
         <ul style="font-size: 12px" id="saved-queries">
+            <li><a href='#' class="quick_query">Get Alberts Price File</a>
+                <span class="query">SELECT * FROM woodshed_no_replicate.AlbertsFileView</span>
+            </li>
             <li><a href='#' class="quick_query">Get Bulk Sale Items</a>
                 <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
 FROM batchList AS bl
@@ -160,7 +163,7 @@ AND store_id = 2 GROUP BY date_id;</span>
             </li>
             <li><a href='#' class="quick_query">Get Vendor Changes</a>
                 <span class="query">SELECT t.upc, v.sku, t.cost as previousCost, p.cost as newCost, (p.cost - t.cost) AS difference,
-p.brand, p.description, p.department as dept, m.super_name
+p.brand, p.description, p.department as dept, m.super_name, CONCAT(t.upc, ': ', (p.cost - t.cost)) AS report 
 FROM woodshed_no_replicate.temp AS t
     LEFT JOIN is4c_op.products AS p ON t.upc = p.upc
     LEFT JOIN is4c_op.MasterSuperDepts as m on p.department=m.dept_ID
@@ -343,7 +346,7 @@ $('#submit').click(function(){
         data: 'query='+query,
         url: '../../../git/fannie/reports/DBA/index.php',
         beforeSend: function() {
-            $('#processing').show();
+            //$('#processing').show();
             $('body').css('cursor', 'wait');
         },
         success: function(response) {

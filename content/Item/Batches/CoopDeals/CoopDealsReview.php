@@ -72,15 +72,14 @@ class CoopDealsReview extends WebDispatch
                     </div>
                 </div><br/>
                 <div class='row'>
-                    <div class='col-lg-4'>
+                    <div class='col-lg-5'>
                         <div class='table-responsive'>
                             {$this->getBadPriceItems($dbc)}
                         </div>
                     </div>
-                    <div class='col-lg-4'>
-                        {$this->getMissingSignText($dbc,$start)}
+                    <div class='col-lg-1'>
                     </div>
-                    <div class='col-lg-3'>
+                    <div class='col-lg-5'>
                         <div class='table-responsive'>
                             {$this->getBadPrices($dbc,$upcs)}
                         </div>
@@ -349,7 +348,8 @@ HTML;
                 LEFT JOIN products AS p ON bl.upc=p.upc
             WHERE startDate = '{$startDate}'
                 AND p.normal_price <= bl.salePrice
-            GROUP BY bl.upc;
+            GROUP BY bl.upc
+            ORDER BY bl.batchID;
         ");
 
         $result = $dbc->execute($query);

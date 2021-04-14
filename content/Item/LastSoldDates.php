@@ -64,12 +64,14 @@ class LastSoldDates extends PageLayoutA
             </form>
         ';
 
-        if ($_GET['upcs']) {
-            $upcs = $_GET['upcs'];
-            $plus = array();
-            $chunks = explode("\r\n", $upcs);
-            foreach ($chunks as $key => $str) {
-                $plus[] = scanLib::upcPreparse($str);
+        $plus = array();
+        if (isset($_GET['upcs'])) {
+            if ($_GET['upcs']) {
+                $upcs = $_GET['upcs'];
+                $chunks = explode("\r\n", $upcs);
+                foreach ($chunks as $key => $str) {
+                    $plus[] = scanLib::upcPreparse($str);
+                }
             }
         }
 
