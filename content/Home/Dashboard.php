@@ -73,19 +73,23 @@ class Dashboard extends PageLayoutA
                 'handler' => self::getVendorList($dbc), 
                 'ranges' => array(0, 1, 99),
             ),
-            //array(
-            //    'handler' => self::getMissingSKU($dbc),
-            //    'ranges' => array(0, 50, 999999),
-            //),
+            /*
+            array(
+                'handler' => self::getMissingSKU($dbc),
+                'ranges' => array(0, 50, 999999),
+            ),
+            */
             array(
                 'handler' => self::getVendorSkuDiscrep($dbc),
                 'ranges' => array(0, 100, 9999),
             ),
 
+            /*
             array(
                 'handler' => self::getAliasMultipleUpcs($dbc),
                 'ranges' => array(0, 5, 9999),
             ),
+            */
 
             array(
                 'handler' => self::getProdsMissingLocation($dbc),
