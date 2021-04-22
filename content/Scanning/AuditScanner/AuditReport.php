@@ -932,7 +932,7 @@ $nFilter
 $columnCheckboxes
 
 <div class="row">
-    <div class="col-lg-8">
+    <div class="col-lg-6">
         <div style="font-size: 12px; padding: 10px;">
             <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label><input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="" checked>
         </div>
@@ -956,7 +956,20 @@ $columnCheckboxes
             </div>
         </div>
     </div>
-    <div class="col-lg-4">
+    <div class="col-lg-3" >
+        <div class="card" style="margin: 5px; box-shadow: 1px 1px lightgrey;">
+            <div class="card-body">
+                <h6 class="card-title" title="JK">Average Calculator</h6>
+                    <div class="form-group">
+                        <textarea rows=1 id="avgCalc" name="avgCalc" style="font-size: 12px" class="form-control small" ></textarea>
+                    </div>
+                    <div>
+                        <p id="avgAnswer" style="font-size: 12px;"></p>
+                    </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3">
         <div class="card" style="margin: 5px; box-shadow: 1px 1px lightgrey;">
             <div class="card-body">
                 <h6 class="card-title" title="JK">Simple Input Calculator &trade;</h6>
@@ -1593,6 +1606,19 @@ $(window).load(function(){
     }
 });
 window.onload = function() {startup = 0;};
+
+$('#avgCalc').focusout(function(){
+    let text = $(this).val();
+    let args = text.split('\\n');
+    let total = 0;
+    for (let i=0; i < args.length; i++) {
+        total += parseFloat(args[i], 10);
+    }
+    let answer = total / args.length;
+    console.log(total);
+    console.log(answer);
+    $('#avgAnswer').text(answer);
+});
 JAVASCRIPT;
     }
 
