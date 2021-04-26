@@ -1617,7 +1617,11 @@ $('#avgCalc').focusout(function(){
     let answer = total / args.length;
     console.log(total);
     console.log(answer);
-    $('#avgAnswer').text(answer);
+    if (answer) {
+        $('#avgAnswer').text(answer);
+    } else {
+        $('#avgAnswer').text('');
+    }
 });
 JAVASCRIPT;
     }
