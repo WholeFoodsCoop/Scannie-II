@@ -169,7 +169,6 @@ FROM woodshed_no_replicate.temp AS t
     LEFT JOIN is4c_op.MasterSuperDepts as m on p.department=m.dept_ID
     LEFT JOIN is4c_op.vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
 WHERE (p.cost - t.cost) <> 0
-    AND p.inUse = 1
 GROUP BY p.upc
 ORDER BY (p.cost - t.cost) ASC;</span>
             </li>
