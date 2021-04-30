@@ -282,13 +282,15 @@ HTML;
         $tempData = array();
         foreach ($fields as $field) {
             $tempData = $this->getDiscrepancies($dbc,$field);
-            foreach ($tempData as $k => $upc) {
-                $data[] = $upc;
+            if ($tempData != false) {
+                foreach ($tempData as $k => $upc) {
+                    $data[] = $upc;
+                }
             }
         }
 
         $data = array_unique($data);
-        $ret .= $this->getProdInfo($dbc,$data,$fields);
+        $ret = $this->getProdInfo($dbc,$data,$fields);
 
         return array('table'=>$ret, 'data'=>$data);
     }
@@ -424,6 +426,7 @@ HTML;
 
     public function limboPcBatch($dbc)
     {
+        $count = 0;
         $desc = 'Forgotten Price-Change Batches';
         $p = $dbc->prepare("SELECT batchID, batchName, batchType 
             FROM batches 
@@ -448,6 +451,7 @@ HTML;
 
     static function badDeliDepts($dbc)
     {
+        $count = 0;
         $desc = 'Products in unused Deli Departments';
         $p = $dbc->prepare("SELECT 
             upc, brand, description, last_sold, store_id, department
@@ -468,6 +472,7 @@ HTML;
 
     static function organicFlags($dbc)
     {
+        $count = 0;
         $desc = 'Products Missing Organic Flag';
         $p = $dbc->prepare("SELECT upc, brand, description, numflag FROM products 
             WHERE description LIKE '%,OG%' AND NOT numflag & (1<<16) <> 0;");
@@ -485,6 +490,7 @@ HTML;
 
     public function badPriceCheck($dbc)
     {
+        $count = 0;
         $desc = "Products with bad prices";
         $p = $dbc->prepare("
             SELECT
@@ -525,6 +531,7 @@ HTML;
 
     public function getMissingScaleItems($dbc)
     {
+        $count = 0;
         $desc = "Scale-items set to scale = 0";
         $p = $dbc->prepare("
             SELECT upc, brand, description, normal_price 
@@ -551,6 +558,7 @@ HTML;
 
     public function getProdsMissingLocation($dbc)
     {
+        $count = 0;
         $desc = "Products missing physical locations";
         $a = array();
         $p = $dbc->prepare("
@@ -614,6 +622,7 @@ HTML;
 
     public function getOneScaleItems($dbc)
     {
+        $count = 0;
         $desc = "scale items set to scale and should not be";
         $p = $dbc->prepare("SELECT upc, brand, description, department, last_sold, weight,
             CASE
@@ -651,6 +660,7 @@ HTML;
 
     public function getZeroScaleItems($dbc)
     {
+        $count = 0;
         $desc = "scale items not set to scale and should be";
         $p = $dbc->prepare("SELECT upc, brand, description, department, last_sold, weight,
             CASE
@@ -688,6 +698,7 @@ HTML;
 
     public function getvendorskudiscrep($dbc)
     {
+        $count = 0;
         $desc = "products with multiple skus by vendor";
         $p = $dbc->prepare("select vendorid from vendors
             where vendorid not in (1, 2, 285) ;");
@@ -770,6 +781,7 @@ HTML;
 
     public function getVendorList($dbc)
     {
+        $count = 0;
         $desc = "Vendors missing from Vendor Review Schedule";
         $p = $dbc->prepare("SELECT vendorID, vendorName FROM vendors 
             WHERE vendorID NOT IN (SELECT vid AS vendorID FROM vendorReviewSchedule)
