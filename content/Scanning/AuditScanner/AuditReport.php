@@ -126,21 +126,21 @@ class AuditReport extends PageLayoutA
         $json = array();
 
         if ($review == 'open') {
-            $prep = $dbc->prepare("INSERT INTO woodshed_no_replicate.temp (upc,cost) SELECT upc, cost FROM products WHERE UPC in (SELECT upc FROM woodshed_no_replicate.AuditScan WHERE username = ?) GROUP BY upc;");
+            $prep = $dbc->prepare("INSERT INTO woodshed_no_replicate.temp (upc,cost) SELECT upc, cost FROM products WHERE UPC in (SELECT upc FROM woodshed_no_replicate.AuditScan WHERE username = ? AND savedAs = 'default') GROUP BY upc;");
             $res = $dbc->execute($prep, array($username));
         } elseif ($review == 'close') {
             $prep = $dbc->prepare("INSERT INTO productCostChanges (upc, previousCost, newCost, difference, date)
                 SELECT
-                t.upc AS upc,
-                t.cost as previousCost,
-                p.cost as newCost,
-                (p.cost - t.cost) AS difference,
-                DATE(NOW()) AS date
+                    t.upc AS upc,
+                    t.cost as previousCost,
+                    p.cost as newCost,
+                    (p.cost - t.cost) AS difference,
+                    DATE(NOW()) AS date
                 FROM woodshed_no_replicate.temp AS t
                 LEFT JOIN products AS p ON t.upc = p.upc
                 RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON p.upc=a.upc
                 WHERE (p.cost - t.cost) <> 0
-                AND a.username = ?
+                    AND a.username = ?
                 GROUP BY p.upc
                 ON DUPLICATE KEY UPDATE previousCost=VALUES(previousCost), newCost=VALUES(newCost), difference=VALUES(difference), date=VALUES(date);
             ");
