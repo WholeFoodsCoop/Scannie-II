@@ -176,7 +176,7 @@ HTML;
         $counts = $this->getQueueCount();
         foreach ($this->options as $v => $o) {
             $sel = ($queue == $v) ? 'selected' : '';
-            $count = ($counts[$v]) ? "[{$counts[$v]}]" : "";
+            $count = (isset($counts[$v])) ? "[{$counts[$v]}]" : "";
             $queueOpts .= "<option value=\"$v\" $sel>$o $count</option>";
         }
         $args = array($storeID);
@@ -207,7 +207,7 @@ HTML;
 
     public function getView()
     {
-        if (!$_SESSION['sessionName'])  {
+        if (!isset($_SESSION['sessionName']))  {
             return $this->getLoginView(); 
         }
         $dbc = scanLib::getConObj();
@@ -273,6 +273,8 @@ HTML;
             $upc = $row['upc'];
             foreach ($cols as $col) {
                 $data[$upc][$col] = $row[$col];
+                $data[$upc]['queues'] = null;
+                $data[$upc]['note'] = null;
             }
         }
 
@@ -404,7 +406,7 @@ HTML;
 
         $td = '';
         foreach ($data as $upc => $row) {
-            if ($row['upc'] != null) {
+            if (isset($row['upc'])) {
                 $batchID = $row['batchID'];
                 $upc = $row['upc'];
                 $queues = '';
@@ -420,8 +422,14 @@ HTML;
 [sign]         {$row['udesc']}\r\n
 [start]        {$start}          [end] {$end}\r\n
                 ";
-                foreach ($row['queues'] as $queued) {
-                    $queues .= $queued[0].", ";
+                if (isset($row['queues'])) {
+                    if (is_array($row['queues'])) {
+                        foreach ($row['queues'] as $queued) {
+                            $queues .= $queued[0].", ";
+                        }
+
+                    }
+                    
                 }
                 $upcLink = "<a href=\"http://{$_SERVER['HTTP_HOST']}/git/fannie/item/ItemEditorPage.php?searchupc=$upc\" target=\"_blank\">{$upc}</a>";
                 $note = ($row['note']) ? $row['note'] : '';

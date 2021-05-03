@@ -602,7 +602,7 @@ HTML;
 
         $this->setInUse($dbc, $upc, $storeID);
 
-        $lastMsg = $_SESSION['lastMsg'];
+        $lastMsg = (isset($_SESSION['lastMsg'])) ? $_SESSION['lastMsg'] : null;
         $prep = $dbc->prepare("SELECT max(id) AS maxid FROM woodshed_no_replicate.batchCheckChat;");
         $res = $dbc->execute($prep);
         $row = $dbc->fetchRow($res);
@@ -632,8 +632,8 @@ HTML;
         $store = $stores[$_SESSION['storeID']];
         $session = '<i>no session selected</i>';
         $session = $_SESSION['sessionName'];
-        $name = (!is_null($this->data[$upc]['pudesc'])) ? $this->data[$upc]['pudesc'] : $this->data[$upc]['pdesc'];
-        $brand = (!is_null($this->data[$upc]['pubrand'])) ? $this->data[$upc]['pubrand'] : $this->data[$upc]['pbrand'];
+        $name = (!isset($this->data[$upc]['pudesc'])) ? $this->data[$upc]['pudesc'] : $this->data[$upc]['pdesc'];
+        $brand = (!isset($this->data[$upc]['pubrand'])) ? $this->data[$upc]['pubrand'] : $this->data[$upc]['pbrand'];
         $retQueued = '';
         $size = $this->data[$upc]['size']; 
         $batch = $this->data[$upc]['batchName']; 
