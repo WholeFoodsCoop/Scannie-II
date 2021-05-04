@@ -56,7 +56,7 @@ class PendingAction extends PageLayoutA
             return false;
         }
 
-        if ($addItem = str_pad($_POST['addItem'], 13, 0, STR_PAD_LEFT)) {
+        if ($addItem = str_pad(FormLib::get('addItem', false), 13, 0, STR_PAD_LEFT)) {
             $note = $_POST['note'];
             $args = array($addItem,$note,$storeID,$note);
             $prep = $dbc->prepare("INSERT INTO woodshed_no_replicate.exceptionItems 
@@ -66,7 +66,7 @@ class PendingAction extends PageLayoutA
             unset($_POST['addItem']);
             if ($dbc->error()) $ret .=  "<div class=\"alert alert-danger\">".$dbc->error()."</div>";
         }
-        if ($rmItem = str_pad($_POST['rmItem'], 13, 0, STR_PAD_LEFT)) {
+        if ($rmItem = str_pad(FormLib::get('rmItem', false), 13, 0, STR_PAD_LEFT)) {
             $prep = $dbc->prepare("delete from woodshed_no_replicate.exceptionItems where upc = ?");
             $dbc->execute($prep,$rmItem);
             unset($_POST['rmItem']);
@@ -224,7 +224,7 @@ JAVASCRIPT;
 
     public function form_content()
     {
-        $ret .= '
+        $ret = '
             <form method="post">
                 <div class="row">
                     <div class="col-lg-3">
