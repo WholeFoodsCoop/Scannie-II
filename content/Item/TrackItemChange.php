@@ -60,7 +60,7 @@ HTML;
         $upc = FormLib::get('upc');
         $upc = scanLib::upcParse($upc);
 
-        if (!class_exists(LastSoldDates)) {
+        if (!class_exists('LastSoldDates')) {
             include('LastSoldDates.php');
         }
         $data = LastSoldDates::getDates();
@@ -171,6 +171,7 @@ HTML;
             }
             for ($i=0; $i<count($desc); $i++) {
                 if (array_key_exists(($i-1), $cost)
+                    && array_key_exists(($i), $cost)
                     && $cost[$i] != $cost[$i-1]
                     || $salePrice[$i] != $salePrice[$i-1]
                     || $cost[$i] != $cost[$i-1]

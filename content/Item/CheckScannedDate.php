@@ -100,10 +100,9 @@ HTML;
             if ($er = $dbc->error()) {
                 echo "<div class='alert alert-danger'>$er</div>";
             }
-            $table .=  "</tbody></table>";
 
         }
-        $table .=  "</tbody></table>";
+        $t .=  "</tbody></table>";
         $ret .= $t;
 
         return <<<HTML

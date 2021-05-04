@@ -90,5 +90,16 @@ JAVASCRIPT;
     {
     }
 
+    public function helpContent()
+    {
+        return <<<HTML
+<h5>Batch History</h5>
+<p>The Batch History page returns every batch related transaction as the 
+history is recorded.  This page can take several minutes to load, especially 
+when requesting more than 100 rows of batch activity.</p>
+<p>Rows are sorted from newest to oldest</p>
+HTML;
+    }
+
 }
 WebDispatch::conditionalExec();

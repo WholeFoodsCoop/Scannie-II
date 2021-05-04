@@ -62,6 +62,7 @@ class ScannerSettings extends PageLayoutA
 <div class="container-fluid" style="margin-top: 25px;">
     <label>Go To:</label>
     <ul>
+        <li><div class="form-group"><a href="AuditScanner/Scanner.php" class="btn btn-default form-control">New Audit Scanner</a></div></li>
         <li><div class="form-group"><a href="AuditScanner/QuickScanner.php" class="btn btn-default form-control">Quick Scanner</a></div></li>
         <li><div class="form-group"><a href="AuditScanner/ProductScanner.php" class="btn btn-default form-control">Audit Scanner</a></div></li>
         <li><div class="form-group"><a href="BatchCheck/SCS.php" class="btn btn-default form-control">Batch Check</a></div></li>

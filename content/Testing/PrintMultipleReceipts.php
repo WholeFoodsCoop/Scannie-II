@@ -59,7 +59,9 @@ class PrintMultipleReceipts extends PageLayoutA
         <div class="no-print">
             <form name="receipts">
                 <h4>Paste List of Receipts </h4>
-                <p>in Firefox, copy receipts from PI Purchases Page while holding down CTRL</p>
+                <p>Copy the first two columns of receipts in PIK->Details
+                    (in Firefox, hold CTRL + left click and drag mouse over table data).
+                    Paste contents into textarea below and submit.</p>
             <div>
                 <textarea name="receipts" rows=10 class="form-control" id="receipts">$formd</textarea>
             </div>
