@@ -55,6 +55,7 @@ class NaturalizeProdInfo extends PageLayoutA
     {
         $upc = FormLib::get('upc');
         $brand = FormLib::get('alt_brand');
+        $brand = urldecode($brand);
         $dbc = scanLib::getConObj();
 
         $args = array($brand, $upc);
@@ -73,6 +74,7 @@ class NaturalizeProdInfo extends PageLayoutA
     {
         $upc = FormLib::get('upc');
         $brand = FormLib::get('brand');
+        $brand = urldecode($brand);
         $dbc = scanLib::getConObj();
 
         $args = array($brand, $upc);
@@ -91,6 +93,7 @@ class NaturalizeProdInfo extends PageLayoutA
     {
         $upc = FormLib::get('upc');
         $description = FormLib::get('description');
+        $description = urldecode($description);
         $description = str_replace('and', '&', $description);
         $description = str_replace('\n', "\n", $description);
         $dbc = scanLib::getConObj();
@@ -111,6 +114,7 @@ class NaturalizeProdInfo extends PageLayoutA
     {
         $upc = FormLib::get('upc');
         $description = FormLib::get('alt_description');
+        $description = urldecode($description);
         $description = str_replace('and', '&', $description);
         $dbc = scanLib::getConObj();
 
@@ -298,7 +302,8 @@ HTML;
             $table .= "<tr>";
             foreach ($columns as $column) {
                 $placeholder = null;
-                $placeholder = $row['alt_'.$column];
+                if (isset($row['alt_'.$column]))
+                    $placeholder = $row['alt_'.$column];
                 if ($column != 'upc') {
                     $table .= "<td><input class=\"editable\" contenteditable=\"true\" data-column=\"$column\"   
                         data-upc=\"{$row['upc']}\" value=\"{$row[$column]}\" placeholder=\"$placeholder\"/>
@@ -393,6 +398,7 @@ var count_edits = 0;
 $('.editable').change(function(){
     var upc = $(this).attr('data-upc');
     var text = $(this).val();
+    text = encodeURIComponent(text);
     var column = $(this).attr('data-column');
     $.ajax({
         beforeSend: function(){
