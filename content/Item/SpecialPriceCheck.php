@@ -109,6 +109,10 @@ HTML;
             $this->upcs[$upc]['P'][$store_id] = $special_price;
             $this->upcs[$upc]['P']['brand'] = $brand;
             $this->upcs[$upc]['P']['description'] = $description;
+            for ($i=1; $i<=2; $i++) {
+                if (!isset($this->upcs[$upc]['P'][$i]))
+                    $this->upcs[$upc]['P'][$i] = 0.00;
+            }
         }
         if ($er = $dbc->error()) {
             echo "<div class='alert alert-warning'>{$dbc->error()}</div>";
@@ -144,14 +148,16 @@ HTML;
             }
             foreach ($stores as $store) {
                 foreach ($bids as $bid) {
-                    $sps[] = $data['B'][$bid]['salePrice'][$store];
+                    $sps[] = (isset($data['B'][$bid]['salePrice'][$store])) ? $data['B'][$bid]['salePrice'][$store] : null;
                     $curHref = "http://{$FANNIE_ROOTDIR}/batches/newbatch/EditBatchPage.php?id=";
                     $l = "<span style='color: grey'> | </span>";
-                    $spstr .= "{$l}<a href='{$curHref}{$bid}' target='_blank'>"
-                        .$data['B'][$bid]['salePrice'][$store] ."</a>";
+                    $spstr .= "{$l}<a href='{$curHref}{$bid}' target='_blank'>";
+                    $spstr .= (isset($data['B'][$bid]['salePrice'][$store])) ? $data['B'][$bid]['salePrice'][$store] : "";
+                    $spstr .= "</a>";
                 }
                 foreach ($bids as $bid) {
-                    if ($saleprice = $data['B'][$bid]['salePrice'][$store]) {
+                    if (isset($data['B'][$bid]['salePrice'][$store])) {
+                        $saleprice = $data['B'][$bid]['salePrice'][$store];
                         $specialprice = $this->upcs[$upc]['P'][$store];
                         if (!in_array($upc, $exceptions)) {
                             if ($saleprice != $specialprice && !in_array($specialprice, $sps)) {
