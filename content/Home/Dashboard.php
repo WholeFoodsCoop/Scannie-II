@@ -67,7 +67,7 @@ class Dashboard extends PageLayoutA
             ),
             array(
                 'handler' => self::getMissingMovementTags($dbc), 
-                'ranges' => array(20, 50, 999),
+                'ranges' => array(99, 999, 9999),
             ),
             array(
                 'handler' => self::getVendorList($dbc), 
@@ -122,6 +122,10 @@ class Dashboard extends PageLayoutA
             array(
                 'handler' => self::getOneScaleItems($dbc),
                 'ranges' => array(1, 10, 9999),
+            ),
+            array(
+                'handler' => self::getLocalDiscrepancies($dbc),
+                'ranges' => array(1, 10, 999),
             ),
             //
         );
@@ -652,6 +656,38 @@ HTML;
         $data = array();
         while ($row = $dbc->fetchrow($r)) {
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
+    public function getLocalDiscrepancies($dbc)
+    {
+        $count = 0;
+        $desc = "Brands with Local setting discrepancies";
+        $cols = array('brand');
+        $data = array();
+        $prep = $dbc->prepare("SELECT brand, local 
+            FROM products 
+                    LEFT JOIN MasterSuperDepts AS m ON department=m.dept_ID
+            WHERE brand IS NOT NULL 
+                AND m.superID IN (1, 3, 4, 5, 8, 9, 13, 17, 18)
+                AND brand != '' 
+                AND default_vendor_id > 0
+            GROUP BY brand, local");
+        $res = $dbc->execute($prep);
+        $brands = array();
+        while ($row = $dbc->fetchRow($res)) {
+            $local = (isset($row['local'])) ? $row['local'] : null;
+            if ($local >= 0) {
+                $brands[$row['brand']][] = $local;
+            }
+        }
+        foreach ($brands as $brand => $local) {
+            if (count($local) > 1) {
+                $data[$brand]['brand'] = $brand;
+            }
         }
 
         return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
