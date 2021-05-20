@@ -108,13 +108,14 @@ HTML;
         </a>
         <div class="dropdown-menu" aria-labelledby="navbarDropdown" id="productsMenuOpts">
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/CheckScannedDate.php">Check PLU Queues</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/NaturalizeProdInfo.php">Cleanup Sign Info</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/ProdUserChangeReport.php">Edits by User</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/FloorSectionMapper.php">Floor Section Mapper</a>
+          <!--<a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/FloorSectionMapper.php">Floor Section Mapper</a>-->
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/LastSoldDates.php?paste_list=1">Last Sold</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/LocalFlagReport.php">Local Flag Discrep</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/PendingAction.php">Pending Action</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/SignAlias.php">Sign Alias</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/CheckUnfiWhs.php">UNFI Warehouse</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/NaturalizeProdInfo.php">Update Sign Info</a>
+          <!--<a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/CheckUnfiWhs.php">UNFI Warehouse</a>-->
         </div>
       </li>
       <li class="nav-item dropdown">
