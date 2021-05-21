@@ -67,6 +67,7 @@ HTML;
                 AND m.superID IN (1, 3, 4, 5, 8, 9,13,17,18)
                 AND brand != '' 
                 AND default_vendor_id > 0
+                AND brand != 'BULK'
             GROUP BY brand, local");
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
