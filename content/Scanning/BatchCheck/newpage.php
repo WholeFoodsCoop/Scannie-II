@@ -9,8 +9,8 @@ if (!class_exists('SQLManager')) {
 class newpage extends PageLayoutA 
 {
     
-    protected $title = "Batch Check";
-    protected $ui = TRUE;
+    public $title = "Batch Check";
+    public $ui = TRUE;
     protected $options = array(
         0 => 'Unchecked',
         1 => 'Good',
@@ -148,6 +148,14 @@ HTML;
             $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.batchCheckQueues
                 WHERE inQueue IN ($in_str) AND storeID = ? AND session = ?");
             $res = $dbc->execute($prep, $args);
+        } elseif (in_array($queue, array(9,10))) {
+            list($in_str, $args) = $dbc->safeInClause(array(9,10));
+            $args[] = $storeID;
+            $args[] = $session;
+            $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.batchCheckQueues
+                WHERE inQueue IN ($in_str) AND storeID = ? AND session = ?");
+            $res = $dbc->execute($prep, $args);
+            
         } else {
             $args = array($storeID, $session, $queue);
             $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.batchCheckQueues
