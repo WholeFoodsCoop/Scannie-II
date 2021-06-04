@@ -8,10 +8,10 @@ if (!class_exists('SQLManager')) {
 
 class SCS extends PageLayoutA
 {
-    protected $title = "Sales Change Scanner";
-    protected $description = "[Sales Change Scanner] is the portion of 
+    public $title = "Sales Change Scanner";
+    public $description = "[Sales Change Scanner] is the portion of 
         batch check tools used for scanning barcodes.";
-    protected $ui = FALSE;
+    public $ui = FALSE;
     protected $enable_linea = true;
     protected $data = array();
     protected $batches = array();
@@ -632,8 +632,8 @@ HTML;
         $store = $stores[$_SESSION['storeID']];
         $session = '<i>no session selected</i>';
         $session = $_SESSION['sessionName'];
-        $name = (!isset($this->data[$upc]['pudesc'])) ? $this->data[$upc]['pudesc'] : $this->data[$upc]['pdesc'];
-        $brand = (!isset($this->data[$upc]['pubrand'])) ? $this->data[$upc]['pubrand'] : $this->data[$upc]['pbrand'];
+        $name = (isset($this->data[$upc]['pudesc'])) ? $this->data[$upc]['pudesc'] : $this->data[$upc]['pdesc'];
+        $brand = (isset($this->data[$upc]['pubrand']) && $this->data[$upc]['pubrand'] != '') ? $this->data[$upc]['pubrand'] : $this->data[$upc]['pbrand'];
         $retQueued = '';
         $size = $this->data[$upc]['size']; 
         $batch = $this->data[$upc]['batchName']; 
