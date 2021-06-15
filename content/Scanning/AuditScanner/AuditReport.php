@@ -503,7 +503,12 @@ class AuditReport extends PageLayoutA
                 c.newCost,
                 c.difference AS costChange,
                 c.date AS costChangeDate,
-                subdepts.subdept_name AS subdept
+                subdepts.subdept_name AS subdept,
+                CASE 
+                    WHEN p.local = 0 THEN ''
+                    WHEN p.local = 1 THEN 'SC'
+                    WHEN p.local = 2 THEN 'MN/WI'
+                END AS local
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -517,7 +522,7 @@ class AuditReport extends PageLayoutA
                     ON vd.vendorID = p.default_vendor_id AND vd.posDeptID = p.department
                 LEFT JOIN prodReview AS pr ON p.upc=pr.upc
                 LEFT JOIN productCostChanges AS c ON p.upc=c.upc
-                LEFT JOIN subdepts ON subdepts.dept_ID=p.department
+                LEFT JOIN subdepts ON subdepts.subdept_no=p.subdept AND subdepts.dept_ID=p.department
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
                 AND p.store_id = ?
@@ -553,7 +558,8 @@ class AuditReport extends PageLayoutA
             <td title=\"prid\" data-column=\"prid\"class=\"prid column-filter\"></td>
             <td title=\"dept\" data-column=\"dept\"class=\"dept column-filter\"></td>
             <td title=\"subdebt\" data-column=\"subdepts\"class=\"subdept column-filter\"></td>
-            <td title=\"subdebt\" data-column=\"flags\"class=\"flags column-filter\"></td>
+            <td title=\"local\" data-column=\"local\"class=\"local column-filter\"></td>
+            <td title=\"flags\" data-column=\"flags\"class=\"flags column-filter\"></td>
             <td title=\"vendor\" data-column=\"vendor\"class=\"vendor column-filter\"></td>
             <td title=\"last_sold\" data-column=\"last_sold\"class=\"last_sold column-filter\"></td>
             <td title=\"scaleItem\" data-column=\"scaleItem\"class=\"scaleItem column-filter\"></td>
@@ -587,6 +593,7 @@ class AuditReport extends PageLayoutA
             <th class=\"prid\">prid</th>
             <th class=\"dept\">dept</th>
             <th class=\"subdept\">subdept</th>
+            <th class=\"local\">local</th>
             <th class=\"flags\">flags</th>
             <th class=\"vendor\">vendor</th>
             <th class=\"last_sold\">last_sold</th>
@@ -644,6 +651,7 @@ class AuditReport extends PageLayoutA
             $prid = $row['priceRuleType'];
             $dept = $row['dept'];
             $subdept = $row['subdept'];
+            $local = $row['local'];
             $flags = $this->getProdFlagsListView($dbc, $upc);
             $vendor = $row['vendor'];
             $notes = $row['notes'];
@@ -687,6 +695,7 @@ class AuditReport extends PageLayoutA
                 <span class=\"dept-select hidden\">$deptOpts</span>
                 </td>";
             $td .= "<td class=\"subdept\">$subdept</td>";
+            $td .= "<td class=\"local\">$local</td>";
             $td .= "<td class=\"flags\">$flags</td>";
             $td .= "<td class=\"vendor\" data-vendorID=\"$vendorID\">$vendor</td>";
             $td .= "<td class=\"last_sold\">$lastSold</td>";
@@ -843,7 +852,7 @@ HTML;
         $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
 
         $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
-            'price', 'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'flags', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed',
+            'price', 'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed',
             'costChange');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         $i = count($columns) - 1;
