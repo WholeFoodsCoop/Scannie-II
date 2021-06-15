@@ -167,6 +167,19 @@ class AuditReport extends PageLayoutA
         return $data;
     }
 
+    private function getProdFlagsListView($dbc, $upc)
+    {
+        $str = "";
+        $args = array($upc);
+        $prep = $dbc->prepare("SELECT flags, storeID FROM prodFlagsListView WHERE upc = ? ORDER BY storeID");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $str .= "<div>" . $row['storeID'] . ": " . $row['flags'] . "</div>";
+        }
+
+        return $str;
+    }
+
     private function getScaleData($dbc, $upc)
     {
         $bycount = null;
@@ -489,7 +502,8 @@ class AuditReport extends PageLayoutA
                 c.previousCost,
                 c.newCost,
                 c.difference AS costChange,
-                c.date AS costChangeDate
+                c.date AS costChangeDate,
+                subdepts.subdept_name AS subdept
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -503,6 +517,7 @@ class AuditReport extends PageLayoutA
                     ON vd.vendorID = p.default_vendor_id AND vd.posDeptID = p.department
                 LEFT JOIN prodReview AS pr ON p.upc=pr.upc
                 LEFT JOIN productCostChanges AS c ON p.upc=c.upc
+                LEFT JOIN subdepts ON subdepts.dept_ID=p.department
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
                 AND p.store_id = ?
@@ -537,6 +552,8 @@ class AuditReport extends PageLayoutA
             <td title=\"rsrp\" data-column=\"rsrp\"class=\"rsrp column-filter\"></td>
             <td title=\"prid\" data-column=\"prid\"class=\"prid column-filter\"></td>
             <td title=\"dept\" data-column=\"dept\"class=\"dept column-filter\"></td>
+            <td title=\"subdebt\" data-column=\"subdepts\"class=\"subdept column-filter\"></td>
+            <td title=\"subdebt\" data-column=\"flags\"class=\"flags column-filter\"></td>
             <td title=\"vendor\" data-column=\"vendor\"class=\"vendor column-filter\"></td>
             <td title=\"last_sold\" data-column=\"last_sold\"class=\"last_sold column-filter\"></td>
             <td title=\"scaleItem\" data-column=\"scaleItem\"class=\"scaleItem column-filter\"></td>
@@ -569,6 +586,8 @@ class AuditReport extends PageLayoutA
             <th class=\"rsrp\">round srp</th>
             <th class=\"prid\">prid</th>
             <th class=\"dept\">dept</th>
+            <th class=\"subdept\">subdept</th>
+            <th class=\"flags\">flags</th>
             <th class=\"vendor\">vendor</th>
             <th class=\"last_sold\">last_sold</th>
             <th class=\"scaleItem\">scale</th>
@@ -624,6 +643,8 @@ class AuditReport extends PageLayoutA
             }
             $prid = $row['priceRuleType'];
             $dept = $row['dept'];
+            $subdept = $row['subdept'];
+            $flags = $this->getProdFlagsListView($dbc, $upc);
             $vendor = $row['vendor'];
             $notes = $row['notes'];
             $vendorID = $row['vendorID'];
@@ -665,6 +686,8 @@ class AuditReport extends PageLayoutA
                 <span class=\"dept-text\">$dept</span>
                 <span class=\"dept-select hidden\">$deptOpts</span>
                 </td>";
+            $td .= "<td class=\"subdept\">$subdept</td>";
+            $td .= "<td class=\"flags\">$flags</td>";
             $td .= "<td class=\"vendor\" data-vendorID=\"$vendorID\">$vendor</td>";
             $td .= "<td class=\"last_sold\">$lastSold</td>";
             $td .= "<td class=\"scaleItem\">$bycount</td>";
@@ -820,7 +843,7 @@ HTML;
         $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
 
         $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
-            'price', 'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed',
+            'price', 'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'flags', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed',
             'costChange');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         $i = count($columns) - 1;
