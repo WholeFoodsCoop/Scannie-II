@@ -1,5 +1,5 @@
 <?php
-if (session_status() == PHP_COOKIE_NONE) {
+if (session_status() == 'PHP_COOKIE_NONE') {
     session_start();
 }
 ?>
@@ -31,7 +31,10 @@ class Login extends PageLayoutA
         $session_expired = FormLib::get('session_expired', false);
 
         $cur_from_page = basename($_SERVER['HTTP_REFERER']);
-        $curUser = $_COOKIE['user_name'];
+        if (isset($_COOKIE['user_name'])) {
+
+            $curUser = $_COOKIE['user_name'];
+        }
         
         $ret = '';
         $expired = 0;
@@ -49,7 +52,7 @@ class Login extends PageLayoutA
         $user = array();
 
         if (isset($_COOKIE['notadmin'])) $ret .=  'You must be logged in as admin to access the previous page.';
-        if ($_POST['username']) {
+        if (isset($_POST['username'])) {
             //check if password is correct
             $curUser = $_POST['username'];
             $query = $dbc->prepare("
@@ -129,7 +132,6 @@ JAVASCRIPT;
                     <div class="form-group">
                         <input type="submit" value="LOG IN" class="btn btn-defult btn-login form-control" >
                     </div>
-                    <!--<a class="" href="http://'.$SCANROOT_DIR.'/misc/mobile.php" style="background: rgba(155,155,155,.9); border: 1px solid grey; padding: 5px;">Mobile Menu</a><br />-->
                 </form>
 
             </div>
