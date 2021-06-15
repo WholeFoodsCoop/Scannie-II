@@ -13,7 +13,7 @@ class AuditReport extends PageLayoutA
 
     public function preprocess()
     {
-        $this->displayFunction = $this->pageContent();
+        $this->displayFunction = $this->postView();
         $this->__routes[] = 'post<test>';
         $this->__routes[] = 'post<notes>';
         $this->__routes[] = 'post<fetch>';
@@ -100,21 +100,23 @@ class AuditReport extends PageLayoutA
 
     public function postColumnSetHandler()
     {
-        $dbc = ScanLib::getConObj();
-        $column = FormLib::get('columnSet');
-        $column = 23 - $column;
+        $bitSet = $_SESSION['columnBitSet']; // is the INT value of columnBitSet 
+        $column = FormLib::get('columnSet'); // the column to be changed
+        $numCols = FormLib::get('numCols'); // the number of columns/checkboxes that exist
+        $column = $numCols - $column - 1;
         $set = FormLib::get('set');
-        $change = ($set == "true") ? " | (1 << $column)" : " & ~(1 << $column)";
 
-        $args = array(session_id());
-        $query = "UPDATE woodshed_no_replicate.ScannieConfig SET auditReportOpt = auditReportOpt $change  WHERE session_id = ?";
-        $prep = $dbc->prepare($query);
-        $res = $dbc->execute($prep, $args);
+        if ($set == "true") {
+            $_SESSION['columnBitSet'] = $bitSet | (1 << $column);
+        } else {
+            $_SESSION['columnBitSet'] = $bitSet & ~(1 << $column);
+        }
+
         $json = array();
-        if ($err = $dbc->error())
-            $json['error'] = $er;
-        echo json_encode($json);
+        $json['test'] = 'true';
+        $json['val'] = $bitSet;
 
+        echo json_encode($json);
         return false;
     }
 
@@ -646,7 +648,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"netCost\">$netCost</td>";
             $td .= "<td class=\"cost\" $ogCost>$cost</td>";
             $td .= "<td class=\"recentPurchase\" title=\"$received\">$recentPurchase</td>";
-            $td .= "<td class=\"\" title=\"\">$received</td>";
+            //$td .= "<td class=\"\" title=\"\">$received</td>";
             $td .= "<td class=\"price\">$price</td>";
             $td .= "<td class=\"sale\">$sale</td>";
             $diff = round($curMargin - $margin, 1);
@@ -755,13 +757,17 @@ HTML;
         return $options;
     }
 
-    public function pageContent()
+    public function postView()
     {
         $dbc = scanLib::getConObj();
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
         $storeID = scanLib::getStoreID();
         $loaded = FormLib::get('loaded');
         $test = new DataModel($dbc);
+
+        if (!isset($_SESSION['columnBitSet'])) {
+            $_SESSION['columnBitSet'] = 1708975;
+        }
 
         $args = array($username, $storeID);
         $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan
@@ -818,7 +824,6 @@ HTML;
             'costChange');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         $i = count($columns) - 1;
-        //$i = 0;
         foreach ($columns as $column) {
             $columnCheckboxes .= "<span class=\"column-checkbox\"><label for=\"check-$column\">$column</label> <input type=\"checkbox\" name=\"column-checkboxes\" id=\"check-$column\" data-colnum=\"$i\" value=\"$column\" class=\"column-checkbox\" checked></span>";
             $i--;
@@ -1008,6 +1013,9 @@ HTML;
         $dbc = ScanLib::getConObj();
         $mod = new DataModel($dbc);
         $config = $mod->getAuditReportOpt(session_id());
+
+        $config = $_SESSION['columnBitSet'];
+        $columnBitSet = $_SESSION['columnBitSet'];
 
         return <<<JAVASCRIPT
 var startup = 1;
@@ -1282,6 +1290,12 @@ $('.row-check').click(function(){
 });
 
 $('.column-checkbox').change(function(){
+
+    var numCols = 0;
+    $('input.column-checkbox').each(function(){
+        numCols++;  
+    });
+
     var checked = $(this).is(':checked');
     var set = checked;
     var column = $(this).val();
@@ -1301,9 +1315,10 @@ $('.column-checkbox').change(function(){
         });
     }
     if (startup == 0) {
+        // do not request ajax if mode = startup (initial column hide/show on pageload)
         $.ajax({
             type: 'post',
-            data: 'columnSet='+colnum+'&set='+set,
+            data: 'columnSet='+colnum+'&set='+set+'&bitSet='+$columnBitSet+'&numCols='+numCols,
             dataType: 'json',
             url: 'AuditReport.php',
             success: function(response)
@@ -1311,10 +1326,14 @@ $('.column-checkbox').change(function(){
                 if (response.error) {
                     console.log(response);
                 }
+                console.log(response.test);
+                console.log("SUCCESS!");
+                console.log("VALUE: " + response.val);
             },
             error: function(response, errorThrown)
             {
                 console.log(errorThrown);
+                console.log("there was an error with your ajax request!");
             },
         });
     }
@@ -1598,8 +1617,15 @@ $('#check-all').click(function(){
 
 // uncheck columns by session_id settings
 $(window).load(function(){
-    let bin = (columnSet >>> 0).toString(2);
-    bin = bin.padStart(24, '0');
+    var numCols = 0;
+    $('input.column-checkbox').each(function(){
+        numCols++;  
+    });
+    //let bin = (columnSet >>> 0).toString(2);
+    //let bin = 63;
+    let bin = $columnBitSet;
+    bin = bin.toString(2);
+    bin = bin.padStart(numCols, '0');
     for (let i = bin.length; i >= 0; i--) {
         if (bin.charAt(i) == 0) {
             $('.column-checkbox[data-colnum='+i+']').trigger('click');
