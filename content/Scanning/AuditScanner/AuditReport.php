@@ -37,6 +37,25 @@ class AuditReport extends PageLayoutA
         return parent::preprocess();
     }
 
+    private function getUpcList($username, $storeID)
+    {
+        $upcs = array();
+        $dbc = ScanLib::getConObj();
+
+        $args = array($username, $storeID);
+        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan
+            WHERE username = ? AND storeID = ? AND savedAs = 'default'");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $upcs[$row['upc']] = $row['upc'];
+            //echo $row['upc'];
+        }
+        //var_dump($dbc);
+        echo $dbc->error();
+
+        return $upcs;
+    }
+
     public function postDeleteListHandler()
     {
 
@@ -167,17 +186,23 @@ class AuditReport extends PageLayoutA
         return $data;
     }
 
-    private function getProdFlagsListView($dbc, $upc)
+    private function getProdFlagsListView($dbc, $upcs)
     {
         $str = "";
-        $args = array($upc);
-        $prep = $dbc->prepare("SELECT flags, storeID FROM prodFlagsListView WHERE upc = ? ORDER BY storeID");
+        $data = "";
+
+        list($inStr, $args) = $dbc->safeInClause($upcs);
+        $query = "SELECT upc, flags, storeID FROM prodFlagsListView WHERE upc IN ($inStr)";
+        $prep = $dbc->prepare($query);
         $res = $dbc->execute($prep, $args);
         while ($row = $dbc->fetchRow($res)) {
-            $str .= "<div>" . $row['storeID'] . ": " . $row['flags'] . "</div>";
+            //$str .= "<div>" . $row['storeID'] . ": " . $row['flags'] . "</div>";
+            $upc = $row['upc']; $flags = $row['flags']; $storeID = $row['storeID'];
+            $data[$upc][$storeID] = $flags;
         }
+        echo $dbc->error();
 
-        return $str;
+        return $data;
     }
 
     private function getScaleData($dbc, $upc)
@@ -460,9 +485,16 @@ class AuditReport extends PageLayoutA
         $storeID = scanLib::getStoreID();
         $rounder = new PriceRounder();
 
+        $upcs = array();
+        //$upcs = $this->getUpcList($username, $storeID);
+        // flags[upc][storeID] = flags string.
+        //$flagData = $this->getProdFlagsListView($dbc, $upcs);
+
         $args = array($username, $storeID);
         $prep = $dbc->prepare("
             SELECT
+                pf.flags,
+                p.store_id,
                 p.upc,
                 v.sku,
                 p.brand,
@@ -523,6 +555,7 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN prodReview AS pr ON p.upc=pr.upc
                 LEFT JOIN productCostChanges AS c ON p.upc=c.upc
                 LEFT JOIN subdepts ON subdepts.subdept_no=p.subdept AND subdepts.dept_ID=p.department
+                LEFT JOIN prodFlagsListView AS pf ON pf.upc=p.upc AND pf.storeID=p.store_id
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
                 AND p.store_id = ?
@@ -606,10 +639,11 @@ class AuditReport extends PageLayoutA
         </tr>
         ";
         $result = $dbc->execute($prep, $args);
-        $upcs = array();
+
+
         while ($row = $dbc->fetch_row($result)) {
             $upc = $row['upc'];
-            $upcs[$upc] = $upc;
+            //$upcs[$upc] = $upc;
             $data = $this->getMovement($dbc, $upc);
             $bycount = null;
             $bycount = $this->getScaleData($dbc, $upc);
@@ -652,7 +686,9 @@ class AuditReport extends PageLayoutA
             $dept = $row['dept'];
             $subdept = $row['subdept'];
             $local = $row['local'];
-            $flags = $this->getProdFlagsListView($dbc, $upc);
+            $storeID = $row['store_id'];
+            //$flags = $flagData[$upc][$storeID];
+            $flags = $row['flags'];
             $vendor = $row['vendor'];
             $notes = $row['notes'];
             $vendorID = $row['vendorID'];
@@ -875,9 +911,9 @@ HTML;
                           </div>
                           <div class=\"modal-body\">
                             <div align=\"center\">
-                                <form method=\"post\" class=\"form-inline\">
+                                <form method=\"post\" class=\"\">
                                     <div class=\"form-group\">
-                                        <textarea class=\"form-control\" name=\"upcs\" rows=\"10\" cols=\"50\"></textarea>
+                                        <textarea class=\"form-control\" name=\"upcs\" rows=\"10\"></textarea>
                                     </div>
                                     <div class=\"form-group\">
                                         <button type=\"submit\" class=\"btn btn-default btn-xs\">Submit</button>
