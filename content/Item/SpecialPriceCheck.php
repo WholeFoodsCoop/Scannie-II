@@ -26,7 +26,7 @@ if (!class_exists('SQLManager')) {
 class SpecialPriceCheck extends WebDispatch 
 {
 
-    protected $title = "Special Price Check";
+    protected $title = "Special Price Check Version 2.0";
     protected $description = "[Special Price Check] Scans both Back
         and Front End DBMS for products that are either erroneously 
         priced in respect to current sales batches or are erroneously 
@@ -34,258 +34,206 @@ class SpecialPriceCheck extends WebDispatch
     protected $ui = false;
     protected $upcs = array();
 
+    private function getCurrentSales() 
+    {
+        $data = array();
+        $upcs1 = array();
+        $upcs2 = array();
+        $dbc = ScanLib::getConObj();
+        // this query takes 19 seconds. How can I make this process faster?
+        $prep = $dbc->prepare("SELECT 
+                p.upc, salePrice, m.storeID, bl.batchID, p.brand, p.description
+            FROM batchList AS bl
+                LEFT JOIN batches AS b ON bl.batchID=b.batchID
+                LEFT JOIN StoreBatchMap AS m ON bl.batchID=m.batchID
+                LEFT JOIN products AS p ON p.upc=bl.upc
+            WHERE endDate >= NOW() 
+                AND startDate <= NOW()
+                AND salePrice > 0
+            ");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            $upc = $row['upc'];
+            $salePrice = $row['salePrice'];
+            $storeID = $row['storeID'];
+            $batchID = $row['batchID'];
+            $brand = $row['brand'];
+            $desc = $row['description'];
+            $data[$upc][$storeID]['salePrice'] = $salePrice;
+            $data[$upc][$storeID]['batchID'] = $batchID;
+            $data[$upc][$storeID]['brand'] = $brand;
+            $data[$upc][$storeID]['desc'] = $desc;
+            if ($storeID == 1)
+                $upcs1[] = $upc;
+            if ($storeID == 2)
+                $upcs2[] = $upc;
+        }
+        echo $dbc->error();
+
+        return array($data, $upcs1, $upcs2);
+    }
+
+    private function checkCurrentSales($upcs, $store)
+    {
+        $data = array();
+        $dbc = ScanLib::getConObj();
+        list($inStr, $args) = $dbc->safeInClause($upcs);
+        $args[] = $store;
+
+        $prep = $dbc->prepare("SELECT 
+                upc, special_price, store_id
+            FROM products 
+            WHERE upc IN ($inStr)
+                AND special_price = 0
+                AND store_id = ?");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $upc = $row['upc'];
+            $storeID = $row['store_id'];
+            $data[$upc][$storeID] = 1;
+        }
+        echo $dbc->error();
+
+        return $data;
+    }
+
+    private function checkLaneSales($upcs, $store, $lane)
+    {
+        $data = array();
+        $dbc = $this->getLaneDbcObj($lane, 'opdata');
+        list($inStr, $args) = $dbc->safeInClause($upcs);
+        $args[] = $store;
+
+        try {
+            $prep = $dbc->prepare("SELECT 
+                    upc, special_price, store_id
+                FROM products 
+                WHERE upc IN ($inStr)
+                    AND special_price = 0
+                    AND store_id = ?");
+            $res = $dbc->execute($prep, $args);
+            while ($row = $dbc->fetchRow($res)) {
+                $upc = $row['upc'];
+                $storeID = $row['store_id'];
+                $data[$upc][$storeID] = 1;
+            }
+            echo $dbc->error();
+        } catch (Execption $e) {
+            echo $e->getMessage();
+        }
+
+        return $data;
+    }
+
     public function body_content()
     {
-        ini_set('memory_limit', '1G');
-        $this->getSales();
-        $opdb = $this->checkSales();
+        $missing = array();
+        $missingLane = array();
+        list($allSales, $upcs1, $upcs2) = $this->getCurrentSales();
+        $td1 = "";
+        $td2 = "";
+        $td3 = "";
 
-        $posdb = "";
-        $regNos = array(1,2,3,4,5,6);
-        foreach ($regNos as $regNo) {
-            $posdb .= $this->getMissingSales("SCANHOST","POSOPDB",$regNo,2);
-        }
-        $regNos = array(11,12,13,14,15);
-        foreach ($regNos as $regNo) {
-            //cannot access denfeld lanes from key anymore for some reason
-            //$posdb .= $this->getMissingSales("SCANDENHOST","POSOPDB",$regNo,2);
-        }
+            $missing[] = $this->checkCurrentSales($upcs2, 2);
+
+            foreach ($missing as $upcs) {
+                foreach ($upcs as $upc => $stores) {
+                    foreach ($stores as $storeID => $v) {
+                        $td1 .= "<tr>";
+                        $td1 .= "<td>{$upc}</td>";
+                        $td1 .= "<td>{$storeID}</td>";
+                        $td1 .= "<td>{$allSales[$upc][$storeID]['salePrice']}</td>";
+                        $td1 .= "<td>{$allSales[$upc][$storeID]['batchID']}</td>";
+                        $td1 .= "<td>{$allSales[$upc][$storeID]['brand']}</td>";
+                        $td1 .= "<td>{$allSales[$upc][$storeID]['desc']}</td>";
+                        $td1 .= "</tr>";
+                    }
+                }
+            }
+
+                foreach ($this->config->vars['FANNIE_HIL_LANES'] as $lane) {
+                    $missingLane[] = $this->checkLaneSales($upcs1, 1, $lane);
+                }
+                foreach ($missingLane as $upcs) {
+                    foreach ($upcs as $upc => $stores) {
+                        foreach ($stores as $storeID => $v) {
+                            $td2 .= "<tr>";
+                            $td2 .= "<td>{$upc}</td>";
+                            $td2 .= "<td>{$storeID}</td>";
+                            $td2 .= "<td>{$allSales[$upc][$storeID]['salePrice']}</td>";
+                            $td2 .= "<td>{$allSales[$upc][$storeID]['batchID']}</td>";
+                            $td2 .= "<td>{$allSales[$upc][$storeID]['brand']}</td>";
+                            $td2 .= "<td>{$allSales[$upc][$storeID]['desc']}</td>";
+                            $td2 .= "</tr>";
+                        }
+                    }
+                }
+
+                unset($missingLane);
+                foreach ($this->config->vars['FANNIE_HIL_LANES'] as $lane) {
+                    $missingLane[] = $this->checkLaneSales($upcs1, 1, $lane);
+                }
+                foreach ($missingLane as $upcs) {
+                    foreach ($upcs as $upc => $stores) {
+                        foreach ($stores as $storeID => $v) {
+                            $td3 .= "<tr>";
+                            $td3 .= "<td>{$upc}</td>";
+                            $td3 .= "<td>{$storeID}</td>";
+                            $td3 .= "<td>{$allSales[$upc][$storeID]['salePrice']}</td>";
+                            $td3 .= "<td>{$allSales[$upc][$storeID]['batchID']}</td>";
+                            $td3 .= "<td>{$allSales[$upc][$storeID]['brand']}</td>";
+                            $td3 .= "<td>{$allSales[$upc][$storeID]['desc']}</td>";
+                            $td3 .= "</tr>";
+                        }
+                    }
+                }
+
 
         return <<<HTML
-<!--<h3>Sale Price Discrepancies </h3>-->
+
 <div id="salePriceDiscrepContainer">
     <button type="button" class="close btn-default" aria-label="Close" onclick="
         $('#salePriceDiscrepContainer').hide();
         var elm = parent.document.getElementById('specIframe');
         elm.style.height = '202px';
         elm.style.display = 'none';
-    ">
-        <span aria-hidden="true">&times;</span>
+    "><span aria-hidden="true">&times;</span>
     </button>
-    <h4><b>OP</b><span style="font-size: 12px;"> Operational Data Conflicts</span></h4>
-    <div style="border: 2px solid lightgrey"> </div>
-        {$opdb}
-    <div style="height: 5px;">&nbsp;</div>
-    <h4><b>POS</b><span style="font-size: 12px;"> Point of Sale Data Conflicts</span></h4>
-    <div style="border: 2px solid lightgrey"> </div>
-    <table class="table table-condensed small">
-        <thead><th>UPC</th><th>Brand</th><th>Description</th><th>[H] | [D]</th><th>Current Batches</th>
-            <th>Register</th></thead><tbody>
-            {$posdb}
-        </tbody>
+    <h4><i>Unforced/Unsynced Sales</i> found on SERVER</h4>
+    <table class="table table-bordered table-sm small">
+        <thead><th>upc</th><th>storeID</th><th>sale price</th><th>batchID</th><th>brand</th><th>description</th></thead>
+        <tbody>$td1</tbody>
     </table>
-    <div style="height: 5px;">&nbsp;</div>
+    <h4><i>Unforced/Unsynced Sales</i> found on Hillside POS Lanes</h4>
+    <table class="table table-bordered table-sm small">
+        <thead><th>upc</th><th>storeID</th><th>sale price</th><th>batchID</th><th>brand</th><th>description</th></thead>
+        <tbody>$td2</tbody>
+    </table>
+    <h4><i>Unforced/Unsynced Sales</i> found on Denfeld POS Lanes</h4>
+    <table class="table table-bordered table-sm small">
+    <table class="table table-bordered table-sm small">
+        <thead><th>upc</th><th>storeID</th><th>sale price</th><th>batchID</th><th>brand</th><th>description</th></thead>
+        <tbody>$td3</tbody>
+    </table>
 </div>
 HTML;
     }
 
-    private function getSales()
-    {
-        $dbc = scanLib::getConObj();
-        $prep = $dbc->prepare("
-            SELECT bl.salePrice, bl.upc, s.storeID, b.batchID, b.batchName, p.special_price, p.store_id,
-                p.brand, p.description
-            FROM batches AS b
-                LEFT JOIN batchList AS bl ON b.batchID=bl.batchID
-                LEFT JOIN StoreBatchMap AS s ON b.batchID=s.batchID
-                LEFT JOIN products AS p ON bl.upc=p.upc
-                LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
-            WHERE CONCAT(CURDATE(),' 00:00:00') BETWEEN b.startDate AND b.endDate
-                AND bl.upc NOT LIKE 'LC%'
-                AND b.discountType > 0
-                AND bl.salePrice <> 0
-                AND bl.pricemethod = 0
-            GROUP BY b.batchID, bl.upc, p.store_id, s.storeID;
-        ");
-        $res = $dbc->execute($prep);
-        $cols = array('upc','batchID','batchName','salePrice','storeID','store_id','special_price',
-            'brand','description');
-        while ($row = $dbc->fetchRow($res)) {
-            foreach ($cols as $col) {
-                ${$col} = $row[$col];
-            }
-            $this->upcs[$upc]['B'][$batchID]['batchName'] = $batchName;
-            $this->upcs[$upc]['B'][$batchID]['salePrice'][$storeID] = $salePrice;
-            $this->upcs[$upc]['P'][$store_id] = $special_price;
-            $this->upcs[$upc]['P']['brand'] = $brand;
-            $this->upcs[$upc]['P']['description'] = $description;
-            for ($i=1; $i<=2; $i++) {
-                if (!isset($this->upcs[$upc]['P'][$i]))
-                    $this->upcs[$upc]['P'][$i] = 0.00;
-            }
-        }
-        if ($er = $dbc->error()) {
-            echo "<div class='alert alert-warning'>{$dbc->error()}</div>";
-        }
-
-        return false;
-    }
-
-    private function checkSales($numstores=2)
-    {
-        $ret = "";
-        $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
-
-        $exceptions = array('0000099012219','0000099103018','0000099110318',
-            '0000099111318','0000099112018','0000099120118','0000099120618',
-            '0000099121118','0000099121318','0000099011919','0000099012619', 
-            '0000099020219','0000099020919','0000099021219','0000099021919', 
-            '0000099030219','0000099032819','0000099040619','0000099041619', 
-            '0000099042719', 
-            );
-        $td = "";
-        $stores = array();
-        for ($i=1; $i<=$numstores; $i++) {
-            $stores[] = $i;
-        }
-        $alphaStore = array(1=>'[H]',2=>'[D]');
-        foreach ($this->upcs as $upc => $data) {
-            $bids = array();
-            $sps = array();
-            $spstr = "";
-            foreach ($data['B'] as $k => $v) {
-                $bids[] = $k;
-            }
-            foreach ($stores as $store) {
-                foreach ($bids as $bid) {
-                    $sps[] = (isset($data['B'][$bid]['salePrice'][$store])) ? $data['B'][$bid]['salePrice'][$store] : null;
-                    $curHref = "http://{$FANNIE_ROOTDIR}/batches/newbatch/EditBatchPage.php?id=";
-                    $l = "<span style='color: grey'> | </span>";
-                    $spstr .= "{$l}<a href='{$curHref}{$bid}' target='_blank'>";
-                    $spstr .= (isset($data['B'][$bid]['salePrice'][$store])) ? $data['B'][$bid]['salePrice'][$store] : "";
-                    $spstr .= "</a>";
-                }
-                foreach ($bids as $bid) {
-                    if (isset($data['B'][$bid]['salePrice'][$store])) {
-                        $saleprice = $data['B'][$bid]['salePrice'][$store];
-                        $specialprice = $this->upcs[$upc]['P'][$store];
-                        if (!in_array($upc, $exceptions)) {
-                            if ($saleprice != $specialprice && !in_array($specialprice, $sps)) {
-                                $curHref = "http://{$FANNIE_ROOTDIR}/batches/batchhistory/BatchHistoryPage.php?upc=";
-                                $ln = "<a href='{$curHref}{$upc}' target='_blank'><span class=\"scanicon-book\"></span>bk</a>";
-                                $ieHref = "<a href='http://{$FANNIE_ROOTDIR}/item/ItemEditorPage.php?searchupc={$upc}
-                                    &ntype=UPC&searchBtn=' target='_blank'>{$upc}</a>";
-                                $td .= "
-                                    <tr>
-                                    <td>{$ieHref}</td>
-                                    <td>{$this->upcs[$upc]['P']['brand']}</td>
-                                    <td>{$this->upcs[$upc]['P']['description']}</td>
-                                    <td>{$this->upcs[$upc]['P'][1]} | {$this->upcs[$upc]['P'][2]}</td>
-                                    <td>{$ln}{$spstr}</td>
-                                    <td>{$alphaStore[$store]}</td>
-                                    {$regtd}
-                                    </tr>";
-                            }
-                        }
-                    }
-                }
-            }
-            unset($bids);
-            unset($sps);
-        }
-
-        return <<<HTML
-<table class="table table-condensed small">
-    <thead><th>upc</th><th>Brand</th><th>Description</th><th>[H] | [D]</th>
-        <th>Current Batches</th><th>Reported</th></thead><tbody>
-        {$td}
-    </tbody>
-</table>
-HTML;
-    }
-
-    private function getMissingSales($h,$db,$regNo="",$numstores=2)
+    private function getLaneDbcObj($h, $db)
     {
         $USER = $this->config->vars['SCANUSER'];
         $PASS = $this->config->vars['SCANPASS'];
-        $dbc = new SQLManager(${$h}.$regNo, 'pdo_mysql', ${$db}, $USER, $PASS);
-        try {
-            if ($dbc->connections[${$db}] == false) {
-                throw new Exception();
-            } else {
-                $upcs = array();
-                foreach ($this->upcs as $k => $v) {
-                    $upcs[] = $k;
-                }
-                list($inStr, $args) = $dbc->safeInClause($upcs);
-                $query = "SELECT upc, store_id FROM products WHERE upc IN ({$inStr})
-                    AND special_price = 0";
-                $prep = $dbc->prepare($query);
-                $res = $dbc->execute($prep, $args);
-                $laneupcs = array();
-                while ($row = $dbc->fetchRow($res)) {
-                    $laneupcs[$row['upc']] = $row['store_id'];
-                }
+        $dbc = new SQLManager($h, 'pdo_mysql', $db, $USER, $PASS);
 
-                $ret = "";
-                $td = "";
-                $stores = array();
-                for ($i=1; $i<=$numstores; $i++) {
-                    $stores[] = $i;
-                }
-                $alphaStore = array(1=>'[H]',2=>'[D]');
-                foreach ($laneupcs as $upc => $store_id) {
-                    $bids = array();
-                    $sps = array();
-                    $spstr = "";
-                    foreach ($this->upcs[$upc]['B'] as $k => $v) {
-                        $bids[] = $k;
-                    }
-                    foreach ($stores as $store) {
-                        foreach ($bids as $bid) {
-                            $sps[] = $this->upcs[$upc]['B'][$bid]['salePrice'][$store];
-                            $curHref = "http://{$FANNIEROOT_DIR}/batches/newbatch/EditBatchPage.php?id=";
-                            $l = "<span style='color: grey'> | </span>";
-                            $spstr .= "{$l}<a href='{$curHref}{$bid}' target='_blank'>"
-                                .$this->upcs[$upc]['B'][$bid]['salePrice'][$store] ."</a>";
-                        }
-                        foreach ($bids as $bid) {
-                            if ($saleprice = $this->upcs[$upc]['B'][$bid]['salePrice'][$store]) {
-                                $specialprice = $this->upcs[$upc]['P'][$store];
-                                if ($saleprice != $specialprice && !in_array($specialprice, $sps)) {
-                                    $curHref = "http://{$FANNIEROOT_DIR}/batches/batchhistory/BatchHistoryPage.php?upc=";
-                                    $ln = "<a href='{$curHref}{$upc}' target='_blank'><span class=\"scanicon-book\"></span></a>";
-                                    $ieHref = "<a href='http://{$FANNIEROOT_DIR}/item/ItemEditorPage.php?searchupc={$upc}
-                                        &ntype=UPC&searchBtn=' target='_blank'>{$upc}</a>";
-                                    $td .= "
-                                        <tr>
-                                        <td>{$ieHref}</td>
-                                        <td>{$this->upcs[$upc]['P']['brand']}</td>
-                                        <td>{$this->upcs[$upc]['P']['description']}</td>
-                                        <td>{$this->upcs[$upc]['P'][1]} | {$this->upcs[$upc]['P'][2]}</td>
-                                        <td>{$ln}{$spstr}</td>
-                                        <td>{$regNo}</td>
-                                        </tr>";
-                                }
-                            }
-                        }
-                        unset($bids);
-                        unset($sps);
-                    }
-                }
-            }
-        }
-        catch (Exception $e) {
-            //echo $e->getMessage();
-        }
-
-        return <<<HTML
-{$td}
-HTML;
+        return $dbc;
     }
-
-    public function css_content()
+    
+    public function cssContent()
     {
-return <<<HTML
-#logview {
-    height: 300px;
-    overflow-y: auto;
-}
-.hovA {
-    display: none;
-}
-b:hover + .hovA {
-    display: block;
+        return <<<HTML
+h4 {
+    backgorund: lightgrey;
+    background: linear-gradient(to right, lightgrey, white, white);
 }
 HTML;
     }
