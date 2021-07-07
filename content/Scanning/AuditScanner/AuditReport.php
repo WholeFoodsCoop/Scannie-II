@@ -867,14 +867,19 @@ HTML;
             //echo "<div>{$row['upc']}</div>";
         }
         $countTemp = $dbc->numRows($res);
-        $tempClass = "btn-secondary";
-        if ($countTemp > 0) {
-            $tempBtn = 'Close Review';
-            $tempInputVal = 'close';
-            $tempClass = 'btn-danger';
-        } else {
-            $tempBtn = 'Open Review';
-            $tempInputVal = 'open';
+        $tempBtn = "";
+        $tempBtnID = "prevent-default";
+        if ($_COOKIE['user_type'] == 2) {
+            $tempClass = "btn-secondary";
+            if ($countTemp > 0) {
+                $tempBtn = 'Close Review';
+                $tempInputVal = 'close';
+                $tempClass = 'btn-danger';
+            } else {
+                $tempBtn = 'Open Review';
+                $tempInputVal = 'open';
+            }
+            $tempBtnID = "temp-btn";
         }
 
         $options = $this->getNotesOpts($dbc,$storeID,$username);
@@ -962,7 +967,7 @@ $modal
 </div>
 <div class="form-group dummy-form">
     <form method="post" action="AuditReport.php">
-        <button class="btn $tempClass btn-sm page-control" id="temp-btn">$tempBtn</button>
+        <button class="btn $tempClass btn-sm page-control" id="$tempBtnID">$tempBtn</button>
         <input type="hidden" name="review" value="$tempInputVal"/>
         <input type="hidden" name="username" value="$username"/>
     </form>
@@ -1717,6 +1722,10 @@ $('#avgCalc').focusout(function(){
     } else {
         $('#avgAnswer').text('');
     }
+});
+
+$('#prevent-default').click(function(e) {
+    e.preventDefault();
 });
 JAVASCRIPT;
     }
