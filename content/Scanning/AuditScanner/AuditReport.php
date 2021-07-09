@@ -1114,7 +1114,7 @@ var stripeTable = function(){
     return false;
 };
 stripeTable();
-setInterval('stripeTable()', 1000);
+//setInterval('stripeTable()', 1000);
 $('#clearNotesInputB').click(function() {
     var c = confirm("Are you sure?");
     if (c == true) {
@@ -1436,7 +1436,7 @@ var fetchNewRows = function()
         },
     });
 }
-setInterval('fetchNewRows()', 1000);
+//setInterval('fetchNewRows()', 1000);
 
 $('[id]').each(function(){
     var ids = $('[id="'+this.id+'"]');
@@ -1572,14 +1572,14 @@ $('.dept-text').click(function(){
     $(this).parent().find('.dept-select').trigger('click');;
     $(this).hide();
 });
-$('.dept-select').change(function(){
-    setTimeout(function(){location.reload();
-    }, 500);
-});
-$('.dept-select').focusout(function(){
-    setTimeout(function(){location.reload();
-    }, 500);
-});
+//$('.dept-select').change(function(){
+//    setTimeout(function(){location.reload();
+//    }, 500);
+//});
+//$('.dept-select').focusout(function(){
+//    setTimeout(function(){location.reload();
+//    }, 500);
+//});
 
 $('#temp').click(function(){
     c = confirm('Save costs to temp table?');
