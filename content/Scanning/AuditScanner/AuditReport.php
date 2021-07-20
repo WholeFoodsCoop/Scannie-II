@@ -813,7 +813,8 @@ HTML;
     private function getNotesOpts($dbc,$storeID,$username)
     {
         $args = array($storeID,$username);
-        $query = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE storeID = ? AND username = ? GROUP BY notes;");
+        $query = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE storeID = ? AND username = ? 
+            and savedAs = 'default' GROUP BY notes;");
         $result = $dbc->execute($query,$args);
         $options = array();
         while ($row = $dbc->fetch_row($result)) {
