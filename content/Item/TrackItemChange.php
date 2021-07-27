@@ -1,7 +1,7 @@
 <?php
 /*******************************************************************************
 
-    Copyright 2016 Whole Foods Community Co-op.
+    Copyright 2021 Whole Foods Community Co-op.
 
     This file is a part of Scannie.
 
@@ -31,328 +31,173 @@ class TrackItemChange extends PageLayoutA
 
     protected $title = "Track Change";
     protected $description = "[Track Change] Track all changes made to an item in POS/OFFICE.";
-    protected $ui = TRUE;
-
-    public function cssContent()
-    {
-return <<<HTML
-.green {
-    color: green;
-}
-.panel-noborder {
-    border: 0;
-    box-shadow: none;
-}
-h5 {
-    color: slategrey;
-}
-.inactive {
-    background: white;
-}
-HTML;
-    }
+    public $ui = TRUE;
 
     public function body_content()
     {
         $ret = '';
         $dbc = scanLib::getConObj();
-        $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
         $upc = FormLib::get('upc');
         $upc = scanLib::upcParse($upc);
+        $stores = array(1 => 'Hillside', 2 => 'Denfeld');
 
-        if (!class_exists('LastSoldDates')) {
-            include('LastSoldDates.php');
+        $prodInfoP = $dbc->prepare("SELECT upc, brand, description, created, DATE(last_sold) AS last_sold, store_id FROM products 
+            WHERE upc = ?");
+        $prodInfoR = $dbc->execute($prodInfoP, array($upc));
+        $lastSold = '';
+        while ($row = $dbc->fetchRow($prodInfoR)) {
+            $brand = $row['brand'];
+            $description = $row['description'];
+            $created = $row['created'];
+            $lastSold .= "[{$stores[$row['store_id']]}] " . $row['last_sold'] . " ";
         }
-        $data = LastSoldDates::getDates();
-        $storename = array(1=>'Hillside',2=>'Denfeld');
-        $lastSold = '<h5>Product Last Sold</h5>
-            <table class="table table-sm"><tbody><tr>';
-        foreach ($data as $k => $v) {
-            $pipe = ($k == 1) ? " | " : "";
-            if (is_numeric($k)) {
-                $lastSold .= "<td class='min'>{$storename[$k]}</td><td>$v</td><td class='space'>$pipe</td>";
+        
+        $vendP = $dbc->prepare("SELECT e.vendorName, e.vendorID, v.sku, v.brand, v.description, v.size, v.units, 
+            v.cost, v.modified FROM vendorItems AS v 
+            LEFT JOIN vendors AS e ON v.vendorID=e.vendorID WHERE upc = ? GROUP BY v.vendorID");
+        $vendR = $dbc->execute($vendP, array($upc));
+        $tdV = "";
+        $thV = "<tr><th>Vendor</th><th>Vendor ID</th><th>SKU</th><th>Brand</th><th>Description</th><th>Size</th><th>Units</th><th>Cost</th><th>Modified</th></tr>";
+        while ($row = $dbc->fetchRow($vendR)) {
+            $tdV .= "<tr>";
+            foreach ($row as $col => $v) {
+                if (!is_numeric($col)) 
+                    $tdV .= "<td>$v</td>";
+            }
+            $tdV .= "</tr>";
+        }
+
+        $purchP = $dbc->prepare("SELECT orderID, internalUPC AS upc, sku, description, unitCost AS cost, caseSize, DATE(receivedDate) AS received, isSpecialOrder AS SO FROM PurchaseOrderItems WHERE internalUPC = ? ORDER BY receivedDate DESC LIMIT 3;");
+        $purchR = $dbc->execute($purchP, array($upc));
+        $cols = array();
+        $tdP = "";
+        while ($row = $dbc->fetchRow($purchR)) {
+            $tdP .= "<tr>";
+            foreach ($row as $col => $v) {
+                if (!is_numeric($col)) {
+                    $tdP .= "<td>$v</td>";
+                    if (!in_array($col, $cols))
+                        $cols[] = $col;
+                }
+            }
+            $tdP .= "</tr>";
+        }
+        $thP = "<tr>";
+        foreach ($cols as $col) {
+            $thP .= "<th>$col</th>";
+        }
+        $thP .= "</tr>";
+
+        $data = array();
+        $td = ""; $i = 0;
+        $skips = array('updateType', 'storeID', 'modified', 'user');
+        $prep = $dbc->prepare("SELECT updateType, storeID, description, price, salePrice, cost, dept, tax, fs, wic, scale, likeCode, 
+            modified, name, forceQty, noDisc, inuse 
+            FROM prodUpdate AS p
+                LEFT JOIN Users AS u ON p.user=u.uid
+            WHERE upc = ? AND storeID = ? 
+            ORDER BY modified DESC, storeID");
+        foreach (array(1,2) as $storeID) {
+            $res = $dbc->execute($prep, array($upc, $storeID));
+            while ($row = $dbc->fetchRow($res)) {
+                foreach ($row as $col => $v) {
+                    if (!is_numeric($col)) 
+                        $data[$i][$col] = $v;
+                }
+                $i++;
             }
         }
-        $lastSold .= '</tr></tbody></table>';
 
-        $prep = $dbc->prepare("SELECT DATE(created) AS created FROM products WHERE upc = ? 
-            AND created IS NOT NULL GROUP BY upc");
-        $res = $dbc->execute($prep, $upc);
-        $row = $dbc->fetchRow($res);
-        $created = $row['created'];
-        $today = new DateTime();
-        $cdate = new DateTime($created);
-        $diff = $today->diff($cdate);
-        $age = $diff->format("%a");
+        function sortByDate($a, $b)
+        {
+            $t1 = strtotime($a['modified']);
+            $t2 = strtotime($b['modified']);
 
-        $col1 =  self::form_content();
-        $desc = array();
-        $salePrice = array();
-        $cost = array();
-        $dept = array();
-        $tax = array();
-        $fs = array();
-        $scale = array();
-        $modified = array();
-        $name = array();
-        $realName = array();
-        $uid = array();
-        if($upc = scanLib::upcParse($upc)) {
-            $args = array($upc);
-            $prep = $dbc->prepare("SELECT pu.description,
-                        pu.salePrice,
-                        pu.price,
-                        pu.cost,
-                        pu.dept,
-                        pu.tax,
-                        pu.fs,
-                        pu.scale,
-                        pu.modified,
-                        u.name,
-                        u.real_name,
-                        u.uid,
-                        pu.upc,
-                        pu.wic,
-                        pu.storeID,
-                        pu.inUse
-                    FROM prodUpdate as pu
-                    LEFT JOIN Users as u on u.uid=pu.user
-                    WHERE pu.upc = ?
-                    GROUP BY pu.modified, pu.storeID
-                    ORDER BY modified DESC
-                    ;");
-            $result = $dbc->execute($prep,$args);
-            while ($row = $dbc->fetchRow($result)) {
-                $desc[] = $row['description'];
-                $price[] = $row['price'];
-                $salePrice[] = $row['salePrice'];
-                $cost[] = $row['cost'];
-                $dept[] = $row['dept'];
-                $tax[] = $row['tax'];
-                $fs[] = $row['fs'];
-                $scale[] = $row['scale'];
-                $modified[] = $row['modified'];
-                $name[] = $row['name'];
-                $realName[] = $row['real_name'];
-                $uid[] = $row['uid'];
-                $wic[] = $row['wic'];
-                $store_id[] = $row['storeID'];
-                $inUse[] = $row['inUse'];
-            }
-            $upcLink = "<div><a href='http://$FANNIE_ROOTDIR/item/ItemEditorPage.php?searchupc="
-                . $upc . "&ntype=UPC&searchBtn=' target='_blank'>{$upc}</a></div>";
-            $col1 .=  "<div>" . $upcLink . " <b>" . $desc[max(array_keys($desc))] . "</b></div>";
-            $col1 .=  "<div><a href='LastSoldDates.php?paste_list=1'>LAST SOLD PAGE</a></div>";
-            $col1 .= "<div>Created: $created <span style=\"font-size: 12px\">($age days old)</span></div>";
-            $col1 .= scanLib::getDbcError($dbc);
+            return $t2 - $t1;
+        }
+        usort($data, 'sortByDate');
 
-            $table = '';
-            $table .=  "<div class='table-responsive'><table class='table table-sm small'>";
-            $table .=  "
-                <thead>
-                <th>Description</th>
-                <th>Price</th><th>Sale</th>
-                <th>Cost</th>
-                <th>Dept</th>
-                <th>Tax</th>
-                <th>FS</th>
-                <th>Scale</th>
-                <th>wic</th>
-                <th>store</th>
-                <th>In Use</th>
-                <th>Modified</th>
-                <th>Modified By</th>
-                </thead>
-                <tbody>
-            ";
-            for ($i=0; $i<count($desc); $i++) {
-                if($store_id[$i] == 1) $store_id[$i] = "Hillside";
-                if($store_id[$i] == 2) $store_id[$i] = "Denfeld";
-            }
-            for ($i=0; $i<count($desc); $i++) {
-                if (array_key_exists(($i-1), $cost)
-                    && array_key_exists(($i), $cost)
-                    && $cost[$i] != $cost[$i-1]
-                    || $salePrice[$i] != $salePrice[$i-1]
-                    || $cost[$i] != $cost[$i-1]
-                    || $tax[$i] != $tax[$i-1]
-                    || $fs[$i] != $fs[$i-1]
-                    || $scale[$i] != $scale[$i-1]
-                    || $desc[$i] != $desc[$i-1]
-                    || $price[$i] != $price[$i-1]
-                    || $dept[$i] != $dept[$i-1]
-                    || $wic[$i] != $wic[$i-1]
-                    || $realName[$i] != $realName[$i-1]
-                    || $store_id[$i] != $store_id[$i-1]
-                    || $inUse[$i] != $inUse[$i-1]
-                )
-                {
-                    if ($store_id[$i] == 'Hillside') {
-                        $table .=  "<tr id='tr_$i'>";
-                    } else {
-                        $table .=  "<tr id='tr_$i' class='alert-warning'>";
+        foreach ($data as $k => $row) {
+            if ($k === 0) {
+                $td .= "<tr>";
+                foreach ($row as $col => $v) {
+                    if ($col == 'modified') {
+                        $date = substr($v, 0, 10);
+                        $time = substr($v, 10);
+                        $v = "$date<span style=\"color: grey;\">$time</span>";
                     }
-
-                    $switch = array(
-                        0=>"<span class=\"alert-danger\" style=\"color: white\">off</span>",
-                        1=>"<span class=\"alert-success\"> on </span>"
-                    );
-
-                    $table .=  "<td>" . $desc[$i] . "</td>";
-                    $table .=  "<td>" . $price[$i] . "</td>";
-                    $table .=  "<td>" . $salePrice[$i]  . "</td>";
-                    $table .=  "<td class='cost'>" . $cost[$i] . "</td>";
-                    $table .=  "<td>" . $dept[$i] . "</td>";
-                    $table .=  "<td>" . $switch[$tax[$i]] . "</td>";
-                    $table .=  "<td>" . $switch[$fs[$i]] . "</td>";
-                    $table .=  "<td>" . $switch[$scale[$i]] . "</td>";
-                    $table .=  "<td>" . $switch[$wic[$i]] . "</td>";
-                    $table .=  "<td class=\"storeid\">" . $store_id[$i] . "</td>";
-                    $table .=  "<td>" . $switch[$inUse[$i]] . "</td>";
-                    $table .=  "<td class='modified'>" . $modified[$i] . "</td> ";
-                    if ($realName[$i] == NULL) {
-                        $table .=  "<td><i>unknown / scheduled change " . $uid[$i] . "</i></tr>";
-                    } else {
-                        $table .=  "<td>" . $realName[$i] . "</tr> ";
+                    $td .= "<td>$v</td>";
+                }
+                $td .= "</tr>";
+            }
+            $show = 0;
+            if ($k !== 0) {
+                $add = '';
+                foreach ($row as $col => $v) {
+                    if ($v != $data[$k-1][$col] && !in_array($col, $skips)) {
+                        $show = 1;
                     }
                 }
-
             }
-            $table .=  "</tbody></table></div>";
-            $ret .= $table;
+            if ($show === 1) {
+                $td .= "<tr>";
+                foreach ($row as $col => $v) {
+                    if ($col == 'modified') {
+                        $date = substr($v, 0, 10);
+                        $time = substr($v, 10);
+                        $v = "$date<span style=\"color: grey;\">$time</span>";
+                    }
+                    $td .= "<td>$v</td>";
+                }
+                $td .= "</tr>";
+            }
+            $show = 0;
+        }
+        $columns = array('updateType', 'storeID', 'description', 'price', 'salePrice', 'cost', 'dept', 'tax', 'fs', 'wic', 'scale', 'likeCode', 'date', 'user', 'forceQty', 'noDisc', 'inuse');
+        $th = '';
+        foreach ($columns as $col) {
+            $th .= "<th>$col</th>";
         }
 
-        $pData = LastSoldDates::getPurchase($upc,$dbc);
-
         return <<<HTML
-<div class="container-fluid" style="margin-top: 20px;">
+<div class="container-fluid" style="padding-top: 15px;">
+    <h5>Track Product Changes</h5>
     <div class="row">
         <div class="col-lg-3">
-            {$col1}
-            {$lastSold}
-            <div class='form-group'>
-                <button class='btn btn-default active filter'>Hillside</button>
-                <button class='btn btn-default active filter'>Denfeld</button>
-            </div>
+            <form class="form-inline">
+                <span class="input-group-text" id="basic-addon1">UPC</span> &nbsp;
+                <input type="text" value="$upc" name="upc" class="form-control form-control-sm" />
+            </form>
         </div>
-        <div class="col-lg-3">
-            {$pData[0]}
+        <div class="col-lg-4">
+            <div><strong>Brand</strong>: $brand </div>
+            <div><strong>Description</strong>: $description </div>
         </div>
-        <div class="col-lg-6">
-            {$pData[1]}
-            <div id="costs">
-                <label>OldCost</label>: <span id="oldCost"></span> | 
-                <label>NewCost</label>: <span id="newCost"></span> | 
-                <label>Change</label>: <span id="diffCost"></span> | 
-                <label>On</label>: <span id="dateCost"></span>
-            </div>
+        <div class="col-lg-4">
+            <div><strong>Created</strong>: $created</div>
+            <div><strong>Last Sold</strong>: $lastSold</div>
         </div>
     </div>
+    <label style="background: #d8ffd4;" class="form-control">Vendor Items</label>
+    <table class="table table-bordered table-condensed table-sm small"><thead style="background: #d8ffd4;">$thV</thead><tbody>$tdV</tbody></table>
+
+    <label style="background: #D4FFFC;" class="form-control">Recent Purchases</label>
+    <table class="table table-bordered table-condensed table-sm small"><thead style="background: #d4fffc;">$thP</thead><tbody>$tdP</tbody></table>
+
+    <label style="background: #D4E9FF;" class="form-control">Product Changes</label>
+    <table id="table-changes" class="table table-bordered table-condensed table-sm small"><thead style="background: #d4e9ff;">$th</thead><tbody>$td</tbody></table>
 </div>
-{$ret}
 HTML;
-    }
 
-    private function form_content()
-    {
-        return <<<HTML
-<form class =""  method="get" >
-    <div class="row">
-        <div class="col-lg-6">
-            <div class="form-group">
-                <input type="text" class="form-control" name="upc" placeholder="Enter a PLU" autofocus />
-            </div>
-        </div>
-        <div class="col-lg-2">
-            <div class="form-group">
-                <div class="form-group">
-                    <input type="submit" class="btn btn-defualt" value="submit" />
-                </div>
-            </div>
-        </div>
-    </div>
-</form>
-HTML;
     }
 
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
-var newCost = 0;
-var oldCost = 0;
-var end = 0; 
-var date = '';
-var dateID = 0;
-$(function() {
-    $('tr').find('td').each(function() {
-        if ( $(this).hasClass('cost') && end == 0 ) {
-            var temp = $(this).text();
-            if (newCost == 0 && temp != 0) {
-                newCost = temp;
-            }
-            if (temp != newCost && temp != 0) {
-                oldCost = temp;
-                dateID = $(this).closest('tr').attr('id');
-                dateID = dateID.substr(3);
-            }
-            temp = 0;
-            if (newCost != 0 && oldCost != 0) end = 1;
-        }
-    });
-    var changeID = dateID-1;
-    var fullChangeID = '#tr_'+changeID;
-    date = $(fullChangeID).closest('tr').find('td.modified').text();
-    $('#oldCost').text(oldCost);
-    $('#newCost').text(newCost);
-    var diff = newCost - oldCost;
-    var ori = '';
-    if (diff > 0) {
-        ori = "+";   
-    }
-    $('#diffCost').text(ori+diff.toFixed(2));
-    $('#dateCost').text(date.substr(0,10));
-    var d = new Date();
-    var dd = d.getDate();
-    var mm = d.getMonth()+1;
-    var yyyy = d.getFullYear();
-    var today = yyyy+"-"+mm+"-"+dd;
-     if ( $('#dateCost').text() == today ) {
-         $('#dateCost').addClass('green').append(' *today*');
-     }
-});
-$(function(){
-    $('.filter').on('click', function(){
-        var active = $(this).hasClass('active');
-        var store = $(this).text();
-        if (active == true) {
-            // make store inactive
-            $(this).removeClass('active')
-                .addClass('inactive');
-            $('td').each(function(){
-                $(this).closest('tr').show();
-            });
-            $('td').each(function(){
-                if ($(this).hasClass('storeid')) {
-                    var hide = $(this).text();
-                    if (hide == store) {
-                        $(this).closest('tr').hide();
-                    }
-                }
-            });
-        } else {
-            // make store active
-            $(this).removeClass('inactive')
-                .addClass('active');
-            $('td').each(function(){
-                if ($(this).hasClass('storeid')) {
-                    var show = $(this).text();
-                    if (show == store) {
-                        $(this).closest('tr').show();
-                    }
-                }
-            });
-        }
-    });
+$('#table-changes tr').each(function(){
+    let storeID = $(this).find('td:eq(1)').text();
+    if (storeID == 2)
+        $(this).css('background-color', '#fff1c2');
 });
 JAVASCRIPT;
     }
