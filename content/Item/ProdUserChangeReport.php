@@ -80,8 +80,9 @@ class ProdUserChangeReport extends WebDispatch
         $query = $dbc->prepare("select * from Users");
         $result = $dbc->execute($query);
         $user_names = array();
+        $uids = array();
         while ($row = $dbc->fetchRow($result)) {
-            if (!in_array($row['uid'],$uids) && $row['name'] != '') {
+            if (!in_array($row['uid'], $uids) && $row['name'] != '') {
                 $uids[$row['uid']] = $row['name'];
             }
         }
