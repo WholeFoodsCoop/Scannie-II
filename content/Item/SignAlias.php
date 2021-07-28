@@ -83,7 +83,7 @@ class SignAlias extends PageLayoutA
         $td = "";
         $aliases = array();
         $aliasSelect = "";
-        $prep = $dbc->prepare("SELECT * FROM signAliasView ORDER BY brand");
+        $prep = $dbc->prepare("SELECT * FROM signAliasView ORDER BY aliasID, brand");
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
             $row[5] = $types[$row[5]];
@@ -92,7 +92,8 @@ class SignAlias extends PageLayoutA
             $td .= "<td>{$row[2]}</td>";
             $td .= "<td>{$row[4]}</td>";
             $td .= "<td>{$row[3]}</td>";
-            $td .= "<td>{$row[0]}</td>";
+            $td .= "<td><div align=\"center\"><button onclick=\"goToMap({$row[0]}); return false;\" 
+                style=\"cursor: pointer; width: 28px;\">{$row[0]}</button></td>";
             $td .= "<td>{$row[5]}</td>";
             $td .= "</tr>";
             $td .= "</tr>";
@@ -100,7 +101,7 @@ class SignAlias extends PageLayoutA
         echo $dbc->error();
 
         $td2 = "";
-        $prep = $dbc->prepare("SELECT * FROM signAlias ORDER BY brand");
+        $prep = $dbc->prepare("SELECT * FROM signAlias ORDER BY aliasID, brand");
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
             $row[3] = $types[$row[3]];
@@ -136,11 +137,18 @@ class SignAlias extends PageLayoutA
 <div class="row" style="padding: 15px;">
     <div class="col-lg-6">
         <h4>Sign Alias View</h4>
-        <table class="table table-bordered table-sm small"><thead></thead><tbody>$td</tbody></table>
+        <table class="table table-bordered table-sm small">
+            <thead><th>Brand</th><th>Sample Desc.</th><th>size</th><th>Sample UPC</th>
+                <th>Alias ID</th><th>Alias Type</th></thead>
+            <tbody>$td</tbody>
+        </table>
         <h4>Sign Alias Table</h4>
-        <table class="table table-bordered table-sm small"><thead></thead><tbody>$td2</tbody></table>
+        <table class="table table-bordered table-sm small">
+            <thead><th>Alias ID</th><th>Brand</th><th>Description</th><th>Alias Type</th></thead></thead>
+            <tbody>$td2</tbody>
+        </table>
         <h4>Sign Alias Map</h4>
-        <table class="table table-bordered table-sm small"><thead></thead><tbody>$td3</tbody></table>
+        <table class="table table-bordered table-sm small" id="table-map"><thead></thead><tbody>$td3</tbody></table>
     </div>
     <div class="col-lg-3">
         <h4>Add items to alias</h4>
@@ -151,7 +159,7 @@ class SignAlias extends PageLayoutA
                 </select>
             </div>
             <div class="form-group">
-                <textarea class="form-control" name="upcs"></textarea>
+                <textarea class="form-control" name="upcs" rows=3></textarea>
             </div>
             <div class="form-group">
                 <button type="submit" class="btn btn-default">Submit</button>
@@ -186,6 +194,18 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
+var goToMap = function(aliasID)
+{
+    var target = null;
+    $('#table-map tr').each(function(){
+        if ($(this).find('td:eq(1)').text() == aliasID) {
+            target = $(this).find('td:eq(1)');
+
+            return false;
+        }
+    });
+    $('html, body').animate({ scrollTop: target.offset().top }, 500);
+}
 JAVASCRIPT;
     }
 
@@ -195,7 +215,7 @@ JAVASCRIPT;
 <strong>Alias Type Key</strong>
 <table class="table table-bordered"><tbody>
     <tr>
-        <td><b>Abby</b></td><td>Abbreviated Signage. Only one sale sign needs to be printed for items with this alias.</td>
+        <td><b>Abbr</b></td><td>Abbreviated Signage. Only one sale sign needs to be printed for items with this alias.</td>
         <td><b>List</b></td><td>List Signage. Use ItemList2UpP or ItemList4UpP layouts when printing signs for items with this alias.</td>
     </tr>
 </tbody></table>
