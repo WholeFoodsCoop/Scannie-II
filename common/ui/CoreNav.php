@@ -32,6 +32,7 @@ JAVASCRIPT;
         $DIR = __DIR__;
         $user = null;
         $ud = "";
+        $type = null;
         if (!empty($_COOKIE['user_name'])) {
             $user = $_COOKIE['user_name'];
             $ud = '<span class="userSymbol"><b>'.strtoupper(substr($user,0,1)).'</b></span>';
@@ -93,6 +94,7 @@ HTML;
           <a class="dropdown-item" href="http://{$FANNIE_COREY_ROOT}">DEV - Corey(1)</a>
           <a class="dropdown-item" href="http://{$FANNIE_COREY2_ROOT}">DEV - Corey(2)</a>
           <a class="dropdown-item" href="http://{$FANNIE_ANDY_ROOT}">DEV - Andy</a>
+          <a class="dropdown-item" href="http://{$FANNIE_ROOTDIR}/../IS4C/pos/is4c-nf/">POS on Key</a>
         </div>
       </li>
       <!--
@@ -107,7 +109,6 @@ HTML;
             Products 
         </a>
         <div class="dropdown-menu" aria-labelledby="navbarDropdown" id="productsMenuOpts">
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/CheckScannedDate.php">Check PLU Queues</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/NaturalizeProdInfo.php">Cleanup Sign Info</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/ProdUserChangeReport.php">Edits by User</a>
           <!--<a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/FloorSectionMapper.php">Floor Section Mapper</a>-->
