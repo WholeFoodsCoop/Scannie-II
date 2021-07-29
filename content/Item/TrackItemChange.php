@@ -92,7 +92,7 @@ class TrackItemChange extends PageLayoutA
         $td = ""; $i = 0;
         $skips = array('updateType', 'storeID', 'modified', 'user');
         $prep = $dbc->prepare("SELECT updateType, storeID, description, price, salePrice, cost, dept, tax, fs, wic, scale, likeCode, 
-            modified, name, forceQty, noDisc, inuse 
+            modified, name AS user, forceQty, noDisc, inuse 
             FROM prodUpdate AS p
                 LEFT JOIN Users AS u ON p.user=u.uid
             WHERE upc = ? AND storeID = ? 
@@ -117,6 +117,8 @@ class TrackItemChange extends PageLayoutA
         }
         usort($data, 'sortByDate');
 
+        $test = array();
+
         foreach ($data as $k => $row) {
             if ($k === 0) {
                 $td .= "<tr>";
@@ -134,20 +136,23 @@ class TrackItemChange extends PageLayoutA
             if ($k !== 0) {
                 $add = '';
                 foreach ($row as $col => $v) {
+                    $test[$k][$col] = 0;
                     if ($v != $data[$k-1][$col] && !in_array($col, $skips)) {
                         $show = 1;
+                        $test[$k][$col] = 1;
                     }
                 }
             }
             if ($show === 1) {
                 $td .= "<tr>";
                 foreach ($row as $col => $v) {
+                    $bold = ($test[$k][$col] == 1) ? 'color: black; text-shadow: 0.5px 0.5px lightgrey; background: #DEDCDC;' : '';
                     if ($col == 'modified') {
                         $date = substr($v, 0, 10);
                         $time = substr($v, 10);
                         $v = "$date<span style=\"color: grey;\">$time</span>";
                     }
-                    $td .= "<td>$v</td>";
+                    $td .= "<td style=\"$bold\">$v</td>";
                 }
                 $td .= "</tr>";
             }
