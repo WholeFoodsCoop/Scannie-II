@@ -128,7 +128,9 @@ class TrackItemChange extends PageLayoutA
                         $time = substr($v, 10);
                         $v = "$date<span style=\"color: grey;\">$time</span>";
                     }
-                    $td .= "<td>$v</td>";
+                    if ($col != 'storeID') {
+                        $td .= "<td>$v</td>";
+                    }
                 }
                 $td .= "</tr>";
             }
@@ -152,13 +154,15 @@ class TrackItemChange extends PageLayoutA
                         $time = substr($v, 10);
                         $v = "$date<span style=\"color: grey;\">$time</span>";
                     }
-                    $td .= "<td style=\"$bold\">$v</td>";
+                    if ($col != 'storeID') {
+                        $td .= "<td style=\"$bold\">$v</td>";
+                    }
                 }
                 $td .= "</tr>";
             }
             $show = 0;
         }
-        $columns = array('updateType', 'storeID', 'description', 'price', 'salePrice', 'cost', 'dept', 'tax', 'fs', 'wic', 'scale', 'likeCode', 'date', 'user', 'forceQty', 'noDisc', 'inuse');
+        $columns = array('updateType', 'description', 'price', 'salePrice', 'cost', 'dept', 'tax', 'fs', 'wic', 'scale', 'likeCode', 'date', 'user', 'forceQty', 'noDisc', 'inuse');
         $th = '';
         foreach ($columns as $col) {
             $th .= "<th>$col</th>";
@@ -190,7 +194,7 @@ class TrackItemChange extends PageLayoutA
     <table class="table table-bordered table-condensed table-sm small"><thead style="background: #d4fffc;">$thP</thead><tbody>$tdP</tbody></table>
 
     <label style="background: #D4E9FF;" class="form-control">Product Changes</label>
-    <table id="table-changes" class="table table-bordered table-condensed table-sm small"><thead style="background: #d4e9ff;">$th</thead><tbody>$td</tbody></table>
+    <table id="table-changes" class="table table-bordered table-condensed table-sm table-striped small"><thead style="background: #d4e9ff;">$th</thead><tbody>$td</tbody></table>
 </div>
 HTML;
 
@@ -205,6 +209,15 @@ $('#table-changes tr').each(function(){
         $(this).css('background-color', '#fff1c2');
 });
 JAVASCRIPT;
+    }
+
+    public function cssContent()
+    {
+        return <<<HTML
+.table-striped > tbody > tr:nth-child(2n+1) > td, .table-striped > tbody > tr:nth-child(2n+1) > th {
+   background-color: #FAFCFF;
+}
+HTML;
     }
 
 }
