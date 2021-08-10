@@ -22,24 +22,8 @@ class DBA extends PageLayoutA
     {
         $today = new DateTime();
         $today = $today->format('Y-m-d');
-        //$this->addScript('tableColumnFilters.js');
-        /* codemirror modul
-        $this->addCssFile('../../node_modules/codemirror/lib/codemirror.css');
-        $this->addScript('../../node_modules/codemirror/lib/codemirror.js');
-        $this->addScript('../../node_modules/codemirror/mode/sql/sql.js');
-        $this->addOnloadCommand('editor.init("query", {
-                lineNumbers: true,
-                mode: "text/x-sql"
-            });');
-        */
 
         return <<<HTML
-<!--<div id="processing" style="display: none; cursor: wait; color: white; z-index: 999; position: fixed; top: 63px; left: 45vw; width: 50px; height: 25; border-radius: 3px; background-color: slategrey"> 
-    <div class="progress">
-        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; height: 25px"></div>
-    </div>
-</div>
--->
 <div class="row">
     <div class="col-lg-10">
         <span id="filter-options"></span>
@@ -47,7 +31,9 @@ class DBA extends PageLayoutA
     </div>
     <div class="col-lg-2">
         <div class="form-group">
-            <textarea name="query" id="query" class="form-control" spellcheck="false" autofocus></textarea>
+            <form><textarea id="code" name="code"></textarea></form>
+            <div style="display: none;">Key buffer: <span id="command-display"></span></div>
+            <div style="display: none;">Vim mode: <span id="vim-mode"></span>
         </div>
         <div class="form-group">
             <button id="submit" class="form-control btn btn-default">Submit</button>
@@ -125,6 +111,11 @@ group by upc</span>
             <li><a href='#' class="quick_query">Get Linked PLU</a>
                 <span class="query">select plu, itemdesc, linkedPLU from scaleItems where linkedPLU = 0000000000864</span>
             </li>
+            <li><a href='#' class="quick_query">Get Locations by Selected Material</a>
+                <span class="query">
+SELECT p.department, d.dept_name, p.upc, p.brand, p.description, v.sections FROM products p left join departments d on p.department=d.dept_no left join MasterSuperDepts m on p.department=m.dept_ID JOIN FloorSectionProductMap f on p.upc=f.upc JOIN FloorSections as s on f.floorSectionID=s.floorSectionID LEFT JOIN FloorSectionsListView v on p.upc=v.upc AND v.storeID = 2 WHERE super_name = 'REFRIGERATED' AND f.floorSectionID <> 45 GROUP BY p.upc ORDER BY p.department, p.upc;
+                </span>
+            </li>
             <li><a href='#' class="quick_query">Get Missing Sub-Locations</a>
                 <span class="query">select i.upc, f.subSection, s.name, p.department, m.super_name
 FROM PickupOrderItems as i 
@@ -169,6 +160,7 @@ FROM woodshed_no_replicate.temp AS t
     LEFT JOIN is4c_op.MasterSuperDepts as m on p.department=m.dept_ID
     LEFT JOIN is4c_op.vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
 WHERE (p.cost - t.cost) <> 0
+    AND ABS(p.cost - t.cost) > 0.09
 GROUP BY p.upc
 ORDER BY (p.cost - t.cost) ASC;</span>
             </li>
@@ -268,20 +260,35 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
-var editor = (function () {
-    var _editor = {};
-    var mod = {};
+// codemirror start
+CodeMirror.commands.save = function(){ alert("Saving"); };
+var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+    lineNumbers: true,
+    mode: "text/x-csrc",
+    keyMap: "vim",
+    matchBrackets: true,
+    showCursorWhenSelecting: true
+});
+var commandDisplay = document.getElementById('command-display');
+var keys = '';
+    CodeMirror.on(editor, 'vim-keypress', function(key) {
+    keys = keys + key;
+    commandDisplay.innerText = keys;
+});
+    CodeMirror.on(editor, 'vim-command-done', function(e) {
+    keys = '';
+    commandDisplay.innerHTML = keys;
+});
+var vimMode = document.getElementById('vim-mode');
+    CodeMirror.on(editor, 'vim-mode-change', function(e) {
+    vimMode.innerText = JSON.stringify(e);
+});
+// codemirror end
 
-    mod.init = function(elem, obj) {
-        _editor = CodeMirror.fromTextArea(document.getElementById(elem), obj);
-    };
-
-    mod.get = function() {
-        return _editor;
-    };
-
-    return mod;
-})();
+var getCodeText = function() {
+    var text = editor.getValue();    
+    return text;
+}
         
 $(document).keydown(function(e){
     var key = e.keyCode;
@@ -339,7 +346,7 @@ jQuery.loadScript = function (url, callback) {
     });
 }
 $('#submit').click(function(){
-    var query = $('#query').val();
+    var query = getCodeText();
     $.ajax({
         type: 'post',
         data: 'query='+query,
@@ -520,6 +527,10 @@ textarea.form-control {
 }
 #response {
     overflow-x: auto;
+}
+.CodeMirror {
+    font-family: consolas, monospace;
+    font-size: 12px;
 }
 HTML;
     }
