@@ -4,7 +4,6 @@ if (!class_exists('WebDispatch')) {
 }
 class PageLayoutA extends WebDispatch
 {
-    public $displayFunction;
 
     public function body_content()
     {

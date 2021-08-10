@@ -146,6 +146,20 @@ class WebDispatch
                 $stylesheets .= "<link rel=\"stylesheet\" href=\"$file_url\" type=\"text/css\">";
             }
         }
+        $basename = basename($_SERVER['PHP_SELF']);
+        $codemirror = '';
+        if ($basename === "DBA.php") {
+            $codemirror = <<<HTML
+<link rel="stylesheet" href="../../common/codemirror/lib/codemirror.css">
+    <link rel="stylesheet" href="../../common/codemirror/addon/dialog/dialog.css">
+    <script src="../../common/codemirror/lib/codemirror.js"></script>
+    <script src="../../common/codemirror/addon/dialog/dialog.js"></script>
+    <script src="../../common/codemirror/addon/search/searchcursor.js"></script>
+    <script src="../../common/codemirror/mode/clike/clike.js"></script>
+    <script src="../../common/codemirror/addon/edit/matchbrackets.js"></script>
+    <script src="../../common/codemirror/keymap/vim.js"></script>
+HTML;
+        }
 
         return <<<HTML
 <html>
@@ -165,6 +179,7 @@ class WebDispatch
     <link rel="icon" href="http://{$MY_ROOTDIR}/common/src/icons/scannie_favicon.ico">
     <link rel="stylesheet" href="http://{$MY_ROOTDIR}/common/css/commonInterface.css?reload=always">
     $stylesheets
+    $codemirror
 <style>
 {$this->cssContent()}
 </style>

@@ -12,8 +12,8 @@ class admin
             echo "# createSv2UsrPwd requires one argument\r\n";
         } else {
             $password = $pw;
-            $options = [ 'cost' => 10, ];
-            echo $hash = password_hash($password, PASSWORD_BCRYPT, $options);
+            $options = [ 'cost' => 10 ];
+            echo $hash = password_hash($password, PASSWORD_BCRYPT, $options) . "\r\n";
         }
 
         return false;

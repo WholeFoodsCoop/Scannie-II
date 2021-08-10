@@ -29,9 +29,9 @@ if (!class_exists('SQLManager')) {
 class MarginCalculator extends PageLayoutA 
 {
     
-    protected $title = "Margin Calculator";
-    protected $description = "[] ";
-    protected $ui = FALSE;
+    public $title = "Margin Calculator";
+    public $description = "[] ";
+    public $ui = FALSE;
 
     public function preprocess()
     {
@@ -42,6 +42,9 @@ class MarginCalculator extends PageLayoutA
 
     public function pageContent()
     {           
+        $cost = (!isset($cost)) ? null : $cost;
+        $markup = (!isset($markup)) ? null : $markup;
+        $dept_marg = (!isset($dept_marg)) ? null : $dept_marg;
     
         $ret = "";
         $ret .= '

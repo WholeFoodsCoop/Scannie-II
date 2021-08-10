@@ -337,7 +337,9 @@ HTML;
         if ($dbc->error()) $ret .= '<div class="alert alert-danger">'.$dbc->error().'</div>';
         while ($row = $dbc->fetchRow($resD)) {
             foreach ($fields as $field) {
-                $itemD[$row['upc']][$field] = $row[$field];
+                if ($field != 'super_name') {
+                    $itemD[$row['upc']][$field] = $row[$field];
+                }
             }
         }
 
@@ -514,7 +516,9 @@ HTML;
                     WHERE method = 'badPriceCheck'   
                         AND page = 'Dashboard'
                 )
-                AND (normal_price = 0 OR normal_price > 129.99 OR normal_price < cost)
+                AND (
+                    normal_price = 0 AND cost <> 0
+                    OR normal_price > 129.99 OR normal_price < cost)
                 AND last_sold is not NULL
                 AND wicable = 0
                 AND m.superID IN (1,3,13,9,4,8,17,5,18) 

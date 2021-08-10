@@ -57,7 +57,7 @@ class PendingAction extends PageLayoutA
         }
 
         if ($addItem = str_pad(FormLib::get('addItem', false), 13, 0, STR_PAD_LEFT)) {
-            $note = $_POST['note'];
+            $note = (isset($_POST['note'])) ? $_POST['note'] : "";
             $args = array($addItem,$note,$storeID,$note);
             $prep = $dbc->prepare("INSERT INTO woodshed_no_replicate.exceptionItems 
                 (upc,note,timestamp,storeID) VALUES (?,?,NOW(),?) 
