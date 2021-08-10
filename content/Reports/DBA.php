@@ -289,6 +289,10 @@ var getCodeText = function() {
     var text = editor.getValue();    
     return text;
 }
+
+var putCodeText = function(text) {
+    editor.setValue(text);    
+}
         
 $(document).keydown(function(e){
     var key = e.keyCode;
@@ -314,9 +318,8 @@ $(document).mousedown(function(e){
 });
 
 $('.quick_query').click(function(){
-    $('#query').text('');
     var query = $(this).next().text();
-    $('#query').text(query);
+    putCodeText(query);
     $('#submit').trigger('click');
 });
 function stripeByColumn()
