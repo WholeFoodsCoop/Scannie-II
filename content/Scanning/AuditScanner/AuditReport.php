@@ -950,6 +950,7 @@ HTML;
         $this->addOnloadCommand("$('#mytable').tablesorter();");
 
         return <<<HTML
+<div class="container-fluid">
 $modal
 <input type="hidden" name="keydown" id="keydown"/>
 <form id="page-info" style="display: none">
@@ -1074,6 +1075,8 @@ $columnCheckboxes
 
 <div id="mytable-container">
     {$this->postFetchHandler()}
+</div>
+
 </div>
 HTML;
     }
