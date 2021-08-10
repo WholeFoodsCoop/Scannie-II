@@ -531,6 +531,7 @@ textarea.form-control {
 .CodeMirror {
     font-family: consolas, monospace;
     font-size: 12px;
+    border: 1px solid lightgrey;
 }
 HTML;
     }

@@ -20,6 +20,7 @@ class newpage extends PageLayoutA
         6 => 'Cap-Signs',
         9 => 'Disco/Supplies Last',
         11 => 'Edited',
+        97 => 'Notes',
         98 => 'DNC',
         99 => 'Main Menu',
     );
@@ -156,6 +157,11 @@ HTML;
                 WHERE inQueue IN ($in_str) AND storeID = ? AND session = ?");
             $res = $dbc->execute($prep, $args);
             
+        } elseif ($queue == 97) {
+            $args = array($storeID, $session);
+            $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.batchCheckNotes
+                WHERE storeID = ? AND session = ?");
+            $res = $dbc->execute($prep, $args);
         } else {
             $args = array($storeID, $session, $queue);
             $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.batchCheckQueues

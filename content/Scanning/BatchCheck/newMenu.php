@@ -7,9 +7,9 @@ if (!class_exists('SQLManager')) {
 }
 class newMenu extends PageLayoutA
 {
-    protected $title = "Batch Check Menu";
-    protected $description = "[] ";
-    protected $ui = true;
+    public $title = "Batch Check Menu";
+    public $description = "[] ";
+    public $ui = true;
 
     public function preprocess()
     {
