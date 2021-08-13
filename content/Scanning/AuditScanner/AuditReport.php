@@ -540,7 +540,8 @@ class AuditReport extends PageLayoutA
                     WHEN p.local = 0 THEN ''
                     WHEN p.local = 1 THEN 'SC'
                     WHEN p.local = 2 THEN 'MN/WI'
-                END AS local
+                END AS local,
+                fslv.sections AS floorSections
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -556,6 +557,7 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN productCostChanges AS c ON p.upc=c.upc
                 LEFT JOIN subdepts ON subdepts.subdept_no=p.subdept AND subdepts.dept_ID=p.department
                 LEFT JOIN prodFlagsListView AS pf ON pf.upc=p.upc AND pf.storeID=p.store_id
+                LEFT JOIN FloorSectionsListView AS fslv ON fslv.upc=p.upc AND fslv.storeID=p.store_id
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
                 AND p.store_id = ?
@@ -598,6 +600,7 @@ class AuditReport extends PageLayoutA
             <td title=\"scaleItem\" data-column=\"scaleItem\"class=\"scaleItem column-filter\"></td>
             <td title=\"reviewed\" data-column=\"reviewed\"class=\"reviewed column-filter\"></td>
             <td title=\"costChange\" data-column=\"costChange\"class=\"costChange column-filter\"></td>
+            <td title=\"floorSections\" data-column=\"floorSections\"class=\"floorSections column-filter\"></td>
             <td title=\"notes\" data-column=\"notes\"class=\"notes column-filter\"></td>
             <td title=\"check\" data-column=\"check\" class=\"check column-filter\"></td>
             <td title=\"unknown\" data-column=\"unknown\" class=\"unknown column-filter\"></td>
@@ -633,6 +636,7 @@ class AuditReport extends PageLayoutA
             <th class=\"scaleItem\">scale</th>
             <th class=\"reviewed\">reviewed</th>
             <th class=\"costChange\">last cost change</th>
+            <th class=\"floorSections\">floor sections</th>
             <th class=\"notes\">notes</th>
             <th class=\"check\"></th>
             <th class=\"\"></th>
@@ -701,6 +705,7 @@ class AuditReport extends PageLayoutA
             $units = $row['units'];
             $costChangeDate = $row['costChangeDate'];
             $costChange = $row['costChange'];
+            $floorSections = $row['floorSections'];
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku editable editable-sku\">$sku</td>";
@@ -739,6 +744,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"reviewed\">$reviewed</td>";
             $oper = ($costChange > 0) ? '+' : '-';
             $td .= "<td class=\"costChange\">$oper$costChange - $costChangeDate</td>";
+            $td .= "<td class=\"floorSections\">$floorSections</td>";
             $td .= "<td class=\"notes editable editable-notes\">$notes</td>";
             $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td></td>";
             $td .= "<td class=\"check\"><input type=\"checkbox\" name=\"check\" class=\"row-check\" $checked/></td>";
@@ -895,7 +901,7 @@ HTML;
 
         $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
             'price', 'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed',
-            'costChange');
+            'costChange', 'floorSections');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         $i = count($columns) - 1;
         foreach ($columns as $column) {
