@@ -25,15 +25,18 @@ class DBA extends PageLayoutA
 
         return <<<HTML
 <div class="row">
-    <div class="col-lg-10">
+    <div class="col-lg-10" id="col-1">
         <span id="filter-options"></span>
         <div id="response"></div>
     </div>
-    <div class="col-lg-2">
+    <div class="col-lg-2" id="col-2">
         <div class="form-group">
             <form><textarea id="code" name="code"></textarea></form>
             <div style="display: none;">Key buffer: <span id="command-display"></span></div>
             <div style="display: none;">Vim mode: <span id="vim-mode"></span>
+        </div>
+        <div onclick="expandTextArea();" style="position: relative; z-index: 999; user-select: none;">
+            <span class="scanicon scanicon-expand" style="position: absolute; top: -42; right: 0">&nbsp;</span>
         </div>
         <div class="form-group">
             <button id="submit" class="form-control btn btn-default">Submit</button>
@@ -46,8 +49,27 @@ class DBA extends PageLayoutA
         <h4>Saved Queries</h4>
         <input type="text" id="saved-queries-filter" class="form-control form-control-sm small">
         <ul style="font-size: 12px" id="saved-queries">
+            <li><a href='#' class="quick_query">Cleanup Brand Names</a>
+                <span class="query">SELECT u.brand, u.description, p.brand, p.description, p.upc
+FROM batchList AS b 
+LEFT JOIN products AS p ON b.upc=p.upc
+LEFT JOIN productUser AS u ON p.upc=u.upc
+WHERE b.batchID BETWEEN 17272 AND 17291
+GROUP BY p.upc
+ORDER BY p.brand</span>
+            </li>
             <li><a href='#' class="quick_query">Get Alberts Price File</a>
                 <span class="query">SELECT * FROM woodshed_no_replicate.AlbertsFileView</span>
+            </li>
+            <li><a href='#' class="quick_query">Get Bulk Herbs</a>
+                <span class="query">SELECT f.upc,
+p.brand, p.description,
+ROUND(p.auto_par*7, 1) AS denPar
+FROM FloorSectionProductMap AS f
+LEFT JOIN products AS p ON f.upc=p.upc
+WHERE floorSectionID = 49
+GROUP BY f.upc
+ORDER BY p.description</span>
             </li>
             <li><a href='#' class="quick_query">Get Bulk Sale Items</a>
                 <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
@@ -128,6 +150,21 @@ AND m.super_name NOT IN ('WELLNESS', 'BULK', 'PRODUCE','BREAD','DELI','GEN MERCH
 GROUP BY i.upc
 ORDER BY m.super_name
                 </span>
+            </li>
+            <li><a href='#' class="quick_query">Get Products In Floor Section</a>
+                <span class="query">
+
+SELECT p.upc, brand, description, 
+ROUND(p.auto_par * 7, 2)
+FROM products AS p 
+LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
+LEFT JOIN FloorSectionProductMap AS f ON p.upc=f.upc
+WHERE superID = 1
+AND f.floorSectionID = 49 
+AND ROUND(p.auto_par * 7, 2) > 0.5
+GROUP BY p.upc
+ORDER BY auto_par DESC
+</span>
             </li>
             <li><a href='#' class="quick_query">Get Review-Comments</a>
                 <span class="query">SELECT v.vendorName, r.upc, p.default_vendor_id AS vendorID, p.brand, p.description,
@@ -261,7 +298,6 @@ HTML;
     {
         return <<<JAVASCRIPT
 // codemirror start
-CodeMirror.commands.save = function(){ alert("Saving"); };
 var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
     lineNumbers: true,
     mode: "text/x-csrc",
@@ -289,6 +325,21 @@ var getCodeText = function() {
     var text = editor.getValue();    
     return text;
 }
+const downloadToFile = (content, filename, contentType) => {
+    const a = document.createElement('a');
+    const file = new Blob([content], {type: contentType});
+
+    a.href= URL.createObjectURL(file);
+    a.download = filename;
+    a.click();
+
+    URL.revokeObjectURL(a.href);
+};
+CodeMirror.commands.save = function(){ 
+    let text = getCodeText();
+    let filename = prompt("Save file as");
+    downloadToFile(text, filename+'.txt', 'text/plain');
+};
 
 var putCodeText = function(text) {
     editor.setValue(text);    
@@ -505,6 +556,22 @@ $('#saved-queries-filter').keyup(function(){
     }
 });
 
+var expandTextArea = function() {
+    let col1 = $('#col-1');
+    let col2 = $('#col-2');
+    if (col1.hasClass('col-lg-10')) {
+        col1.removeClass('col-lg-10')
+            .addClass('col-lg-2');
+        col2.removeClass('col-lg-2')
+            .addClass('col-lg-10');
+    } else {
+        col2.removeClass('col-lg-10')
+            .addClass('col-lg-2');
+        col1.removeClass('col-lg-2')
+            .addClass('col-lg-10');
+    }
+};
+
 JAVASCRIPT;
     }
 
@@ -535,6 +602,12 @@ textarea.form-control {
     font-family: consolas, monospace;
     font-size: 12px;
     border: 1px solid lightgrey;
+}
+.scanicon-expand {
+    background-image: url('http://key/Scannie/common/src/img/icons/expandIcon-small.png');
+    background-repeat: no-repeat;
+    display: inline-block;
+    height: 25px;
 }
 HTML;
     }
