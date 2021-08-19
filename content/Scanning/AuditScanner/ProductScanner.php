@@ -278,7 +278,7 @@ HTML;
         }
         $dbc = scanLib::getConObj();
         $username = scanLib::getUser();
-        $response = $_GET['success'];
+        $response = (isset($_GET['success'])) ? $_GET['success'] : false;
         $newscan = $_POST['success'];
         if ($response && $newscan != 'empty') {
             if ($response == TRUE) {
@@ -305,8 +305,11 @@ HTML;
             }
         }
         $upc = scanLib::upcPreparse($upc);
+        if ($upc == 0) {
+            return $this->form_content($isSocketDevice);
+        }
 
-        $loading .= '
+        $loading = '
             <div class="progress" id="progressBar">
                 <div class="progress-bar progress-bar-striped active" role="progressbar"
                     aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width:100%">
@@ -359,15 +362,17 @@ HTML;
             </style>";
         }
         $saleInfoStr = '';
-        foreach ($batchList['price'] as $k => $v) {
-            $saleInfoStr .= '
-                <span class="sm-label">PRICE: </span>$<span class="text-sale">'.$v.'</span>
-                <span class="sm-label">ID: </span>'.$batchList['batchID'][$k].'<br />
-                <span class="sm-label">BATCH: </span>'.$batchList['batchName'][$k].'
-                <br /><br />
-                <div style="border: 1px solid lightrgba(255,255,255,0.6); width: 20vw"></div>
-                <br />
-            ';
+        if (isset($batchList['price'])) {
+            foreach ($batchList['price'] as $k => $v) {
+                $saleInfoStr .= '
+                    <span class="sm-label">PRICE: </span>$<span class="text-sale">'.$v.'</span>
+                    <span class="sm-label">ID: </span>'.$batchList['batchID'][$k].'<br />
+                    <span class="sm-label">BATCH: </span>'.$batchList['batchName'][$k].'
+                    <br /><br />
+                    <div style="border: 1px solid lightrgba(255,255,255,0.6); width: 20vw"></div>
+                    <br />
+                ';
+            }
         }
 
         //Gather product information
@@ -706,10 +711,8 @@ HTML;
         $ret .= '
                 </div>
             </div>';
-        $touchicon = "<img class=\"scanicon-pointer\" src=\"../../../common/src/img/icons/pointer-light.png\"
-            style=\"margin-left: 20px; margin-top: -5px;\"/>";
         $count = $this->getCount($dbc, $storeID, $username);
-        $ret .= '<div class="counter"><span id="counter">'.$count.'</span>'.$touchicon.'</div>';
+        $ret .= '<div class="counter"><span id="counter">'.$count.'</span></div>';
 
         $ret .= '<br /><br /><br /><br /><br /><br />';
         $this->addOnloadCommand("$('#progressBar').hide();");
@@ -746,9 +749,18 @@ HTML;
             $upc = substr(FormLib::get('upc'), 0, -1);
         }
         $upc = ScanLib::upcPreparse($upc);
-        $ret .= '';
+        $ret = '';
+        $startupSpace = ($upc == 0) ? "<div style=\"padding-top: 25px;\"></div>" : "";
+        $startupBtn = ($upc == 0) ? "<div class=\"form-group\" style=\"padding-top: 25px;\"><button class=\"btn btn-default\">Submit</button></div>" : "";
+        $greeting = ($upc == 0) ? "<div style=\"padding-top: 25px;\" align=\"center\">
+            <h3>Audie 2.0</h3>
+            <h5>The Audit Scanner</h5>
+            <h6>by Corey Sather</h6>
+            <h6>&copy; Whole Foods Community Co-op 2021</h6>
+            </div>" : "";
         $ret .= '
             <div align="center">
+                '.$startupSpace.'
                 <form method="post" class="" id="my-form" name="main_form">
                     <input class="form-control input-sm info" name="upc" id="upc" value="'.$upc.'" '.$autofocus.' 
                         style="text-align: center; width: 140px; border: none;" pattern="\d*">
@@ -756,8 +768,10 @@ HTML;
                     <input type="hidden" name="success" value="empty"/>
                     <span id="auto_par" class="sm-label"></span><span id="par_val" class="norm-text"></span>
                     <!-- <button type="submit" class="btn btn-xs"><span class="go-icon"></span></button> -->
+                    '.$startupBtn.'
                 </form>
             </div>
+            '.$greeting.'
         ';
 
         return $ret;
@@ -1167,7 +1181,6 @@ HTML;
 </div>
 <div id="floor-section-edit">
     <div id="floor-section-edit-close" onclick="$('#floor-section-edit').hide();">X</div>
-    $select
     $sections
 </div>
 HTML;
