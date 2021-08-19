@@ -281,3 +281,9 @@ $('#submit-note').click(function(){
     queueNote();
 });
 
+$('#upc').focus(function(){
+    $(this).select();
+});
+$('#upc').focusout(function(){
+    $(this).closest('form').submit();
+});
