@@ -116,6 +116,10 @@ class Dashboard extends PageLayoutA
                 'ranges' => array(1, 10, 999),
             ),
             array(
+                'handler' => self::organicDesc($dbc),
+                'ranges' => array(1, 10, 9999),
+            ),
+            array(
                 'handler' => self::getZeroScaleItems($dbc),
                 'ranges' => array(1, 10, 9999),
             ),
@@ -488,6 +492,59 @@ HTML;
         while ($row = $dbc->fetchRow($r)) {
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
         }
+
+        $p = $dbc->prepare("SELECT upc, brand, description, numflag 
+            FROM products AS p 
+                LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
+            WHERE brand LIKE '%organic%' 
+                AND superID <> 6 
+                AND NOT numflag & (1<<16) <> 0;");
+        $r = $dbc->execute($p);
+        while ($row = $dbc->fetchRow($r)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+        }
+
+        $p = $dbc->prepare("SELECT p.upc, p.brand, p.description, p.numflag 
+            FROM products AS p 
+                LEFT JOIN productUser AS u ON p.upc=u.upc
+                LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
+            WHERE u.description LIKE '%organic%' 
+                AND superID <> 6 
+                AND NOT numflag & (1<<16) <> 0;");
+        $r = $dbc->execute($p);
+        while ($row = $dbc->fetchRow($r)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+        }
+
+        if ($er = $dbc->error()) echo "<div class='alert alert-danger'>$er</div>";
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
+    static function organicDesc($dbc)
+    {
+        $count = 0;
+        $desc = 'Products Missing Organic In Sign Description';
+        $cols = array('upc', 'brand', 'ubrand', 'description', 'udescription', 'numflag');
+        $data = array();
+
+        $p = $dbc->prepare("SELECT p.upc, p.brand AS brand, u.brand AS ubrand, 
+                p.description AS description, u.description AS udescription, flags AS numflag
+            FROM products AS p 
+                LEFT JOIN productUser AS u ON p.upc=u.upc
+                LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
+                LEFT JOIN prodFlagsListView AS v ON p.upc=v.upc
+            WHERE p.brand NOT LIKE '%organic%' 
+                AND u.description NOT LIKE '%organic%'
+                AND superID <> 6 
+                AND p.inUse = 1
+                AND numflag & (1<<16) <> 0;");
+        $r = $dbc->execute($p);
+        while ($row = $dbc->fetchRow($r)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+        }
+
         if ($er = $dbc->error()) echo "<div class='alert alert-danger'>$er</div>";
 
         return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
