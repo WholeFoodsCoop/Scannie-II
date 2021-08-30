@@ -541,7 +541,8 @@ class AuditReport extends PageLayoutA
                     WHEN p.local = 1 THEN 'SC'
                     WHEN p.local = 2 THEN 'MN/WI'
                 END AS local,
-                fslv.sections AS floorSections
+                fslv.sections AS floorSections,
+                pr.comment
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -601,6 +602,7 @@ class AuditReport extends PageLayoutA
             <td title=\"reviewed\" data-column=\"reviewed\"class=\"reviewed column-filter\"></td>
             <td title=\"costChange\" data-column=\"costChange\"class=\"costChange column-filter\"></td>
             <td title=\"floorSections\" data-column=\"floorSections\"class=\"floorSections column-filter\"></td>
+            <td title=\"comment\" data-column=\"comment\"class=\"comment column-filter\"></td>
             <td title=\"notes\" data-column=\"notes\"class=\"notes column-filter\"></td>
             <td title=\"check\" data-column=\"check\" class=\"check column-filter\"></td>
             <td title=\"unknown\" data-column=\"unknown\" class=\"unknown column-filter\"></td>
@@ -637,6 +639,7 @@ class AuditReport extends PageLayoutA
             <th class=\"reviewed\">reviewed</th>
             <th class=\"costChange\">last cost change</th>
             <th class=\"floorSections\">floor sections</th>
+            <th class=\"comments\">review comments</th>
             <th class=\"notes\">notes</th>
             <th class=\"check\"></th>
             <th class=\"\"></th>
@@ -706,6 +709,7 @@ class AuditReport extends PageLayoutA
             $costChangeDate = $row['costChangeDate'];
             $costChange = $row['costChange'];
             $floorSections = $row['floorSections'];
+            $reviewComments = $row['comment'];
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku editable editable-sku\">$sku</td>";
@@ -745,6 +749,7 @@ class AuditReport extends PageLayoutA
             $oper = ($costChange > 0) ? '+' : '-';
             $td .= "<td class=\"costChange\">$oper$costChange - $costChangeDate</td>";
             $td .= "<td class=\"floorSections\">$floorSections</td>";
+            $td .= "<td class=\"comments\">$reviewComments</td>";
             $td .= "<td class=\"notes editable editable-notes\">$notes</td>";
             $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td></td>";
             $td .= "<td class=\"check\"><input type=\"checkbox\" name=\"check\" class=\"row-check\" $checked/></td>";
@@ -901,7 +906,7 @@ HTML;
 
         $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
             'price', 'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed',
-            'costChange', 'floorSections');
+            'costChange', 'floorSections', 'comments');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         $i = count($columns) - 1;
         foreach ($columns as $column) {
@@ -1066,7 +1071,7 @@ $columnCheckboxes
                     </div>
                     <div class="col-lg-3">
                         <div class="form-group">
-                            <button id="clear" class="btn btn-default btn-sm small form-control">CL</button>
+                            <button id="clear" class="btn btn-default btn-sm small form-control" style="font-size: 10px">CL</button>
                         </div>
                     </div>
                 </div>
@@ -1364,10 +1369,10 @@ $('.row-check').click(function(){
     var strpercent = '';
     var i = 0
     for (i; i < percent; i += 10) {
-        strpercent += '<span style="color: lightgreen;">&#9608;</span>';
+        strpercent += '<span style="color: lightgreen; border: 1px solid grey;">&#9608;</span>';
     }
     for (i; i < 100; i += 10) {
-        strpercent += '<span style="color: grey;">&#9608;</span>';
+        strpercent += '<span style="color: grey; border: 1px solid grey;">&#9608;</span>';
     }
     $('#percentComplete').html(Math.round(percent, 4) + '% Complete ' + strpercent);
 });
