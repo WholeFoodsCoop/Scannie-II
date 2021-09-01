@@ -798,6 +798,9 @@ $(document).ready(function(){
         beep.play();
     }
 });
+$('#upc').focusin(function(){
+    $(this).select();
+});
 JAVASCRIPT;
     }
 
