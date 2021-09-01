@@ -1,6 +1,4 @@
-<?php 
-if (!class_exists('PageLayoutA')) {
-    include(__DIR__.'/../../PageLayoutA.php');
+<?php if (!class_exists('PageLayoutA')) { include(__DIR__.'/../../PageLayoutA.php');
 }
 if (!class_exists('SQLManager')) {
     include_once(__DIR__.'/../../../common/sqlconnect/SQLManager.php');
@@ -24,7 +22,8 @@ class newpage extends PageLayoutA
         98 => 'DNC',
         99 => 'Main Menu',
     );
-    protected $batchColors = array(
+    protected $batchColors = array( 
+        0 => 'white',
         1 => 'green',
         2 => 'orange',
         11 => 'red',
@@ -241,7 +240,7 @@ HTML;
                     LEFT JOIN products AS p ON bl.upc=p.upc 
                     LEFT JOIN productUser AS pu ON p.upc=pu.upc 
                     LEFT JOIN batches AS b ON bl.batchID=b.batchID 
-                    INNER JOIN FloorSectionsListView AS f ON p.upc=f.upc AND p.store_id=f.storeID 
+                    LEFT JOIN FloorSectionsListView AS f ON p.upc=f.upc AND p.store_id=f.storeID 
                     LEFT JOIN StoreBatchMap AS sbm ON b.batchID=sbm.batchID AND p.store_id=sbm.storeID
                     LEFT JOIN woodshed_no_replicate.batchCheckQueues AS q ON bl.upc=q.upc
                         AND q.storeID=p.store_id AND q.session=?
@@ -421,21 +420,32 @@ HTML;
         $td = '';
         foreach ($data as $upc => $row) {
             if (isset($row['upc'])) {
-                $batchID = $row['batchID'];
+                $batchID = (isset($row['batchID'])) ? $row['batchID'] : 0;
                 $upc = $row['upc'];
                 $queues = '';
-                $start = substr($row['startDate'], 0, 10);
-                $end = substr($row['endDate'], 0, 10);
-                $extraData = "
-[lastsold]   {$row['last_sold']}\r\n
-[batch]      {$row['batchName']}\r\n
-[size]         {$row['size']}\r\n
-[pos]          {$row['brand']}\r\n
-[pos]          {$row['description']}\r\n
-[sign]         {$row['ubrand']}\r\n
-[sign]         {$row['udesc']}\r\n
-[start]        {$start}          [end] {$end}\r\n
-                ";
+                $start = (isset($row['startDate'])) ? substr($row['startDate'], 0, 10) : '';
+                $end = (isset($row['endDate'])) ? substr($row['endDate'], 0, 10) : '';
+
+                $lastSold = (isset($row['last_sold'])) ? $row['last_sold'] : null;
+                $batchName = (isset($row['batchName'])) ? $row['batchName'] : null;
+                $size = (isset($row['size'])) ? $row['size'] : null;
+                $brand = (isset($row['brand'])) ? $row['brand'] : null;
+                $description = (isset($row['description'])) ? $row['description'] : null;
+                $ubrand = (isset($row['ubrand'])) ? $row['ubrand'] : null;
+                $udesc = (isset($row['udesc'])) ? $row['udesc'] : null;
+                $batchType = (isset($row['batchType'])) ? $row['batchType'] : 0;
+                $salePrice = (isset($row['salePrice'])) ? $row['salePrice'] : 0;
+
+                $extraData = <<<HTML
+[lastsold]     $lastSold\r\n
+[batch]        $batchName\r\n
+[size]         $size\r\n
+[pos]          $brand\r\n
+[pos]          $description\r\n
+[sign]         $ubrand\r\n
+[sign]         $udesc\r\n
+[start]        $start          [end] $end\r\n
+HTML;
                 if (isset($row['queues'])) {
                     if (is_array($row['queues'])) {
                         foreach ($row['queues'] as $queued) {
@@ -445,14 +455,17 @@ HTML;
                     }
                     
                 }
+                $row['floorsection'] = (isset($row['floorsection'])) ? $row['floorsection'] : '';
                 $upcLink = "<a href=\"http://{$_SERVER['HTTP_HOST']}/git/fannie/item/ItemEditorPage.php?searchupc=$upc\" target=\"_blank\">{$upc}</a>";
-                $note = ($row['note']) ? $row['note'] : '';
+                $note = (isset($row['note'])) ? $row['note'] : '';
                 $noteChr = ($note != '') ? ' <i style="color: white; border-radius: 50%; background: purple; padding: 1px; font-weight: bold;">+n</i>' : '';
-                $dealCol = $this->batchColors[$row['batchType']];
+                $dealCol = $this->batchColors[$batchType];
                 $dealDot = "<span style='background-color: $dealCol; border-radius: 50%; 
                         display: inline-block; height: 5px; width: 5px;'>&nbsp</span>";
-                $dealDot .= ($this->storeBatchMap[$batchID] == 1) ? " <span style='background-color: blue; transform: rotateY(0deg) rotate(45deg);
+                if (isset($this->storeBatchMap[$batchID])) {
+                    $dealDot .= ($this->storeBatchMap[$batchID] == 1) ? " <span style='background-color: blue; transform: rotateY(0deg) rotate(45deg);
                         display: inline-block; height: 5px; width: 5px;'>&nbsp</span>" : '';
+                }
                 $td .= sprintf("
                     <tr data-lastsold=\"%s\">
                     <td width='110px;'>%s</td>
@@ -467,14 +480,14 @@ HTML;
                     <td class=\"tc-unch\"><button id='queue%s' value='0' class='queue-btn btn btn-default btn-sm'>Unch</button></td>
                     <td class=\"tc-clear\"><button id='queue%s' value='%s' class='queue-btn btn btn-danger btn-sm'>Clear</button></td>
                     </tr>",
-                    $row['last_sold'],
+                    $lastSold,
                     $upcLink,
-                    $brand = ($row['ubrand']) ? $row['ubrand'] : $row['brand'],
-                    $note, $note, $desc = ($row['udesc']) ? $row['udesc'] . $noteChr : $row['description'] . $noteChr,
-                    $extraData, $extraData, $row['salePrice'], $dealDot,
+                    $brand = ($ubrand != null) ? $ubrand : $brand,
+                    $note, $note, $desc = ($udesc != null) ? $udesc . $noteChr : $description . $noteChr,
+                    $extraData, $extraData, $salePrice, $dealDot,
                     $row['floorsection'], 
                     $queues,
-                    $row['upc'],$row['upc'],$row['upc'],$row['upc'],$row['upc'],$queue
+                    $upc, $upc, $upc, $upc, $upc, $queue
                 );
             }
         }

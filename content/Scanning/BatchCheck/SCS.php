@@ -548,8 +548,10 @@ HTML;
             $fields = array('upc','brand','pbrand','pdesc','pudesc','pubrand','size','special_price','sections');
             while ($row = $dbc->fetchRow($res)) {
                 foreach ($fields as $field) {
-                    ${$field} = $row[$field];
-                    $this->data[$upc][$field] = $row[$field];
+                    if (isset($row[$field])) {
+                        ${$field} = $row[$field];
+                        $this->data[$upc][$field] = $row[$field];
+                    }
                 }
             }
         }
@@ -598,7 +600,23 @@ HTML;
             $upc = $this->skuToUpc($upc);
         }
         $upc = scanLib::upcPreparse($upc);
+        if ($upc == 0) {
+            return <<<HTML
+<div align="center" id="grandparent">
+    <form class="form-inline" id="upcForm" name="upcForm" method="post">
+        <div class="form-group" align="center">
+            <input type="text" class="form-control" id="upc" name="upc" pattern="\d*" 
+                value="$upc" placeholder="upc">
+        </div>
+    </form>
+</div>
+HTML;
+        }
+
         $storeID = $_SESSION['storeID'];
+        $queued = array();;
+        if (!isset($this->queues))
+            $this->queues = array();
 
         $this->setInUse($dbc, $upc, $storeID);
 
@@ -636,14 +654,13 @@ HTML;
         $brand = (isset($this->data[$upc]['pubrand']) && $this->data[$upc]['pubrand'] != '') ? $this->data[$upc]['pubrand'] : $this->data[$upc]['pbrand'];
         $retQueued = '';
         $size = $this->data[$upc]['size']; 
-        $batch = $this->data[$upc]['batchName']; 
-        $sale = '$'.$this->data[$upc]['salePrice'];
+        $batch = (isset($this->data[$upc]['batchName'])) ? $this->data[$upc]['batchName'] : '';
+        $sale = (isset($this->data[$upc]['salePrice'])) ? '$'.$this->data[$upc]['salePrice'] : '';
         $numBatches = count($this->batches);
         $editFields = array('name','brand','size');
         $notes = 'n/a';
 
-        $location = 'n/a';
-        $location = (!is_null($this->data[$upc]['sections'])) ? $this->data[$upc]['sections'] : 'n/a';
+        $location = (isset($this->data[$upc]['sections'])) ? $this->data[$upc]['sections'] : 'n/a';
 
         $args = array($upc,$session,$storeID);
         $prep = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.batchCheckNotes WHERE upc = ? AND session = ? AND storeID = ?");
@@ -674,6 +691,7 @@ HTML;
         foreach ($queued as $id => $queue) {
             $retQueued .= "<div class='showQueue btn btn-$queues[$queue]' id='id$id'>$queue</div>";
         }
+        $bkgstyle = "";
         if ($this->data[$upc]['special_price'] == 0.00) {
             $curPrice = "Not On Sale";    
             $batchData = '<div class="line"></div>';
