@@ -271,6 +271,16 @@ m.floorSectionID = 8
 AND p.inUse = 1
 GROUP BY upc
             </li>
+            <li><a href='#' class="quick_query">Get Vendors Reviewed Last Month</a>
+                <span class="query">SELECT l.bid, DATE(l.created) AS created, DATE(l.forced) AS forced,
+v.vendorName, v.vendorID
+FROM batchReviewLog AS l 
+LEFT JOIN vendors AS v ON l.vid=v.vendorID
+WHERE forced >= '2021-07-30'
+AND forced <= '2021-09-01'
+GROUP BY vendorID
+ORDER BY bid</span>
+            </li>
             <li><a href='#' class="quick_query">Review Sale Sign Info Info</a>
                 <span class="query">
 SELECT u.brand, p.brand, p.department, bl.upc, bl.salePrice, bl.batchID,  p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
