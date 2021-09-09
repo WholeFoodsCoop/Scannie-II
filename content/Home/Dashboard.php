@@ -396,7 +396,7 @@ HTML;
         $diffR = $dbc->query("
             SELECT upc, description
             FROM products
-            WHERE inUse = 1
+            WHERE inUse IN (0,1)
                 AND brand NOT IN (
                     'BOLTHOUSE FARMS', 
                     'BEETOLOGY',
