@@ -1057,6 +1057,7 @@ $columnCheckboxes
                     </div>
                     <div>
                         <p id="avgAnswer" style="font-size: 12px;"></p>
+                        <p id="stdevAnswer" style="font-size: 12px;"></p>
                     </div>
             </div>
         </div>
@@ -1723,6 +1724,7 @@ $(window).load(function(){
 window.onload = function() {startup = 0;};
 
 $('#avgCalc').focusout(function(){
+    // find average
     let text = $(this).val();
     let args = text.split('\\n');
     let total = 0;
@@ -1730,13 +1732,29 @@ $('#avgCalc').focusout(function(){
         total += parseFloat(args[i], 10);
     }
     let answer = total / args.length;
-    console.log(total);
-    console.log(answer);
+    let mean = answer;
+
+    // find stdev
+    let xi = 0;
+    for (let i=0; i < args.length; i++) {
+        let x = parseFloat(args[i]); 
+        let p = x - mean;
+        p = Math.pow(p, 2);
+        xi += p;
+    }
+    let xi_mean = xi / (args.length - 1);
+    let stddev = Math.sqrt(xi_mean)
+
+    answer = 'AVERG: ' + answer; 
+    stddev = "STDEV: " + stddev;
     if (answer) {
         $('#avgAnswer').text(answer);
+        $('#stdevAnswer').text(stddev);
     } else {
         $('#avgAnswer').text('');
+        $('#stdevAnswer').text('');
     }
+
 });
 
 $('#prevent-default').click(function(e) {
