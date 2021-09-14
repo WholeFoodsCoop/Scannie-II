@@ -535,8 +535,8 @@ HTML;
                 LEFT JOIN productUser AS u ON p.upc=u.upc
                 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
                 LEFT JOIN prodFlagsListView AS v ON p.upc=v.upc
-            WHERE p.brand NOT LIKE '%organic%' 
-                AND u.description NOT LIKE '%organic%'
+            WHERE UPPER(p.brand) NOT LIKE '%ORGANIC%' 
+                AND UPPER(u.description) NOT LIKE '%ORGANIC%'
                 AND superID <> 6 
                 AND p.inUse = 1
                 AND numflag & (1<<16) <> 0;");
