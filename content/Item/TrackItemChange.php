@@ -90,7 +90,7 @@ class TrackItemChange extends PageLayoutA
 
         $data = array();
         $td = ""; $i = 0;
-        $skips = array('updateType', 'storeID', 'modified', 'user');
+        $skips = array('updateType', 'storeID', 'modified' );
         $prep = $dbc->prepare("SELECT updateType, storeID, description, price, salePrice, cost, dept, tax, fs, wic, scale, likeCode, 
             modified, name AS user, forceQty, noDisc, inuse 
             FROM prodUpdate AS p
@@ -135,8 +135,10 @@ class TrackItemChange extends PageLayoutA
                 $td .= "</tr>";
             }
             $show = 0;
+            //$show = 1;
             if ($k !== 0) {
                 $add = '';
+                $teststr = '';
                 foreach ($row as $col => $v) {
                     $test[$k][$col] = 0;
                     if ($v != $data[$k-1][$col] && !in_array($col, $skips)) {
@@ -174,8 +176,10 @@ class TrackItemChange extends PageLayoutA
     <div class="row">
         <div class="col-lg-3">
             <form class="form-inline">
-                <span class="input-group-text" id="basic-addon1">UPC</span> &nbsp;
-                <input type="text" value="$upc" name="upc" class="form-control form-control-sm" />
+                    <span class="input-group-text" id="basic-addon1">UPC</span> &nbsp;
+                    <input type="text" value="$upc" name="upc" id="upc" class="form-control form-control-sm" pattern="\d*" />
+                &nbsp;
+                    <button type="submit" class="btn btn-default btn-sm">Submit</button>
             </form>
         </div>
         <div class="col-lg-4">
@@ -187,14 +191,21 @@ class TrackItemChange extends PageLayoutA
             <div><strong>Last Sold</strong>: $lastSold</div>
         </div>
     </div>
+
     <label style="background: #d8ffd4;" class="form-control">Vendor Items</label>
+    <div class="table-responsive">
     <table class="table table-bordered table-condensed table-sm small"><thead style="background: #d8ffd4;">$thV</thead><tbody>$tdV</tbody></table>
+    </div>
 
     <label style="background: #D4FFFC;" class="form-control">Recent Purchases</label>
+    <div class="table-responsive">
     <table class="table table-bordered table-condensed table-sm small"><thead style="background: #d4fffc;">$thP</thead><tbody>$tdP</tbody></table>
+    </div>
 
     <label style="background: #D4E9FF;" class="form-control">Product Changes</label>
+    <div class="table-responsive">
     <table id="table-changes" class="table table-bordered table-condensed table-sm table-striped small"><thead style="background: #d4e9ff;">$th</thead><tbody>$td</tbody></table>
+    </div>
 </div>
 HTML;
 
@@ -203,6 +214,9 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
+$('#upc').focusin(function(){
+    $(this).select();
+});
 $('#table-changes tr').each(function(){
     let storeID = $(this).find('td:eq(1)').text();
     if (storeID == 2)
