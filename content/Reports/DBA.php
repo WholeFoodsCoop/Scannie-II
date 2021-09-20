@@ -191,13 +191,14 @@ AND store_id = 2 GROUP BY date_id;</span>
             </li>
             <li><a href='#' class="quick_query">Get Vendor Changes</a>
                 <span class="query">SELECT t.upc, v.sku, t.cost as previousCost, p.cost as newCost, (p.cost - t.cost) AS difference,
-p.brand, p.description, p.department as dept, m.super_name, CONCAT(t.upc, ': ', (p.cost - t.cost)) AS report 
+p.brand, p.description, p.department as dept, m.super_name, CONCAT(t.upc, ': ', (p.cost - t.cost)) AS report ,
+(p.cost - t.cost) / t.cost AS perDiff
 FROM woodshed_no_replicate.temp AS t
-    LEFT JOIN is4c_op.products AS p ON t.upc = p.upc
-    LEFT JOIN is4c_op.MasterSuperDepts as m on p.department=m.dept_ID
-    LEFT JOIN is4c_op.vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
+LEFT JOIN is4c_op.products AS p ON t.upc = p.upc
+LEFT JOIN is4c_op.MasterSuperDepts as m on p.department=m.dept_ID
+LEFT JOIN is4c_op.vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
 WHERE (p.cost - t.cost) <> 0
-    AND ABS(p.cost - t.cost) > 0.09
+AND ABS(p.cost - t.cost) > 0.09
 GROUP BY p.upc
 ORDER BY (p.cost - t.cost) ASC;</span>
             </li>
