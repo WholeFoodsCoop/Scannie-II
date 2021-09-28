@@ -62,14 +62,7 @@ ORDER BY p.brand</span>
                 <span class="query">SELECT * FROM woodshed_no_replicate.AlbertsFileView</span>
             </li>
             <li><a href='#' class="quick_query">Get Bulk Herbs</a>
-                <span class="query">SELECT f.upc,
-p.brand, p.description,
-ROUND(p.auto_par*7, 1) AS denPar
-FROM FloorSectionProductMap AS f
-LEFT JOIN products AS p ON f.upc=p.upc
-WHERE floorSectionID = 49
-GROUP BY f.upc
-ORDER BY p.description</span>
+                <span class="query">select m.*, ROUND(p.auto_par*7, 2) AS curPar  from woodshed_no_replicate.bulkHerbMT20210923 as m LEFT JOIN is4c_op.products AS p ON m.upc=p.upc and p.store_id = 2 where ROUND(p.auto_par*7, 2) <> par;</span>
             </li>
             <li><a href='#' class="quick_query">Get Bulk Sale Items</a>
                 <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
@@ -293,6 +286,37 @@ WHERE bl.batchID IN ( SELECT batchID FROM batches WHERE '2020-09-13' BETWEEN sta
 GROUP BY bl.upc
 order by u.brand 
 
+            </li>
+            <li><a href='#' class="quick_query">SIGN ALIAS: Get All SA Items In Batch</a>
+                <span class="query">
+SELECT * FROM 
+woodshed_no_replicate.signAliasMap as s
+LEFT join batchList as b on s.upc=b.upc
+WHERE b.batchID = 18575
+GROUP BY b.upc
+ORDER BY aliasID </span>
+            </li>
+            <li><a href='#' class="quick_query">SIGN ALIAS: Get Groups In Bach </a>
+                <span class="query">
+SELECT * FROM 
+woodshed_no_replicate.signAliasMap as s
+LEFT join batchList as b on s.upc=b.upc
+LEFT join woodshed_no_replicate.signAlias AS a ON s.aliasID=a.aliasID
+WHERE b.batchID = 18575
+GROUP BY a.aliasID
+
+                </span>
+            </li>
+            <li><a href='#' class="quick_query">SIGN ALIAS: Get Non-SA In Batch</a>
+                <span class="query">
+SELECT upc FROM batchList WHERE batchID = 18575 and upc not in (
+    SELECT b.upc FROM 
+    woodshed_no_replicate.signAliasMap as s
+    LEFT join batchList as b on s.upc=b.upc
+    WHERE b.batchID = 18575
+    GROUP BY b.upc
+)
+                </span>
             </li>
         </ul>
         <h4>Additional Features</h4>
