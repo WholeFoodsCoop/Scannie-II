@@ -49,6 +49,16 @@ class DBA extends PageLayoutA
         <h4>Saved Queries</h4>
         <input type="text" id="saved-queries-filter" class="form-control form-control-sm small">
         <ul style="font-size: 12px" id="saved-queries">
+            <li><a href='#' class="quick_query">Check Bulk Herb Movement</a>
+                <span class="query">
+SELECT m.*, ROUND(p.auto_par*7, 2) AS curPar, ROUND(p.auto_par*7, 2) - par  
+FROM woodshed_no_replicate.bulkHerbMT20210923 AS m 
+LEFT JOIN is4c_op.products AS p ON m.upc=p.upc 
+    AND p.store_id = 2 
+WHERE ROUND(p.auto_par*7, 2) <> par 
+ORDER BY ABS(ROUND(p.auto_par*7, 2) - par) DESC;
+                </span>
+            </li>
             <li><a href='#' class="quick_query">Cleanup Brand Names</a>
                 <span class="query">SELECT u.brand, u.description, p.brand, p.description, p.upc
 FROM batchList AS b 
@@ -175,8 +185,12 @@ ORDER BY p.default_vendor_id
                 <span class="query">SELECT plu, price, itemDesc, linkedPLU FROM scaleItems WHERE linkedPLU IN (SELECT upc FROM batchList WHERE batchID = 16411)</span>
             </li>
             <li><a href='#' class="quick_query">Get Single_Item_Movement 90</a>
-                <span class="query">SELECT upc, DATE(tdate), SUM(quantity) FROM is4c_trans.dlog_90_view WHERE upc = '0074599850009' 
-AND store_id = 2 GROUP BY date_id;</span>
+                <span class="query">
+SELECT SUM(itemQtty), DATE(tdate) AS Date, store_id
+FROM is4c_trans.dlog_90_view
+WHERE upc = "0028761000000"
+GROUP BY DATE(tdate)
+                </span>
             </li>
             <li><a href='#' class="quick_query">Get Single_Item_Movement All</a>
                 <span class="query">SELECT upc, DATE(datetime), SUM(quantity), unitPrice FROM trans_archive.bigArchive WHERE upc = '0007349012827' 
