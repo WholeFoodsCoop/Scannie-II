@@ -216,6 +216,14 @@ LEFT JOIN products AS p ON g.upc=p.upc
 WHERE last_sold IS NOT NULL
 AND last_sold > '2020-03-01'</span>
             </li>
+            <li><a href='#' class="quick_query">Get Yesterday's Mercato Sales</a>
+                <span class="query">SELECT upc, description, total, sum(ItemQtty), register_no 
+FROM is4c_trans.dlog_15
+WHERE register_no = 40
+AND DATE(tdate) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+GROUP BY upc DESC;
+                </span>
+            </li>
             <li><a href='#' class="quick_query">Grocery Likecodes</a>
                 <span class="query">SELECT 
 l.likeCode, l.likeCodeDesc, 
