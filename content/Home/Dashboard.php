@@ -52,6 +52,83 @@ class Dashboard extends PageLayoutA
         $d = new DateTime();
         $datetime = $d->format('Y-m-d H:i');
 
+        /* just today/tomorrow 2021-10-07
+        $itemP = $dbc->prepare("SELECT upc, SUM(itemQtty) AS SoldToday, DATE(tdate), trans_num AS Date, store_id
+        FROM is4c_trans.dlog_90_view
+        WHERE upc IN ('0007172807040')
+        GROUP BY Date(tdate)");
+        $itemR = $dbc->execute($itemP);
+        $itemRow = $dbc->fetchRow($itemR);
+        $tmpStr = '2021-10-07 Search For Bilinski Mystery Sausage Sale: ';
+        foreach ($itemRow as $row => $v) {
+            if (!is_numeric($row)) {
+                $v = (is_null($v)) ? '-' : $v;
+                $tmpStr .= "[$row] $v, ";
+            }
+        }
+        */
+
+        $tdReview = "";
+        $pre = $dbc->prepare("SELECT 
+store_id,
+SUM(CASE WHEN r.reviewed > DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS Thirty,
+SUM(CASE WHEN r.reviewed BETWEEN DATE_SUB(NOW(), INTERVAL 60 DAY) AND DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS Sixty,
+SUM(CASE WHEN r.reviewed BETWEEN DATE_SUB(NOW(), INTERVAL 90 DAY) AND DATE_SUB(NOW(), INTERVAL 60 DAY) THEN 1 ELSE 0 END) AS Ninty,
+SUM(CASE WHEN r.reviewed < DATE_SUB(NOW(), INTERVAL 90 DAY) THEN 1 ELSE 0 END) AS Longer 
+FROM products AS p 
+LEFT JOIN prodReview AS r ON p.upc=r.upc 
+LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
+WHERE last_sold > DATE_SUB(NOW(), INTERVAL 30 DAY)
+AND m.super_name NOT IN ('BRAND', 'MISC', 'PRODUCE')
+GROUP BY store_id
+ORDER BY r.reviewed;");
+        $res = $dbc->execute($pre);
+        while ($row = $dbc->fetchRow($res)) {
+            $id = $row['store_id'];
+            $three = $row['Thirty'];
+            $six = $row['Sixty'];
+            $nine = $row['Ninty'];
+            $long = $row['Longer'];
+            $tdReview .= "<tr>";
+            $tdReview .= "<td>$id</td><td>$three</td><td>$six</td><td>$nine</td><td>$long</td>";
+            $tdReview .= "</tr>";
+        }
+        if ($dbc->error())
+            $tdReview.= "<div class=\"alert alert-danger\">{$dbc->error()}</div>";
+        //echo "<div class=\"alert alert-danger\">{$dbc->error()}</div>";
+
+        $tdDetailed = "";
+        $pre = $dbc->prepare("SELECT 
+vendorName AS VendorName,
+COUNT(p.upc) AS ProductCount,
+SUM(CASE WHEN r.reviewed > DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS Thirty,
+SUM(CASE WHEN r.reviewed BETWEEN DATE_SUB(NOW(), INTERVAL 60 DAY) AND DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS Sixty,
+SUM(CASE WHEN r.reviewed BETWEEN DATE_SUB(NOW(), INTERVAL 90 DAY) AND DATE_SUB(NOW(), INTERVAL 60 DAY) THEN 1 ELSE 0 END) AS Ninty,
+SUM(CASE WHEN r.reviewed < DATE_SUB(NOW(), INTERVAL 90 DAY) THEN 1 ELSE 0 END) AS Longer 
+FROM products AS p 
+LEFT JOIN prodReview AS r ON p.upc=r.upc 
+LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
+LEFT JOIN vendors AS v ON p.default_vendor_id=v.vendorID
+WHERE last_sold > DATE_SUB(NOW(), INTERVAL 30 DAY)
+AND m.super_name NOT IN ('BRAND', 'MISC', 'PRODUCE')
+GROUP BY vendorID
+ORDER BY COUNT(p.upc) DESC");
+        $res = $dbc->execute($pre);
+        while ($row = $dbc->fetchRow($res)) {
+            $vendorName = $row['VendorName'];
+            $count = $row['ProductCount'];
+            $three = $row['Thirty'];
+            $six = $row['Sixty'];
+            $nine = $row['Ninty'];
+            $long = $row['Longer'];
+            $tdDetailed .= "<tr>";
+            $tdDetailed .= "<td>$vendorName</td><td>$count</td><td>$three</td><td>$six</td><td>$nine</td><td>$long</td>";
+            $tdDetailed .= "</tr>";
+        }
+        if ($dbc->error())
+            $tdDetailed.= "<div class=\"alert alert-danger\">{$dbc->error()}</div>";
+
+
         $reports = array(
             array(
                 'handler' => self::getGenericPRIDItems($dbc), 
@@ -161,8 +238,47 @@ class Dashboard extends PageLayoutA
                 <div class="card-title">
                     <h4>Scanning Department Dashboard <span class="smh4"><strong>Page last updated:</strong> $datetime</span></h4>
                 </div>
+                <!--<div>$tmpStr</div>-->
                 $table 
                 $multi
+            </div>
+        </div>
+    </div>
+    <div style="margin-top: 20px;"></div>
+    <div class="card">
+        <div class="card-content">
+            <div class="card-body">
+                <div class="card-title">
+                    <legend>Product Review Dash</legend>
+                </div>
+                <div class="card-text">
+                    <table class="table table-bordered small table-sm table-hover">
+                        <thead>
+                            <th>Store ID</th>
+                            <th>Reviewed This Month</th>
+                            <th>Last 60 Days</th>
+                            <th>Last 90 days</th>
+                            <th>> 90 days</th>
+                        </thead>
+                        <tbody>$tdReview</tbody>
+                    </table>
+                    <legend data-toggle="collapse" data-target="#detailedView">Detailed View
+                        <span class="scanicon scanicon-expand"></span>
+                    </legend>
+                    <div id="detailedView" class="collapse">
+                        <table class="table table-bordered small table-sm table-hover">
+                            <thead>
+                                <th>Vendor Name</th>
+                                <th>Product Count</th>
+                                <th>Reviewed This Month</th>
+                                <th>Last 60 Days</th>
+                                <th>Last 90 days</th>
+                                <th>> 90 days</th>
+                            </thead>
+                            <tbody>$tdDetailed</tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
