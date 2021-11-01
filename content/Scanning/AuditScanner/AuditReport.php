@@ -103,14 +103,11 @@ class AuditReport extends PageLayoutA
         $storeID = FormLib::get('storeID');
         $list = FormLib::get('list');
         $upcs = explode("\r\n", $list);
-        $f = fopen('test.txt', 'w');
         foreach($upcs as $upc) {
             $args = array($upc, $username, $storeID, $saveAs);
             $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs)
-                VALUES (NOW(), ?, ?, ?, ?)");
+                VALUES (NOW(), ?, ?, ?, ?) ON DUPLICATE KEY UPDATE date = NOW()");
             $res = $dbc->execute($prep, $args);
-            //file_put_contents('test.txt', $upc);
-            fwrite($f, $upc, 1000);
         }
         $er = $dbc->error();
 
@@ -309,11 +306,12 @@ class AuditReport extends PageLayoutA
     {
         $upc = FormLib::get('upc');
         $cost = FormLib::get('cost');
+        $vendorID = FormLib::get('vendorID');
         $json = array();
 
         $dbc = ScanLib::getConObj();
         $mod = new DataModel($dbc);
-        $json['saved'] = $mod->setCost($upc, $cost);
+        $json['saved'] = $mod->setCost($upc, $cost, $vendorID);
         echo json_encode($json);
 
         return false;
@@ -719,7 +717,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"sign-description editable editable-description \" data-table=\"productUser\">$signDescription</td>";
             $td .= "<td class=\"size\">$size</td>";
             $td .= "<td class=\"units\">$units</td>";
-            $td .= "<td class=\"netCost\">$netCost</td>";
+            $td .= "<td class=\"netCost editable-cost\" data-vid=\"$vendorID\">$netCost</td>";
             $td .= "<td class=\"cost\" $ogCost>$cost</td>";
             $td .= "<td class=\"recentPurchase\" title=\"$received\">$recentPurchase</td>";
             //$td .= "<td class=\"\" title=\"\">$received</td>";
@@ -759,6 +757,9 @@ class AuditReport extends PageLayoutA
         $textarea .= "</textarea></div>";
         $rows = $dbc->numRows($result);
 
+        /*
+         *  This section was used to show items that aren't in POS. I'm commenting out 
+            because it's causing a MYSQL error and it doesn't work anyway. Corey 2021-10-06
         $args = array($username, $storeID);
         $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan
             WHERE username = ? AND storeID = ? AND savedAs = 'default'");
@@ -777,6 +778,7 @@ class AuditReport extends PageLayoutA
             }
         }
         echo $dbc->error();
+        */
 
         $ret = <<<HTML
 <input type="hidden" id="table-rows" val(ue)="$rows" />
@@ -815,8 +817,8 @@ HTML;
         $result = $dbc->execute($prep,$args);
         $options = array();
         $row = $dbc->fetch_row($result);
-        $unitCost = $row['unitCost'];
-        $received = $row['receivedDate'];
+        $unitCost = (isset($row['unitCost'])) ? $row['unitCost'] : 0;
+        $received = (isset($row['receivedDate'])) ? $row['receivedDate'] : 0;
 
         return array($unitCost, $received);
     }
@@ -860,15 +862,16 @@ HTML;
         $list .= '</textarea>';
 
         $args = array($username, $storeID);
-        $prep = $dbc->prepare("SELECT savedAs FROM woodshed_no_replicate.AuditScan
-            WHERE username = ? AND storeID = ? AND savedAs != 'default' GROUP BY savedAs");
+        $prep = $dbc->prepare("SELECT savedAs, DATE(date) AS date FROM woodshed_no_replicate.AuditScan
+            WHERE username = ? AND storeID = ? AND savedAs != 'default' GROUP BY savedAs ORDER BY date DESC");
         $res = $dbc->execute($prep, $args);
         $savedLists = "";
         $datalist = "<datalist id=\"savedLists\">";
         while ($row = $dbc->fetchRow($res)) {
+            $date = $row['date'];
             $saved = $row['savedAs'];
             $sel = ($saved == $loaded) ? ' selected ' : '';
-            $savedLists .= "<option value=\"$saved\" $sel>$saved</option>";
+            $savedLists .= "<option value=\"$saved\" $sel>[$date] $saved</option>";
             $datalist .= "<option value=\"$saved\">";
         }
         $datalist .= "</datalist>";
@@ -1051,7 +1054,7 @@ $columnCheckboxes
     <div class="col-lg-3" >
         <div class="card" style="margin: 5px; box-shadow: 1px 1px lightgrey;">
             <div class="card-body">
-                <h6 class="card-title" title="JK">Average Calculator</h6>
+                <h6 class="card-title">Average Calculator</h6>
                     <div class="form-group">
                         <textarea rows=1 id="avgCalc" name="avgCalc" style="font-size: 12px" class="form-control small" ></textarea>
                     </div>
@@ -1065,7 +1068,7 @@ $columnCheckboxes
     <div class="col-lg-3">
         <div class="card" style="margin: 5px; box-shadow: 1px 1px lightgrey;">
             <div class="card-body">
-                <h6 class="card-title" title="JK">Simple Input Calculator &trade;</h6>
+                <h6 class="card-title">Simple Input Calculator &trade;</h6>
                 <div class="row">
                     <div class="col-lg-9">
                         <input type="text" id="calculator" name="calculator" style="font-size: 12px" class="form-control small" autofocus>
@@ -1217,6 +1220,42 @@ $('.scanicon-trash').click( function(event) {
             error: function(response)
             {
                 console.log(response);
+            },
+        });
+    }
+});
+
+var lastCost = null;
+$('.editable-cost').click(function(){
+    lastCost = $(this).text();
+    $(this).attr('contentEditable', 'true');
+});
+$('.editable-cost').focusout(function(){
+    var cost = $(this).text();
+    var upc = $(this).parent().find('.upc').attr('data-upc');
+    var vendorID = $(this).attr('data-vid'); 
+    var element = $(this);
+    if (lastCost != cost) {
+        $.ajax({
+            type: 'post',
+            data: 'setCost=true&upc='+upc+'&cost='+cost+'&vendorID='+vendorID,
+            dataType: 'json',
+            url: 'AuditReport.php',
+            success: function(response)
+            {
+                console.log('Saved: '+response);
+                if (response.saved == true) {
+                    //alert('saved');
+                    element.css('background-color', 'lightgreen');
+                    setTimeout(function(){
+                        element.css('background-color', 'transparent');
+                    }, 1000);
+                } else {
+                    element.css('background-color', 'tomato');
+                    setTimeout(function(){
+                        element.css('background-color', 'transparent');
+                    }, 1000);
+                }
             },
         });
     }
