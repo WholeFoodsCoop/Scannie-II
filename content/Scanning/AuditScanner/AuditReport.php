@@ -1229,6 +1229,7 @@ var lastCost = null;
 $('.editable-cost').click(function(){
     lastCost = $(this).text();
     $(this).attr('contentEditable', 'true');
+    $(this).css('font-weight', 'bold');
 });
 $('.editable-cost').focusout(function(){
     var cost = $(this).text();
@@ -1259,6 +1260,8 @@ $('.editable-cost').focusout(function(){
             },
         });
     }
+    $(this).attr('contentEditable', 'false');
+    $(this).css('font-weight', 'normal');
 });
 
 
