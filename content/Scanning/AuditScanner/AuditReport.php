@@ -1246,12 +1246,22 @@ $('.editable-cost').focusout(function(){
             {
                 console.log('Saved: '+response);
                 if (response.saved == true) {
-                    //alert('saved');
+                    /*
+                        success!
+                    */
                     element.css('background-color', 'lightgreen');
                     setTimeout(function(){
                         element.css('background-color', 'transparent');
                     }, 1000);
+                    // check the associated checkbox 
+                    let checkbox = element.parent().find('input[type=checkbox]');
+                    console.log(checkbox.attr('name'));
+                    //checkbox.prop('checked', true);
+                    checkbox.trigger('click');
                 } else {
+                    /*
+                        failure
+                    */
                     element.css('background-color', 'tomato');
                     setTimeout(function(){
                         element.css('background-color', 'transparent');
