@@ -56,6 +56,7 @@ FROM woodshed_no_replicate.bulkHerbMT20210923 AS m
 LEFT JOIN is4c_op.products AS p ON m.upc=p.upc 
     AND p.store_id = 2 
 WHERE ROUND(p.auto_par*7, 2) <> par 
+AND p.upc NOT IN ('0000000008366', '0024152000000')
 ORDER BY ABS(ROUND(p.auto_par*7, 2) - par) DESC;
                 </span>
             </li>
@@ -73,6 +74,21 @@ ORDER BY p.brand</span>
             </li>
             <li><a href='#' class="quick_query">Get Bulk Herbs</a>
                 <span class="query">select m.*, ROUND(p.auto_par*7, 2) AS curPar  from woodshed_no_replicate.bulkHerbMT20210923 as m LEFT JOIN is4c_op.products AS p ON m.upc=p.upc and p.store_id = 2 where ROUND(p.auto_par*7, 2) <> par;</span>
+            </li>
+            <li><a href='#' class="quick_query">Get Bulk Price Change List</a>
+                <span class="query">
+SELECT b.upc,
+p.brand,
+p.description,
+p.normal_price,
+b.salePrice
+FROM batchList AS b
+LEFT JOIN products
+  AS p ON b.upc=p.upc
+  WHERE b.upc IN ("...")
+  AND b.batchID IN (1234)
+GROUP BY p.upc
+                </span>
             </li>
             <li><a href='#' class="quick_query">Get Bulk Sale Items</a>
                 <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
