@@ -31,12 +31,13 @@ class TrackItemChange extends PageLayoutA
 
     protected $title = "Track Change";
     protected $description = "[Track Change] Track all changes made to an item in POS/OFFICE.";
+    protected $connect = true;
     public $ui = TRUE;
 
     public function body_content()
     {
         $ret = '';
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $upc = FormLib::get('upc');
         $upc = scanLib::upcParse($upc);
         $stores = array(1 => 'Hillside', 2 => 'Denfeld');
@@ -216,6 +217,11 @@ HTML;
         return <<<JAVASCRIPT
 $('#upc').focusin(function(){
     $(this).select();
+});
+$('#upc').focusout(function(){
+    let text = $(this).val();
+    text = text.replace(/\D/g, '');
+    $(this).val(text);
 });
 $('#table-changes tr').each(function(){
     let storeID = $(this).find('td:eq(1)').text();
