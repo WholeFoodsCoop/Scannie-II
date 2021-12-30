@@ -642,8 +642,8 @@ class AuditReport extends PageLayoutA
             <th class=\"floorSections\">floor sections</th>
             <th class=\"comment\">comment</th>
             <th class=\"notes\">notes</th>
-            <th class=\"trash\">trash</th>
-            <th class=\"check\">check</th>
+            <th class=\"trash\"></th>
+            <th class=\"check\"></th>
         </tr>
         ";
         $result = $dbc->execute($prep, $args);
