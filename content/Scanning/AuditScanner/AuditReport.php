@@ -500,6 +500,7 @@ class AuditReport extends PageLayoutA
                 p.description AS description,
                 u.description AS signDescription,
                 p.cost,
+                p.auto_par,
                 CASE
                     WHEN e.shippingMarkup > 0 THEN p.cost + (p.cost * e.shippingMarkup) ELSE p.cost
                 END AS adjcost,
@@ -586,6 +587,7 @@ class AuditReport extends PageLayoutA
             <td title=\"recentPurchases\" data-column=\"recentPurchase\"class=\"recentPurchase column-filter\"></td>
             <td title=\"price\" data-column=\"price\"class=\"price column-filter\"></td>
             <td title=\"sale\" data-column=\"sale\"class=\"sale column-filter\"></td>
+            <td title=\"autoPar\" data-column=\"autoPar\"class=\" column-filter\"></td>
             <td title=\"margin_target_diff\" data-column=\"margin_target_diff\"class=\"margin_target_diff column-filter\"></td>
             <td title=\"srp\" data-column=\"srp\"class=\"srp column-filter\"></td>
             <td title=\"rsrp\" data-column=\"rsrp\"class=\"rsrp column-filter\"></td>
@@ -623,6 +625,7 @@ class AuditReport extends PageLayoutA
             <th class=\"recentPurchase\">PO-unit</th>
             <th class=\"price\">price</th>
             <th class=\"sale\">sale</th>
+            <th class=\"autoPar\">autoPar</th>
             <th class=\"margin_target_diff\">margin, target, diff</th>
             <th class=\"srp\">srp</th>
             <th class=\"rsrp\">round srp</th>
@@ -663,6 +666,19 @@ class AuditReport extends PageLayoutA
             $sku = $row['sku'];
             list($recentPurchase, $received) = $this->getRecentPurchase($dbc,$upc);
             $brand = $row['brand'];
+            $autoPar = round($row['auto_par'],1);
+            $parMod = 0;
+            $parVerb = '';
+            if ($storeID == 1) {
+                $parMod = 3;
+                //$parVerb = "<span style=\"font-size: 11px;\">({$autoPar}*3)";
+                $parVerb = "({$autoPar}*3)";
+            } elseif ($storeID == 2) {
+                $parMod = 7;
+                //$parVerb = "<span style=\"font-size: 11px;\">({$autoPar}*7)";
+                $parVerb = "({$autoPar}*7)";
+            }
+            $autoPar = round($row['auto_par'] * $parMod, 1);
             $signBrand = $row['signBrand'];
             $description = $row['description'];
             $signDescription = $row['signDescription'];
@@ -723,6 +739,7 @@ class AuditReport extends PageLayoutA
             //$td .= "<td class=\"\" title=\"\">$received</td>";
             $td .= "<td class=\"price\">$price</td>";
             $td .= "<td class=\"sale\">$sale</td>";
+            $td .= "<td class=\"autoPar\" title=\"$parVerb\">$autoPar</td>";
             $diff = round($curMargin - $margin, 1);
             $curMargin = round($curMargin, 1);
             $td .= "<td class=\"margin_target_diff\">
@@ -908,8 +925,8 @@ HTML;
         $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
 
         $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
-            'price', 'sale', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 'notes', 'reviewed',
-            'costChange', 'floorSections', 'comments');
+            'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
+            'notes', 'reviewed', 'costChange', 'floorSections', 'comments');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         $i = count($columns) - 1;
         foreach ($columns as $column) {
