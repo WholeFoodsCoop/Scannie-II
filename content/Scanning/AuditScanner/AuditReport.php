@@ -578,7 +578,7 @@ class AuditReport extends PageLayoutA
             <td title=\"sku\" data-column=\"sku\"class=\"sku column-filter\"></td>
             <td title=\"band\" data-column=\"brand\"class=\"brand column-filter\"></td>
             <td title=\"sign-brand\" data-column=\"sign-brand\"class=\"sign-brand column-filter\"></td>
-            <td title=\"description\" data-column=\"description\"class=\"column-filter\"></td>
+            <td title=\"description\" data-column=\"description\"class=\"description column-filter\"></td>
             <td title=\"sign-description\" data-column=\"sign-description\"class=\"sign-description column-filter\"></td>
             <td title=\"size\" data-column=\"size\"class=\"size column-filter\"></td>
             <td title=\"units\" data-column=\"units\"class=\"units column-filter\"></td>
@@ -587,7 +587,7 @@ class AuditReport extends PageLayoutA
             <td title=\"recentPurchases\" data-column=\"recentPurchase\"class=\"recentPurchase column-filter\"></td>
             <td title=\"price\" data-column=\"price\"class=\"price column-filter\"></td>
             <td title=\"sale\" data-column=\"sale\"class=\"sale column-filter\"></td>
-            <td title=\"autoPar\" data-column=\"autoPar\"class=\" column-filter\"></td>
+            <td title=\"autoPar\" data-column=\"autoPar\"class=\"autoPar column-filter\"></td>
             <td title=\"margin_target_diff\" data-column=\"margin_target_diff\"class=\"margin_target_diff column-filter\"></td>
             <td title=\"srp\" data-column=\"srp\"class=\"srp column-filter\"></td>
             <td title=\"rsrp\" data-column=\"rsrp\"class=\"rsrp column-filter\"></td>
@@ -605,7 +605,7 @@ class AuditReport extends PageLayoutA
             <td title=\"comment\" data-column=\"comment\"class=\"comment column-filter\"></td>
             <td title=\"notes\" data-column=\"notes\"class=\"notes column-filter\"></td>
             <td title=\"check\" data-column=\"check\" class=\"check column-filter\"></td>
-            <td title=\"unknown\" data-column=\"unknown\" class=\"unknown column-filter\"></td>
+            <td title=\"trash-icon\" data-column=\"trash-icon\" class=\"trash-icon column-filter\"></td> <!-- you cannot filter this column -->
         </tr>
         ";
 
@@ -640,10 +640,10 @@ class AuditReport extends PageLayoutA
             <th class=\"reviewed\">reviewed</th>
             <th class=\"costChange\">last cost change</th>
             <th class=\"floorSections\">floor sections</th>
-            <th class=\"comments\">review comments</th>
+            <th class=\"comment\">comment</th>
             <th class=\"notes\">notes</th>
-            <th class=\"check\"></th>
-            <th class=\"\"></th>
+            <th class=\"trash\">trash</th>
+            <th class=\"check\">check</th>
         </tr>
         ";
         $result = $dbc->execute($prep, $args);
@@ -764,7 +764,7 @@ class AuditReport extends PageLayoutA
             $oper = ($costChange > 0) ? '+' : '-';
             $td .= "<td class=\"costChange\">$oper$costChange - $costChangeDate</td>";
             $td .= "<td class=\"floorSections\">$floorSections</td>";
-            $td .= "<td class=\"comments\">$reviewComments</td>";
+            $td .= "<td class=\"comment\">$reviewComments</td>";
             $td .= "<td class=\"notes editable editable-notes\">$notes</td>";
             $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td></td>";
             $td .= "<td class=\"check\"><input type=\"checkbox\" name=\"check\" class=\"row-check\" $checked/></td>";
@@ -926,7 +926,7 @@ HTML;
 
         $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
             'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
-            'notes', 'reviewed', 'costChange', 'floorSections', 'comments');
+            'notes', 'reviewed', 'costChange', 'floorSections', 'comment');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         $i = count($columns) - 1;
         foreach ($columns as $column) {
