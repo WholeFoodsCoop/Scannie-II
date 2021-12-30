@@ -27,6 +27,7 @@ class DeliReusePluReport extends PageLayoutA
                 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
             WHERE upc > 20001000000 
                 AND upc < 29999000000
+                AND upc LIKE '%00000'
                 AND created < '2020-01-01'
                 AND m.super_name = 'DELI'
         ");
