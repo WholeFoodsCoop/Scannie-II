@@ -609,6 +609,8 @@ class AuditReport extends PageLayoutA
         </tr>
         ";
 
+        $parMod = (scanLib::getStoreID() == 1) ? 3 : 7;
+
         // this is the first thead row (column sorting)
         $th = "
         <tr>
@@ -625,7 +627,7 @@ class AuditReport extends PageLayoutA
             <th class=\"recentPurchase\">PO-unit</th>
             <th class=\"price\">price</th>
             <th class=\"sale\">sale</th>
-            <th class=\"autoPar\">autoPar</th>
+            <th class=\"autoPar\">autoPar*$parMod</th>
             <th class=\"margin_target_diff\">margin, target, diff</th>
             <th class=\"srp\">srp</th>
             <th class=\"rsrp\">round srp</th>
@@ -669,13 +671,11 @@ class AuditReport extends PageLayoutA
             $autoPar = round($row['auto_par'],1);
             $parMod = 0;
             $parVerb = '';
-            if ($storeID == 1) {
+            if (scanLib::getStoreID() == 1) {
                 $parMod = 3;
-                //$parVerb = "<span style=\"font-size: 11px;\">({$autoPar}*3)";
                 $parVerb = "({$autoPar}*3)";
             } elseif ($storeID == 2) {
                 $parMod = 7;
-                //$parVerb = "<span style=\"font-size: 11px;\">({$autoPar}*7)";
                 $parVerb = "({$autoPar}*7)";
             }
             $autoPar = round($row['auto_par'] * $parMod, 1);
