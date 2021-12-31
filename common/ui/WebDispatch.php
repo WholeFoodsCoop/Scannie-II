@@ -19,11 +19,17 @@ class WebDispatch
     protected $config;
     protected $cssFiles = array();
     protected $__routes = array();
+    protected $connect = false;
+    protected $memory = array();
 
     function __construct() 
     {
+        $this->memory[] = memory_get_usage();
         $this->config = new config();    
         $this->config->getConfig();
+        if ($this->connect == true) {
+            $this->connect = scanLib::getConObj();
+        }
     }
 
     private static function runPage($class)
@@ -68,6 +74,10 @@ class WebDispatch
         $this->loadtime = strftime('%T', mktime(0, 0, $sec)) . str_replace('0.', '.', sprintf('%.3f', $micro));
         echo $this->getHelpContent();
         echo $this->writeJS();
+
+        $this->memory[] = memory_get_usage();
+        $memory = ($this->memory[1] - $this->memory[0]) / 1000000;
+        //echo "<span id=\"php-memory-used\">$memory MB</span>";
     }
 
     static public function conditionalExec($custom_errors=true)
@@ -99,11 +109,31 @@ class WebDispatch
             $_SESSION['discard_after'] = $now + 3600;
         }
         $test = session_id();
-        $dbc = scanLib::getConObj('SCANALTDB');
-        $a = array(session_id());
-        $p = $dbc->prepare("INSERT IGNORE INTO ScannieConfig (session_id, scanBeep, time)
-            VALUES (?, 0, NOW());");
-        $dbc->execute($p, $a);
+
+        if (!isset($_SESSION['ScannieConfig'])) {
+            foreach (
+                array(
+                    'session_id',
+                    'scanBeep',
+                    'time',
+                    'auditPar',
+                    'auditCost',
+                    'auditSrp',
+                    'auditProdInfo',
+                    'auditVendorInfo',
+                    'auditLocations',
+                    'auditSize',
+                    'auditSignInfo',
+                    'auditSaleInfo',
+                    'socketDevice',
+                    'auditReportSet',
+                    'auditReportOpt',
+                    'auditPrtID'
+                ) as $settingID) {
+                $_SESSION['ScannieConfig']['AuditSettings'][$settingID] = 1;
+            }
+        }
+
         $hostname = $_SERVER['HTTP_HOST'];
         if ($this->must_authenticate == true) {
             try {
@@ -209,6 +239,7 @@ HTML;
                 <div class="pre">
                    <div>Page drawn in: {$this->loadtime}</div>
                    <div class="close" onclick="$('#help-contents').hide(); return false;">x</div>
+                   <div><span id="php-memory-used-clone"></span></div>
                 </div>
             </div>
         </div>

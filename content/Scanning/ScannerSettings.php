@@ -21,41 +21,23 @@ class ScannerSettings extends PageLayoutA
 
     public function postSaveHandler()
     {
-        $dbc = scanLib::getConObj('SCANALTDB');
         $column = FormLib::get('column');
-
         $checked = FormLib::get('checked');
         $checked = ($checked == 'true') ? 1 : 0;
+        $_SESSION['ScannieConfig']['AuditSettings'][$column] = $checked;
         $a = array($checked, session_id());
-        $p = $dbc->prepare("UPDATE ScannieConfig SET $column = ? WHERE session_id = ?;");
-        $dbc->execute($p, $a);
-        if ($er =  $dbc->error()) echo "<div class=\"alert alert-danger\">$er</div>";
-        echo "HI";
+        echo $column . ' edited.';
 
         return false;
     }
 
     public function postView()
     {
-        $dbc = scanLib::getConObj('SCANALTDB');
         $SESSION_ID = session_id();
         $a = array($SESSION_ID);
-        $p = $dbc->prepare("SELECT * FROM ScannieConfig WHERE session_id = ?;");
-        $r = $dbc->execute($p, $a);
-        while ($row = $dbc->fetchRow($r)) {
-            $beepChecked = ($row['scanBeep']) ? 'checked' : '';
-            $checkPar = ($row['auditPar']) ? 'checked' : '';
-            $checkCost = ($row['auditCost']) ? 'checked' : '';
-            $checkSrp = ($row['auditSrp']) ? 'checked' : '';
-            $checkProdInfo = ($row['auditProdInfo']) ? 'checked' : '';
-            $checkVendorInfo = ($row['auditVendorInfo']) ? 'checked' : '';
-            $checkLocations = ($row['auditLocations']) ? 'checked' : '';
-            $checkSize = ($row['auditSize']) ? 'checked' : '';
-            $checkSignInfo = ($row['auditSignInfo']) ? 'checked' : '';
-            $checkSaleInfo = ($row['auditSaleInfo']) ? 'checked' : '';
-            $checkSaleInfo = ($row['auditSaleInfo']) ? 'checked' : '';
-            $isSocketDevice = ($row['socketDevice']) ? 'checked' : '';
-        };
+        foreach ($_SESSION['ScannieConfig']['AuditSettings'] as $setting => $value) {
+            ${'checked_'.$setting} = ($value) ? 'checked' : '';
+        }
 
         $scanner_settings = array();
         return <<<HTML
@@ -72,7 +54,7 @@ class ScannerSettings extends PageLayoutA
         <ul>
             <li>
                 <label>Beep After Scan: </label>
-                <input type="checkbox" name="scanBeep" value=1 id="toggleBeep" $beepChecked />
+                <input type="checkbox" name="scanBeep" value=1 id="toggleBeep" $checked_scanBeep/>
             </li>
         </ul>
         <input type="hidden" name="sessionID" id="sessionID" value="$a" />
@@ -82,43 +64,47 @@ class ScannerSettings extends PageLayoutA
         <ul class="" id="scanner-settings">
             <li>
                 <label>Par</label>
-                <input type="checkbox" name="auditPar" value=1 id="togglePar" $checkPar/>
+                <input type="checkbox" name="auditPar" value=1 id="togglePar" $checked_auditPar/>
             </li>
             <li>
                 <label>Cost/Price/Margin</label>
-                <input type="checkbox" name="auditCost" value=1 id="toggleCost" $checkCost/>
+                <input type="checkbox" name="auditCost" value=1 id="toggleCost" $checked_auditCost/>
             </li>
             <li>
                 <label>SRP/Margin</label>
-                <input type="checkbox" name="auditSrp" value=1 id="toggleSrp" $checkSrp/>
+                <input type="checkbox" name="auditSrp" value=1 id="toggleSrp" $checked_auditSrp/>
+            </li>
+            <li>
+                <label>Price Rule Type</label>
+                <input type="checkbox" name="auditPrtID" value=1 id="togglePrtID" $checked_auditPrtID/>
             </li>
             <li>
                 <label>Desc, Brand, Dept</label>
-                <input type="checkbox" name="auditProdInfo" value=1 id="toggleProdInfo" $checkProdInfo/>
+                <input type="checkbox" name="auditProdInfo" value=1 id="toggleProdInfo" $checked_auditProdInfo/>
             </li>
             <li>
                 <label>Vendor Info</label>
-                <input type="checkbox" name="auditVendorInfo" value=1 id="toggleVendorInfo" $checkVendorInfo/>
+                <input type="checkbox" name="auditVendorInfo" value=1 id="toggleVendorInfo" $checked_auditVendorInfo/>
             </li>
             <li>
                 <label>Prod Location</label>
-                <input type="checkbox" name="auditLocations" value=1 id="toggleLocations" $checkLocations/>
+                <input type="checkbox" name="auditLocations" value=1 id="toggleLocations" $checked_auditLocations/>
             </li>
             <li>
                 <label>Size</label>
-                <input type="checkbox" name="auditSize" value=1 id="toggleSize" $checkSize/>
+                <input type="checkbox" name="auditSize" value=1 id="toggleSize" $checked_auditSize/>
             </li>
             <li>
                 <label>Sign Info</label>
-                <input type="checkbox" name="auditSignInfo" value=1 id="toggleSignInfo" $checkSignInfo/>
+                <input type="checkbox" name="auditSignInfo" value=1 id="toggleSignInfo" $checked_auditSignInfo/>
             </li>
             <li>
                 <label>Sale Info</label>
-                <input type="checkbox" name="auditSaleInfo" value=1 id="toggleSaleInfo" $checkSaleInfo/>
+                <input type="checkbox" name="auditSaleInfo" value=1 id="toggleSaleInfo" $checked_auditSaleInfo/>
             </li>
             <li>
                 <label>Socket Device</label>
-                <input type="checkbox" name="socketDevice" value=1 id="toggleSocketDevice" $isSocketDevice/>
+                <input type="checkbox" name="socketDevice" value=1 id="toggleSocketDevice" $checked_socketDevice/>
             </li>
         </ul>
         <input type="hidden" name="sessionID" id="sessionID" value="$a" />
@@ -141,7 +127,8 @@ $('input[type="checkbox"]').on('change', function(){
         dataType: 'text',
         success: function(response)
         {
-            console.log('save successful')
+            console.log('save successful');
+            console.log(response);
         }
     });
 });

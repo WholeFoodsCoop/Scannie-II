@@ -30,6 +30,7 @@ class ProductScanner extends PageLayoutA
     protected $description = "[Product Scanner] is a light-weight, all around product
         scanner for use with iUnfi iPod Touch scanners.";
     protected $ui = false;
+    protected $connect = true;
     protected $use_preprocess = TRUE;
     protected $must_authenticate = TRUE;
     protected $enable_linea = true;
@@ -38,7 +39,7 @@ class ProductScanner extends PageLayoutA
     {
 
         $username = scanLib::getUser();
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         if (!$username) {
             header('location: ../../../auth/Login.php');
         }
@@ -78,7 +79,7 @@ class ProductScanner extends PageLayoutA
 
     private function delete_mapID_handler()
     {
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $mapID = FormLib::get('mapID');
 
         $prep = $dbc->prepare("DELETE FROM FloorSectionProductMap 
@@ -90,7 +91,7 @@ class ProductScanner extends PageLayoutA
 
     private function mapID_handler()
     {
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $mapID = FormLib::get('mapID');
         $upc = FormLib::get('upc');
         $floor_section = FormLib::get('floor_section');
@@ -119,7 +120,7 @@ class ProductScanner extends PageLayoutA
 
     private function mod_edit_handler($upc)
     {
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $table = FormLib::get('table');
         $column = FormLib::get('column');
         $newtext = FormLib::get('newtext');
@@ -135,7 +136,7 @@ class ProductScanner extends PageLayoutA
 
     private function mod_narrow_handler($upc)
     {
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $args = array($upc);
         $prep = $dbc->prepare("SELECT upc FROM productUser WHERE upc = ? AND narrow = 1");
         $res = $dbc->execute($prep, $args);
@@ -156,7 +157,7 @@ class ProductScanner extends PageLayoutA
 
     private function mod_inuse_handler($upc)
     {
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $store = scanLib::getStoreID();
         $args = array($upc, $store);
         $prep = $dbc->prepare("SELECT inUse FROM products WHERE upc = ? AND store_id = ?;");
@@ -271,12 +272,12 @@ HTML;
                 );
             ");
         }
-        foreach ($scannerConfig as $id => $set) {
-            if ($set == false) {
-                $this->addOnloadCommand("$('#$id').hide();");
+        foreach ($_SESSION['ScannieConfig']['AuditSettings'] as $setting => $value) {
+            if ($value == false) {
+                $this->addOnloadCommand("$('#$setting').hide();");
             }
         }
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $username = scanLib::getUser();
         $response = (isset($_GET['success'])) ? $_GET['success'] : false;
         $newscan = $_POST['success'];
@@ -306,7 +307,7 @@ HTML;
         }
         $upc = scanLib::upcPreparse($upc);
         if ($upc == 0) {
-            return $this->form_content($isSocketDevice);
+            //return $this->form_content($isSocketDevice);
         }
 
         $loading = '
@@ -391,6 +392,7 @@ HTML;
                 p.department,
                 d.dept_name,
                 p.price_rule_id,
+                prt.description AS prt,
                 vd.margin AS unfiMarg,
                 d.margin AS deptMarg,
                 pu.description AS signdesc,
@@ -411,6 +413,8 @@ HTML;
                     ON vd.vendorID = p.default_vendor_id
                         AND vd.deptID = vi.vendorDept
                 LEFT JOIN FloorSectionsListView AS fslv ON p.upc=fslv.upc AND p.store_id=fslv.storeID
+                LEFT JOIN PriceRules AS pr ON p.price_rule_id=pr.priceRuleID
+                LEFT JOIN PriceRuleTypes AS prt ON pr.priceRuleTypeID=prt.priceRuleTypeID
             WHERE p.store_id = ?
                 AND p.upc = ?
             LIMIT 1
@@ -420,6 +424,7 @@ HTML;
         while ($row = $dbc->fetchRow($result)) {
             $cost = $row['cost'];
             $price = $row['normal_price'];
+            $prt = $row['prt'];
             $desc = $row['description'];
             $brand = $row['brand'];
             $vendor = '<span class="vid">id['.$row['default_vendor_id'].'] </span>'.$row['vendorName'];
@@ -571,6 +576,11 @@ HTML;
                         </div>
                     </div>
                     <br />
+                    <div id="auditPrtID">
+                        <div class="row">
+                            <div class="col-12 info" ><span class="sm-label">PRT-ID:</span> <span id="PrtID_v">'.$prt.'</span></div>
+                        </div>
+                    </div>
                     <div id="auditProdInfo">
                         <div class="row">
                             <div class="col-12 info" ><span class="sm-label">DESC:</span> <span id="description1_v">'.$desc.'</span></div>
@@ -644,7 +654,7 @@ HTML;
 
 
 
-                    <div class="container">
+                    <div class="container-fluid">
                     <br />
                     <div class="row">
                         <!-- <div class="col-4  clear btn btn-warning" onClick="queue('.$storeID.'); return false;">Print</div> -->
@@ -664,8 +674,10 @@ HTML;
                         <div class="col-4  clear "><a class="btn btn-success" style="width: 100%" href="http://'.$MY_ROOTDIR.'/content/Scanning/BatchCheck/SCS.php">B.C.</a></div>
                     </div>
                     <div class="row">
-                        <div class="col-8">
-                            <a class="btn btn-primary" style="width: 100%; " href="AuditReport.php ">View Report</a>
+                        <div class="col-4">
+                            <a class="btn btn-primary" style="width: 100%; font-size: 10px" href="AuditReport.php ">Report</a>
+                        </div>
+                        <div class="col-4">
                         </div>
                         <div class="col-4">
                             <a class="btn btn-default" style="background: lightgrey; color: black;" href="http://'.$FANNIE_ROOTDIR.'/modules/plugins2.0/ShelfAudit/SaMenuPage.php">Menu</a>
@@ -724,6 +736,8 @@ HTML;
         $ret .= "<input type=\"hidden\" id=\"username\" value=\"$username\"/>
             <input type=\"hidden\" id=\"storeID\" value=\"$storeID\"/> 
         ";
+
+        //$this->addOnloadCommand("window.location.reload();");
 
         return <<<HTML
 <div class="container-fluid">$ret</div>
@@ -1127,7 +1141,7 @@ HTML;
     private function hiddenContent($upc, $narrow, $inUse)
     {
         $storeID = scanLib::getStoreID();
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
 
         $prep = $dbc->prepare("SELECT floorSectionID, name FROM FloorSections 
             WHERE storeID = ? ORDER BY name;");
