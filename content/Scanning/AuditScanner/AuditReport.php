@@ -1675,12 +1675,13 @@ $('#temp').click(function(){
 
 var resizes = 0;
 $('#calculator').keydown(function(e){
+    var arr = $('#calculator').val();
+    arr = arr.replace('$', '');
+    arr = arr.replace('CS', '');
+    arr = arr.replace(/\s+/g,'');
+    arr = arr.split(" ");
     if (e.keyCode == 13) {
         // Enter key pressed
-        var arr = $('#calculator').val();
-        arr = arr.replace('$', '');
-        arr = arr.replace('CS', '');
-        arr = arr.split(" ");
         if (arr.length == 3) {
             var val_1 = parseFloat(arr[0], 10);
             var oper = arr[1];
