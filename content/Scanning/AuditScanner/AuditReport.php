@@ -750,10 +750,11 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"rsrp\">$rsrp</td>";
             $td .= "<td class=\"srp\">$srp</td>";
             $td .= "<td class=\"prid\">$prid</td>";
-            $td .= "<td class=\"dept\">
-                <span class=\"dept-text\">$dept</span>
-                <span class=\"dept-select hidden\">$deptOpts</span>
-                </td>";
+            //$td .= "<td class=\"dept\">
+            //    <span class=\"dept-text\">$dept</span>
+            //    <span class=\"dept-select hidden\">$deptOpts</span>
+            //    </td>";
+            $td .= "<td class=\"dept\">$dept</td>";
             $td .= "<td class=\"subdept\">$subdept</td>";
             $td .= "<td class=\"local\">$local</td>";
             $td .= "<td class=\"flags\">$flags</td>";
