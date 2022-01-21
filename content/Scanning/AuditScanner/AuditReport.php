@@ -86,8 +86,8 @@ class AuditReport extends PageLayoutA
         $res = $dbc->execute($prep, $args);
 
         $args = array($username, $storeID, $load);
-        $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs)
-            SELECT NOW(), upc, username, storeID, 'default' FROM AuditScan WHERE username = ?
+        $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs, notes)
+            SELECT NOW(), upc, username, storeID, 'default', notes FROM AuditScan WHERE username = ?
             AND storeID = ? AND savedAs = ?");
         $res = $dbc->execute($prep, $args);
 
@@ -103,10 +103,22 @@ class AuditReport extends PageLayoutA
         $storeID = FormLib::get('storeID');
         $list = FormLib::get('list');
         $upcs = explode("\r\n", $list);
+        
+        $notes = array();
+        $args = array($username, $storeID);
+        $prep = $dbc->prepare("SELECT upc, notes FROM AuditScan 
+            WHERE username = ? AND storeID = ? AND savedAs = 'default'");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $notes[$row['upc']] = $row['notes'];
+        }
+
         foreach($upcs as $upc) {
-            $args = array($upc, $username, $storeID, $saveAs);
-            $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs)
-                VALUES (NOW(), ?, ?, ?, ?) ON DUPLICATE KEY UPDATE date = NOW()");
+            $note = '';
+            $note = $notes[$upc];
+            $args = array($upc, $username, $storeID, $saveAs, $note);
+            $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs, notes)
+                VALUES (NOW(), ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE date = NOW()");
             $res = $dbc->execute($prep, $args);
         }
         $er = $dbc->error();
@@ -899,8 +911,9 @@ HTML;
         while ($row = $dbc->fetchRow($res)) {
             //echo "<div>{$row['upc']}</div>";
         }
+        $tempInputVal = '';
         $countTemp = $dbc->numRows($res);
-        $tempBtn = "";
+        $tempBtn = ""; $tempClass = '';
         $tempBtnID = "prevent-default";
         if ($_COOKIE['user_type'] == 2) {
             $tempClass = "btn-secondary";
