@@ -202,7 +202,7 @@ ORDER BY v.sku, r.reviewed
                 $data[$upc]['Item Name 2nd Line'] = $lines[1];
             } else {
                 $data[$upc]['Item Name 1st Line'] = $lines[0];
-                $data[$upc]['Item Name 2st Line'] = ''; // be sure to enter a blank line in second row
+                $data[$upc]['Item Name 2nd Line'] = ''; // be sure to enter a blank line in second row
             }
 
             // get all the straight forward data
