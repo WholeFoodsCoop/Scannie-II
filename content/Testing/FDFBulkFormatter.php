@@ -12,6 +12,47 @@ if (!class_exists('scanLib')) {
 class FDFBulkFormatter 
 {
 
+    private function getDVs()
+    {
+        $dbc = scanLib::getConObj();
+        $prep = $dbc->prepare('SELECT * FROM NutriFactStd');
+        $res = $dbc->execute($prep);
+        $info = array();
+        while ($row = $dbc->fetchRow($res)) {
+            $info[$row['name']] = $row['units'];
+        }
+
+        return $info;
+    }
+    
+    private function getDVValue($stdv, $val)
+    {
+        $val = preg_replace('/[^0-9.]+/', '', $val);
+        if ($val != 0) {
+            $retVal = 100 * ($val / $stdv);
+        } else {
+            $retVal = null;
+        }
+        $retVal = floor($retVal);
+
+        return $retVal;
+    }
+
+    private function getItemNutrientVals()
+    {
+        $dbc = scanLib::getConObj();
+        $info = array();
+        $prep = $dbc->prepare("SELECT * FROM NutriFactOptItems WHERE upc IN (
+'0000000000729','0000000000219','0000000000445','0000000000215','0000000000244','0000000000284','0000000000303','0000000000475','0000000000477','0000000000478','0000000000503','0000000000346','0000000000415','0000000000492','0000000000698','0000000000744'
+)
+");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            $info[$row['upc']][$row['name']] = $row['percentDV'];
+        }
+
+        return $info;
+    }
 
     public function run()
     {
@@ -47,8 +88,11 @@ class FDFBulkFormatter
             "Calcium Percent",
             "Iron Percent",
             "Potassium Percent",
-            "Total Carb Percent"
+            " Total Carb Percent" // [sic]
         );
+
+        $DVS = $this->getDVs();
+        $nutrients = $this->getItemNutrientVals();
 
 // FDF Heading 
 $fdfHead = "%FDF-1.2
@@ -61,7 +105,7 @@ $fdfHead = "%FDF-1.2
 ";
 
 // EOF format 
-$fdfTail .= "]
+$fdfTail = "]
 >>
 >>
 endobj 
@@ -73,7 +117,7 @@ trailer
 %%EOF";
 
         $dbc = scanLib::getConObj();
-        $items = array();
+        $data = array();
 
         $prp = $dbc->prepare("
 SELECT 
@@ -84,8 +128,14 @@ CASE
     ELSE p.description
 END AS description,
 v.sku,
-si.text,
-p.normal_price,
+#CASE
+#    WHEN si.text != '' AND si.text IS NOT NULL THEN si.text
+#    ELSE u.long_text
+#END AS text,
+#si.text,
+#p.normal_price,
+u.long_text AS text,
+bl.salePrice AS normal_price,
 ven.vendorName,
 n.servingSize, n.numServings, n.calories, n.fatCalories, n.totalFat, n.saturatedFat, n.transFat, n.cholesterol, n.sodium, n.totalCarbs, n.fiber, n.sugar, n.protein
 FROM products AS p 
@@ -96,11 +146,11 @@ LEFT JOIN scaleItems AS si ON si.linkedPLU=p.upc
 LEFT JOIN productUser AS u ON u.upc=p.upc
 LEFT JOIN vendors AS ven ON ven.vendorID=p.default_vendor_id
 LEFT JOIN NutriFactReqItems AS n ON n.upc=p.upc
-WHERE p.last_sold > NOW() - INTERVAL 30 DAY
-AND p.upc < 1000
-AND p.default_vendor_id = 1
-AND p.inUse = 1
-AND p.store_id = 2
+LEFT JOIN batchList AS bl ON p.upc=bl.upc
+WHERE p.upc IN (
+'0000000000729','0000000000219','0000000000445','0000000000215','0000000000244','0000000000284','0000000000303','0000000000475','0000000000477','0000000000478','0000000000503','0000000000346','0000000000415','0000000000492','0000000000698','0000000000744'
+)
+AND bl.batchID IN (19697,19452)
 GROUP BY p.upc
 ORDER BY v.sku, r.reviewed
         ");
@@ -127,6 +177,7 @@ ORDER BY v.sku, r.reviewed
             $fiber = $row['fiber'];
             $sugar = $row['sugar'];
             $protein = $row['protein'];
+            $data[$upc]['Ingredients'] = $ingredients;
 
             if (!isset($data[$upc])) {
                 foreach ($formFields as $field) {
@@ -151,7 +202,7 @@ ORDER BY v.sku, r.reviewed
                 $data[$upc]['Item Name 2nd Line'] = $lines[1];
             } else {
                 $data[$upc]['Item Name 1st Line'] = $lines[0];
-                $data[$upc]['Ingredients'] = $ingredients;
+                $data[$upc]['Item Name 1st Line'] = ''; // be sure to enter a blank line in second row
             }
 
             // get all the straight forward data
@@ -170,21 +221,68 @@ ORDER BY v.sku, r.reviewed
             $data[$upc]['Fiber Amount'] = $fiber;
             $data[$upc]['Total Sugars Amount'] = $sugar;
             $data[$upc]['Protein Amount'] = $protein;
-        }
 
+            // now staring in on percents
+            $data[$upc]['Total Fat Percent'] = $this->getDVValue($DVS['Fat'], $totalFat)."%";
+            $data[$upc]['Sat Fat Percent'] = $this->getDVValue($DVS['Sat Fat'], $saturatedFat)."%";
+            $data[$upc]['Cholesterol Percent'] = $this->getDVValue($DVS['Cholesterol'], $cholesterol)."%";
+            $data[$upc]['Sodium Percent'] = $this->getDVValue($DVS['Sodium'], $sodium)."%";
+            $data[$upc]['Fiber Percent'] = $this->getDVValue($DVS['Fiber'], $fiber)."%";
+            $data[$upc][' Total Carb Percent'] = $this->getDVValue($DVS['Carbohydrate'], $totalCarbs)."%";
+            //$data[$upc]['Added Sugars Percent'] = $this->getDVValue($DVS['Added Sugars'], $addedSugar); // doesn't exist yet
+
+            if (isset($nutrients[$upc]['Vitamin D'])) {
+                $data[$upc]['Vitamin D Percent'] = $nutrients[$upc]['Vitamin D']."%";
+            } else {
+                $data[$upc]['Vitamin D Percent'] = "0%";
+            }
+            if (isset($nutrients[$upc]['Calcium'])) {
+                $data[$upc]['Calcium Percent'] = $nutrients[$upc]['Calcium']."%";
+            } else {
+                $data[$upc]['Calcium Percent'] = "0%";
+            }
+            if (isset($nutrients[$upc]['Iron'])) {
+                $data[$upc]['Iron Percent'] = $nutrients[$upc]['Iron']."%";
+            } else {
+                $data[$upc]['Iron Percent'] = "0%";
+            }
+            if (isset($nutrients[$upc]['Potassium'])) {
+                $data[$upc]['Potassium Percent'] = $nutrients[$upc]['Potassium']."%";
+            } else {
+                $data[$upc]['Potassium Percent'] = "0%";
+            }
+        }
 
         // NEXT - for every 4 items, produce a .FDF file
         $sheetNum = 0;
         $quad = 1;
+        $total = 0;
         $f = fopen('fdfs/'.uniqid().'.fdf', 'w');
         fwrite($f, 'fdfs/'.$fdfHead, 1000);
+        echo "\n".count($data);
         foreach ($data as $upc => $row) {
-            if ($quad == 5) {
+            $total++;
+            //echo "\nQuad: $quad";
+            if ($total == count($data)) { // before checking to create a new sheet, check if end of list met and end process before creating a new sheet
+                //$quad = 1;
+                //$sheetNum++;
+                //$f = fopen('fdfs/'.uniqid().'.fdf', 'w');
+                //fwrite($f, $fdfHead, 1000); 
+                foreach ($row as $k => $v) {
+                    //echo "$k $quad" . ", " . $v  . "\n";
+                    $fdfLine = "<<
+/T ($k $quad) /V ($v)
+>>";
+                    fwrite($f, $fdfLine, 1000);
+                }
+                fwrite($f, $fdfTail, 1000);
+            } else if ($quad == 5) { 
+                //echo "\nQuad: $quad, Total: $total";
                 $quad = 1;
                 $sheetNum++;
                 fwrite($f, $fdfTail, 1000);
                 $f = fopen('fdfs/'.uniqid().'.fdf', 'w');
-                fwrite($f, $fdfHead, 1000);
+                fwrite($f, $fdfHead, 1000); 
             }
             //echo $str = $row['PLU#'] . "\n";
             foreach ($row as $k => $v) {
