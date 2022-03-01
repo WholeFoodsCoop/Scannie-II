@@ -49,6 +49,25 @@ class DBA extends PageLayoutA
         <h4>Saved Queries</h4>
         <input type="text" id="saved-queries-filter" class="form-control form-control-sm small">
         <ul style="font-size: 12px" id="saved-queries">
+            <li><a href='#' class="quick_query"></a>
+                <span class="query">
+                </span>
+            </li>
+            <li><a href='#' class="quick_query">UNFI Bulk SKU Check</a>
+                <span class="query">
+SELECT 
+p.upc, p.brand, p.description, v.sku, r.reviewed, DATE(p.last_sold) AS lastSold
+FROM products AS p 
+LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
+LEFT JOIN vendorItems AS v ON v.upc=p.upc AND v.vendorID = 1
+LEFT JOIN prodReview AS r ON r.upc=p.upc
+WHERE p.last_sold > NOW() - INTERVAL 30 DAY
+AND p.upc < 1000
+AND p.default_vendor_id = 1
+GROUP BY p.upc
+ORDER BY v.sku, r.reviewed
+                </span>
+            </li>
             <li><a href='#' class="quick_query">Check Bulk Herb Movement</a>
                 <span class="query">
 SELECT m.*, ROUND(p.auto_par*7, 2) AS curPar, ROUND(p.auto_par*7, 2) - par  
@@ -68,6 +87,12 @@ LEFT JOIN productUser AS u ON p.upc=u.upc
 WHERE b.batchID BETWEEN 17272 AND 17291
 GROUP BY p.upc
 ORDER BY p.brand</span>
+            </li>
+            <li><a href='#' class="quick_query">Find Items Removed From Basics</a>
+                <span class="query">
+# Upload Basics file to Generic Upload to use this query
+SELECT p.upc, v.sku, p.brand, p.description, p.last_sold, p.inUse FROM products AS p LEFT JOIN vendorItems AS v ON p.upc=v.upc AND p.default_vendor_id=v.vendorID LEFT JOIN PriceRules AS r ON p.price_rule_id=r.priceRuleID WHERE r.priceRuleTypeID = 6 AND p.upc NOT IN (SELECT upc FROM GenericUpload) AND p.inUse = 1 AND p.last_sold >= DATE(NOW() - INTERVAL 60 DAY);
+                </span>
             </li>
             <li><a href='#' class="quick_query">Get Alberts Price File</a>
                 <span class="query">SELECT * FROM woodshed_no_replicate.AlbertsFileView</span>
@@ -119,13 +144,20 @@ WHERE CASE WHEN WhsAvail like '%T%' THEN 'yes' ELSE 'no' END = 'yes'
                 </span>
             </li>
             <li><a href='#' class="quick_query">Get Current Sales</a>
-                <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
+                <span class="query">
+SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate,
+CONCAT(ROUND(100 * (1 - bl.salePrice / normal_price), 0), '%') AS PrcOff 
 FROM batchList AS bl
-    LEFT JOIN products AS p ON bl.upc=p.upc
-    LEFT JOIN batches AS b ON bl.batchID=b.batchID
-WHERE bl.batchID IN ( SELECT batchID FROM batches WHERE '$today' BETWEEN startDate AND endDate)
+LEFT JOIN products AS p ON bl.upc=p.upc
+LEFT JOIN batches AS b ON bl.batchID=b.batchID
+WHERE DATE(NOW()) BETWEEN b.startDate AND b.endDate
+AND p.upc NOT LIKE '%LC%'
+AND bl.salePrice <> 0
 GROUP BY bl.upc
-order by p.department, p.brand</span>
+order by department, p.brand
+# order by bl.salePrice / normal_price, p.department, p.brand
+
+                </span>
             </li>
             <li><a href='#' class="quick_query">Get Current Linked PLU</a>
                 <span class="query">SELECT p.department, bl.upc, bl.salePrice, bl.batchID, p.brand, p.description, date(b.startDate) AS startDate, date(b.endDate) AS endDate
@@ -149,7 +181,7 @@ order by department, upc
                 <span class="query">select upc, brand, description from products where created > '2020-09-25 09:00:00' 
 group by upc</span>
             </li>
-            <li><a href='#' class="quick_query">Get Linked PLU</a>
+            <li><a href='#' class="quick_query">Get Linked PLU Single Item</a>
                 <span class="query">select plu, itemdesc, linkedPLU from scaleItems where linkedPLU = 0000000000864</span>
             </li>
             <li><a href='#' class="quick_query">Get Locations by Selected Material</a>
@@ -185,6 +217,11 @@ GROUP BY p.upc
 ORDER BY auto_par DESC
 </span>
             </li>
+            <li><a href='#' class="quick_query">New Items Entered Today</a>
+                <span class="query">
+SELECT upc, brand, description FROM products WHERE created >= DATE(NOW()) GROUP BY upc
+                </span>
+            </li>
             <li><a href='#' class="quick_query">Get Review-Comments</a>
                 <span class="query">SELECT v.vendorName, r.upc, p.default_vendor_id AS vendorID, p.brand, p.description,
 r.user, r.reviewed, r.comment
@@ -198,7 +235,10 @@ ORDER BY p.default_vendor_id
                 </span>
             </li>
             <li><a href='#' class="quick_query">Get Scale LinkedPLU in Batch</a>
-                <span class="query">SELECT plu, price, itemDesc, linkedPLU FROM scaleItems WHERE linkedPLU IN (SELECT upc FROM batchList WHERE batchID = 16411)</span>
+                <span class="query">
+SELECT linkedPLU AS pluInBatch, price AS currentPrice, plu AS pluMissingFromBatch, salePrice AS newPrice FROM scaleItems AS s LEFT JOIN batchList AS b ON s.linkedPLU=b.upc WHERE b.batchID = 
+16411
+</span>
             </li>
             <li><a href='#' class="quick_query">Get Single_Item_Movement 90</a>
                 <span class="query">
