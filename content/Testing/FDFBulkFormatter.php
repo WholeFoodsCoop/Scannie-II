@@ -8,9 +8,37 @@ if (!class_exists('scanLib')) {
 }
 /*
 **  @class FDFBulkFormatter 
+*   Precursor to an FDF->PDF generator to fill out NCG templates for bulk bin labels
+*   Note: enter $organic and $local to match what is being printed for sanity check that 
+*   product types match the type being printed. This will go away once we can call pdftk in PHP,
+*   but for now, only one type of bin labels can be generated at a time, eg - local organic.
+*   I think the only thing storeID is being used for is generating the movement numbers.  
+*   Note that movement is not being re-calculated here, you may want to run the list of 
+*   UPCs through a sign printing page in Fannie and select HYBRID to re-calculate movement.
+*   Params: @storeID INT,  @organic bool, @local bool, @upcs array of INT
 */
 class FDFBulkFormatter 
 {
+
+    public $storeID = 2;
+    public $parMod = array(3, 7);
+    // once pdftk is handled by PHP, a dimension may be added to $data for each flag set (conv, local conv, organic, local organic)
+    // but for now, this will have to be handled manually
+    public $organic = true;
+    public $local = false;
+    // I also need to flag whether the price is current or comming from a price change batch
+    public $upcs = array(
+'604', '489', '355', '277'
+);
+
+    public function __construct()
+    {
+        $tmp = array();
+        foreach ($this->upcs as $upc) {
+            $tmp[] = scanLib::padUPC($upc);
+        }
+        $this->upcs = $tmp;
+    }
 
     private function getDVs()
     {
@@ -42,11 +70,9 @@ class FDFBulkFormatter
     {
         $dbc = scanLib::getConObj();
         $info = array();
-        $prep = $dbc->prepare("SELECT * FROM NutriFactOptItems WHERE upc IN (
-        '0000000000191','0000000000277','0000000000829','0000000000282','0000000000341','0000000000355','0000000000376','0000000000425','0000000000446','0000000000531','0000000000604','0000000000706','0000000000721','0000000000735','0000000000279','0000000000362','0000000000402','0000000000489','0000000000551','0000000000725','0000000000737','0000000000749','0000000000886'
-)
-");
-        $res = $dbc->execute($prep);
+        list($inStr, $args) = $dbc->safeInClause($this->upcs);
+        $prep = $dbc->prepare("SELECT * FROM NutriFactOptItems WHERE upc IN ($inStr)");
+        $res = $dbc->execute($prep, $args);
         while ($row = $dbc->fetchRow($res)) {
             $info[$row['upc']][$row['name']] = $row['percentDV'];
         }
@@ -91,6 +117,7 @@ class FDFBulkFormatter
             " Total Carb Percent" // [sic]
         );
 
+        $date = new DateTime();
         $DVS = $this->getDVs();
         $nutrients = $this->getItemNutrientVals();
 
@@ -118,6 +145,7 @@ trailer
 
         $dbc = scanLib::getConObj();
         $data = array();
+        list($inStr, $args) = $dbc->safeInClause($this->upcs);
 
         $prp = $dbc->prepare("
 SELECT 
@@ -133,10 +161,18 @@ v.sku,
 #    ELSE u.long_text
 #END AS text,
 #si.text,
-#p.normal_price,
+p.normal_price,
 u.long_text AS text,
-bl.salePrice AS normal_price,
+#bl.salePrice AS normal_price,
 ven.vendorName,
+p.auto_par,
+CASE 
+    WHEN p.numflag & (1 << 16) <> 0 THEN true
+    ELSE false 
+END AS organic, 
+CASE WHEN p.local <> 0 THEN true 
+    ELSE false
+END AS local,
 n.servingSize, n.numServings, n.calories, n.fatCalories, n.totalFat, n.saturatedFat, n.transFat, n.cholesterol, n.sodium, n.totalCarbs, n.fiber, n.sugar, n.protein
 FROM products AS p 
 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
@@ -147,22 +183,39 @@ LEFT JOIN productUser AS u ON u.upc=p.upc
 LEFT JOIN vendors AS ven ON ven.vendorID=p.default_vendor_id
 LEFT JOIN NutriFactReqItems AS n ON n.upc=p.upc
 LEFT JOIN batchList AS bl ON p.upc=bl.upc
-WHERE p.upc IN (
-'0000000000191','0000000000277','0000000000829','0000000000282','0000000000341','0000000000355','0000000000376','0000000000425','0000000000446','0000000000531','0000000000604','0000000000706','0000000000721','0000000000735','0000000000279','0000000000362','0000000000402','0000000000489','0000000000551','0000000000725','0000000000737','0000000000749','0000000000886'
-)
-AND bl.batchID IN (19697,19452)
+WHERE p.upc IN ($inStr)
+#AND bl.batchID IN (19697,19452)
+AND p.store_id = ?
 GROUP BY p.upc
 ORDER BY v.sku, r.reviewed
         ");
-        $res = $dbc->execute($prp);
+        $args[] = $this->storeID;
+        $res = $dbc->execute($prp, $args);
+        //var_dump($res);
         while ($row = $dbc->fetchRow($res)) {
             $upc = $row['upc'];
             $desc = $row['description'];
             $brand = $row['brand'];
             $sku = $row['sku'];
-            $price = $row['normal_price'];
+            $price = $row['normal_price']."/lb";
             $vendorName = $row['vendorName'];
             $ingredients = $row['text'];
+            $ingredients = preg_replace('#<br\s*/?>#i', "\n", $ingredients);
+            $movement = round($row['auto_par'] * $this->parMod[$this->storeID - 1], 1);
+            $local = $row['local'];
+            $organic = $row['organic'];
+
+            // this chunk is temporary, for sanity check, only until pdftk is handled by PHP
+            if ($local != $this->local || $organic != $this->organic) {
+                $mode1 = ($this->organic == true) ? 'organic' : 'conventional';
+                $mode2 = ($this->local == true) ? 'local' : 'not local';
+                echo "This set: '$mode1' & '$mode2' \n";
+                if ($local != $this->local) echo "local discrepancy found for $upc \n";
+                if ($organic != $this->organic) echo "organic discrepancy found for $upc \n";
+                echo "FDF FILES HAVE NOT BEEN GENERATED \n";
+
+                return false;
+            }
 
             $servingSize = $row['servingSize'];
             $numServings = $row['numServings'];
@@ -178,6 +231,7 @@ ORDER BY v.sku, r.reviewed
             $sugar = $row['sugar'];
             $protein = $row['protein'];
             $data[$upc]['Ingredients'] = $ingredients;
+            $data[$upc]['Eff. Date'] = $date->format('Y-m-d') . ' | MT: ' . $movement;
 
             if (!isset($data[$upc])) {
                 foreach ($formFields as $field) {
@@ -253,13 +307,16 @@ ORDER BY v.sku, r.reviewed
             }
         }
 
+        $fileNames = $this->createFileNames($data);
+
         // NEXT - for every 4 items, produce a .FDF file
         $sheetNum = 0;
         $quad = 1;
         $total = 0;
-        $f = fopen('fdfs/'.uniqid().'.fdf', 'w');
+        //$f = fopen('fdfs/'.uniqid().'.fdf', 'w');
+        $f = fopen('fdfs/'.$fileNames[$sheetNum].'.fdf', 'w');
         fwrite($f, 'fdfs/'.$fdfHead, 1000);
-        echo "\n".count($data);
+        //echo "\n".count($data);
         foreach ($data as $upc => $row) {
             $total++;
             //echo "\nQuad: $quad";
@@ -281,7 +338,8 @@ ORDER BY v.sku, r.reviewed
                 $quad = 1;
                 $sheetNum++;
                 fwrite($f, $fdfTail, 1000);
-                $f = fopen('fdfs/'.uniqid().'.fdf', 'w');
+                //$f = fopen('fdfs/'.uniqid().'.fdf', 'w');
+                $f = fopen('fdfs/'.$fileNames[$sheetNum].'.fdf', 'w');
                 fwrite($f, $fdfHead, 1000); 
             }
             //echo $str = $row['PLU#'] . "\n";
@@ -306,9 +364,28 @@ ORDER BY v.sku, r.reviewed
 
 */
 
-
-
         return true;
+    }
+
+    private function createFileNames($data)
+    {
+        $names = array();
+        $i = 0;
+        $j = 0;
+        $last = null;
+        foreach ($data as $upc => $row) {
+            if (!isset($names[$j])) {
+                $names[$j] = '';
+            }
+            $names[$j] .= substr($upc, -3) . ".";
+            $i++;
+            if ($i % 4 == 0) {
+                $names[$j] = rtrim($names[$j], '.');
+                $j++;
+            }
+        }
+
+        return $names;
     }
 
 }
