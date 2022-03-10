@@ -32,6 +32,8 @@ Contains: " . ucwords($allergens);
         
         $ing = "Ingredients: " . ucwords($long_text);
         if ($allergens != null) {
+            $ing .= "
+";
             $ing .= $contains;
         }
 
