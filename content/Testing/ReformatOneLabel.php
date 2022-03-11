@@ -22,8 +22,14 @@ class ReformatOneLabel extends PageLayoutA
     public function body_content()
     {
 
-        $long_text = FormLib::get('ingredients');
-        $allergens = FormLib::get('allergens');
+        $long_text = strtolower(FormLib::get('ingredients'));
+        $long_text = str_replace('ingredients', '', $long_text);
+        $long_text = str_replace(':', '', $long_text);
+        $long_text = str_replace('.', '', $long_text);
+        $allergens = strtolower(FormLib::get('allergens'));
+        $allergens = str_replace('contains', '', $allergens);
+        $allergens = str_replace(':', '', $allergens);
+        $allergens = str_replace('.', '', $allergens);
 
         $contains = "
 Contains: " . ucwords($allergens);
