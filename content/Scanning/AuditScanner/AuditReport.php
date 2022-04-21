@@ -33,8 +33,35 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<saveAs>';
         $this->__routes[] = 'post<loadList>';
         $this->__routes[] = 'post<deleteList>';
+        $this->__routes[] = 'post<vendCat>';
 
         return parent::preprocess();
+    }
+
+    public function postVendCatHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $vid = FormLib::get('vendCat');
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+
+        $args = array($vid);
+        $prep = $dbc->prepare("SELECT v.upc
+            FROM products AS p
+                LEFT JOIN vendorItems AS v ON v.upc=p.upc AND v.vendorID=p.default_vendor_id
+            WHERE inUse = 1
+            AND p.default_vendor_id = ?
+            GROUP BY p.upc;
+        ");
+        $res = $dbc->execute($prep, $args);
+        $items = array();
+        while ($row = $dbc->fetchRow($res)) {
+            $items[] = $row['upc'];
+        }
+
+        $this->loadVendorCatalogHandler($items, $username, $storeID);
+
+        return header("location: AuditReport.php?upc=$items[0]");
     }
 
     private function getUpcList($username, $storeID)
@@ -70,6 +97,26 @@ class AuditReport extends PageLayoutA
         $res = $dbc->execute($prep, $args);
 
         return header("location: AuditReport.php");
+    }
+
+    private function loadVendorCatalogHandler($upcs, $username, $storeID)
+    {
+        $dbc = ScanLib::getConObj('SCANALTDB');
+
+        $args = array($username, $storeID);
+        $prep = $dbc->prepare("DELETE FROM AuditScan WHERE username = ?
+            AND storeID = ? AND savedAs = 'default'");
+        $res = $dbc->execute($prep, $args);
+
+        foreach ($upcs as $upc) {
+            $args = array($upc, $username, $storeID);
+            $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs, notes)
+                VALUES (NOW(), ?, ?, ?, 'default', '' );
+            ");
+            $res = $dbc->execute($prep, $args);
+        }
+
+        return false;
     }
 
     public function postLoadListHandler()
@@ -906,6 +953,19 @@ HTML;
         }
         $datalist .= "</datalist>";
 
+        $vselect = '';
+        $curVendor = FormLib::get('vendor');
+        $prep = $dbc->prepare("SELECT vendorName, vendorID FROM vendors 
+            WHERE vendorID NOT IN (-2,-1,1,2)
+            ORDER BY vendorName ASC;");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+             $vid = $row['vendorID'];
+             $vname = $row['vendorName'];
+             $vselect .= "<option value='$vid'>$vname</option>";
+         }
+
+
         $prep = $dbc->prepare("SELECT * FROM woodshed_no_replicate.temp");
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
@@ -1052,6 +1112,18 @@ $modal
     </div>
     <div class="form-group dummy-form">
         <button class="btn btn-default btn-sm" type="submit">Save</button>
+    </div>
+</form>
+<form name="loadVendCat" id="loadVendCat" method="post" action="AuditReport.php" style="display: inline-block">
+    <input name="username" type="hidden" value="$username" />
+    <input name="storeID" type="hidden" value="$storeID" />
+    <div class="form-group dummy-form">
+        <select name="vendCat" class="form-control form-control-sm" placeholder="Select a Vendor Catalog">
+            $vselect
+        </select>
+    </div>
+    <div class="form-group dummy-form">
+        <button class="btn btn-default btn-sm" type="submit">Load Catalog</button>
     </div>
 </form>
 $nFilter
