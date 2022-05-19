@@ -49,8 +49,30 @@ class DBA extends PageLayoutA
         <h4>Saved Queries</h4>
         <input type="text" id="saved-queries-filter" class="form-control form-control-sm small">
         <ul style="font-size: 12px" id="saved-queries">
-            <li><a href='#' class="quick_query"></a>
+            <li><a href='#' class="quick_query">Run Everyday Sprouted Bagels</a>
                 <span class="query">
+SELECT * FROM is4c_trans.dlog_90_view  WHERE upc = "0005599104902" AND tdate > '2022-04-27'
+                </span>
+            </li>
+            <li><a href='#' class="quick_query">Check For Badscans Yesterday</a>
+                <span class="query">
+SELECT
+t.store_id, DATE(datetime) AS date, SUBSTRING(datetime, 12, 5) AS time, register_no, t.upc, t.description AS trans_desc, p.description AS p_description, CONCAT( emp_no, '-', register_no, '-',trans_no) AS trans_num
+FROM is4c_trans.dtransactions AS t
+LEFT JOIN products AS p ON p.upc=t.upc
+WHERE datetime > '2022-05-18' 
+AND t.description = 'BADSCAN'
+AND t.upc > 9999
+ORDER BY store_id, datetime DESC
+                </span>
+            </li>
+            <li><a href='#' class="quick_query">Get Nutri Fact Percent DV</a>
+                <span class="query">
+SELECT
+units*
+0.02
+, name, units
+FROM NutriFactStd   
                 </span>
             </li>
             <li><a href='#' class="quick_query">UNFI Bulk SKU Check</a>
@@ -91,6 +113,7 @@ ORDER BY p.brand</span>
             <li><a href='#' class="quick_query">Find Items Removed From Basics</a>
                 <span class="query">
 # Upload Basics file to Generic Upload to use this query
+# To check CSCS, change prid 6 to 12 and upload the CSCS file to Generic Upload
 SELECT p.upc, v.sku, p.brand, p.description, p.last_sold, p.inUse FROM products AS p LEFT JOIN vendorItems AS v ON p.upc=v.upc AND p.default_vendor_id=v.vendorID LEFT JOIN PriceRules AS r ON p.price_rule_id=r.priceRuleID WHERE r.priceRuleTypeID = 6 AND p.upc NOT IN (SELECT upc FROM GenericUpload) AND p.inUse = 1 AND p.last_sold >= DATE(NOW() - INTERVAL 60 DAY);
                 </span>
             </li>
