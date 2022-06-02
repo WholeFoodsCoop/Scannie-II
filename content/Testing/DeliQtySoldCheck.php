@@ -323,7 +323,7 @@ HTML;
         $dbc = scanLib::getConObj();
         $data = array();
 
-        $args = array($date1, $date2, $storeID);
+        $args = array($date1, $date2, $storeID, $date1);
         list($inStr, $addArgs) = $dbc->safeInClause($list);
         $args = array_merge($args, $addArgs);
         $prep = $dbc->prepare("
@@ -363,6 +363,7 @@ HTML;
                     AND dlog.tdate >= ? AND dlog.tdate <= ? 
             WHERE m.superID IN (3)
                 AND p.store_id = ?
+                AND p.created < ?
                 AND p.upc IN ($inStr)
             GROUP BY p.upc, p.store_id
             ORDER BY p.department, p.brand
