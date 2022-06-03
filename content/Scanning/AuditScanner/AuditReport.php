@@ -49,8 +49,10 @@ class AuditReport extends PageLayoutA
         $prep = $dbc->prepare("SELECT v.upc
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON v.upc=p.upc AND v.vendorID=p.default_vendor_id
+                RIGHT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
             WHERE inUse = 1
             AND p.default_vendor_id = ?
+                AND m.super_name != 'PRODUCE'
             GROUP BY p.upc;
         ");
         $res = $dbc->execute($prep, $args);
@@ -521,6 +523,8 @@ class AuditReport extends PageLayoutA
         $json = array('count' => null);
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
         $storeID = scanLib::getStoreID();
+        // tmp
+        $storeID = 2;
         $args = array($username, $storeID);
         $query = $dbc->prepare("
             SELECT upc
@@ -540,6 +544,8 @@ class AuditReport extends PageLayoutA
         $dbc = ScanLib::getConObj();
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
         $storeID = scanLib::getStoreID();
+        // tmp
+        $storeID = 2;
         $rounder = new PriceRounder();
 
         $upcs = array();
@@ -625,6 +631,24 @@ class AuditReport extends PageLayoutA
             ORDER BY a.date DESC
         ");
 
+        // get autopar for all stores
+        $pars = array();
+        $parA = array($username);
+        $parP = $dbc->prepare("SELECT p.upc, 
+                ROUND(auto_par*7,1) AS autoPar, 
+                p.store_id
+            FROM products AS p
+                RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON a.upc=p.upc
+            WHERE p.upc != '0000000000000'
+                AND a.username = ?
+                AND a.savedAS = 'default'
+            ORDER BY p.upc, p.store_id
+        ");
+        $parR = $dbc->execute($parP, $parA);
+        while ($row = $dbc->fetchRow($parR)) {
+            $pars[$row['upc']][$row['store_id']] = $row['autoPar'];
+        }
+
         $td = "";
         $textarea = "<div style=\"position: relative\">
             <span class=\"status-popup\">Copied!</span>
@@ -669,6 +693,8 @@ class AuditReport extends PageLayoutA
         ";
 
         $parMod = (scanLib::getStoreID() == 1) ? 3 : 7;
+        // tmp
+        $parMod = 7;
 
         // this is the first thead row (column sorting)
         $th = "
@@ -686,7 +712,7 @@ class AuditReport extends PageLayoutA
             <th class=\"recentPurchase\">PO-unit</th>
             <th class=\"price\">price</th>
             <th class=\"sale\">sale</th>
-            <th class=\"autoPar\">autoPar*$parMod</th>
+            <th class=\"autoPar\">autoPar(*7)</th>
             <th class=\"margin_target_diff\">margin, target, diff</th>
             <th class=\"srp\">srp</th>
             <th class=\"rsrp\">round srp</th>
@@ -727,17 +753,23 @@ class AuditReport extends PageLayoutA
             $sku = $row['sku'];
             list($recentPurchase, $received) = $this->getRecentPurchase($dbc,$upc);
             $brand = $row['brand'];
-            $autoPar = round($row['auto_par'],1);
-            $parMod = 0;
-            $parVerb = '';
-            if (scanLib::getStoreID() == 1) {
-                $parMod = 3;
-                $parVerb = "({$autoPar}*3)";
-            } elseif ($storeID == 2) {
-                $parMod = 7;
-                $parVerb = "({$autoPar}*7)";
+            //$autoPar = round($row['auto_par'],1);
+            $autoPar = '| ';
+            foreach ($pars[$upc] as $par) {
+                $autoPar .= "$par | ";
             }
-            $autoPar = round($row['auto_par'] * $parMod, 1);
+            $parMod = 0;
+            //$parVerb = '';
+            //if (scanLib::getStoreID() == 1) {
+            //    $parMod = 3;
+            //    $parVerb = "({$autoPar}*3)";
+            //} elseif ($storeID == 2) {
+            //    $parMod = 7;
+            //    $parVerb = "({$autoPar}*7)";
+            //}
+            // tmp
+            $parMod = 7;
+            //$autoPar = round($row['auto_par'] * $parMod, 1);
             $signBrand = $row['signBrand'];
             $description = $row['description'];
             $signDescription = $row['signDescription'];
@@ -921,6 +953,11 @@ HTML;
         $dbc = scanLib::getConObj();
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
         $storeID = scanLib::getStoreID();
+        // tmp
+        // override storeID while working from home
+        if ($username == 'csather') {
+            $storeID = 2;
+        }
         $loaded = FormLib::get('loaded');
         $test = new DataModel($dbc);
 
@@ -1123,7 +1160,7 @@ $modal
         </select>
     </div>
     <div class="form-group dummy-form">
-        <button class="btn btn-default btn-sm" type="submit">Load Catalog</button>
+        <button class="btn btn-default btn-sm" type="submit" id="loadCatBtn">Load Catalog</button>
     </div>
 </form>
 $nFilter
@@ -1169,9 +1206,12 @@ $columnCheckboxes
         </div>
     </div>
     <div class="col-lg-3">
-        <div class="card" style="margin: 5px; box-shadow: 1px 1px lightgrey;">
+        <div class="card" style="margin: 5px; box-shadow: 1px 1px lightgrey;" id="simpleInputCalc">
             <div class="card-body">
-                <h6 class="card-title">Simple Input Calculator &trade;</h6>
+                <h6 class="card-title">Simple Input Calculator 
+                    <span id="hide-SIC" style="padding: 5px; padding-right: 10px; padding-left: 10px;border: 1px solid grey; font-size: 12px;
+                        cursor: pointer;">
+                        scroll-lock: on</span></h6>
                 <div class="row">
                     <div class="col-lg-9">
                         <input type="text" id="calculator" name="calculator" style="font-size: 12px" class="form-control small" autofocus>
@@ -1915,6 +1955,42 @@ $('#avgCalc').focusout(function(){
 
 $('#prevent-default').click(function(e) {
     e.preventDefault();
+});
+
+$('#loadCatBtn').on('click', function(){
+    c = confirm("Are you sure you would like to load this catalog? This will replace the current list.");
+    return c;
+});
+
+var scrollMode = 0;
+$(window).scroll(function () {
+    var scrollTop = $(this).scrollTop();
+    if (scrollMode == 0) {
+        if (scrollTop > 400) {
+            $('#simpleInputCalc')
+                .css('position', 'fixed')
+                .css('top', '0px')
+                .css('right', '0px')
+                .css('background-color', 'rgba(255,255,255,1)');
+        } else {
+            $('#simpleInputCalc')
+                .css('position', 'relative')
+                .css('background-color', 'rgba(255,255,255,1)');
+        }
+    }
+});
+
+$('#hide-SIC').click(function(){
+    if (scrollMode == 0) {
+        scrollMode = 1;
+        $(this).text('scroll-lock: off');
+        $('#simpleInputCalc')
+            .css('position', 'relative')
+            .css('background-color', 'rgba(255,255,255,1)');
+    } else {
+        scrollMode = 0;
+        $(this).text('scroll-lock: on');
+    }
 });
 JAVASCRIPT;
     }
