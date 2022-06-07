@@ -1214,7 +1214,7 @@ $columnCheckboxes
                         scroll-lock: on</span></h6>
                 <div class="row">
                     <div class="col-lg-9">
-                        <input type="text" id="calculator" name="calculator" style="font-size: 12px" class="form-control small" autofocus>
+                        <input type="text" id="calculator" name="calculator" style="font-size: 12px" class="form-control small">
                     </div>
                     <div class="col-lg-3">
                         <div class="form-group">
