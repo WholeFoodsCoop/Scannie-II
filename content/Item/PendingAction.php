@@ -32,11 +32,12 @@ class PendingAction extends PageLayoutA
     protected $title = "Pending Actions";
     protected $description = "[Pending Actions] is a memory safety net.";
     protected $ui = TRUE;
+    protected $connect = true;
 
     public function body_content()
     {
         $ret = '';
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $storeID = scanLib::getStoreID();
         $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
 
@@ -90,7 +91,8 @@ class PendingAction extends PageLayoutA
                     p.special_price,
                     e.note,
                     p.inUse,
-                    e.storeID
+                    e.storeID,
+                    DATE(p.last_sold) AS last_sold
                 FROM woodshed_no_replicate.exceptionItems AS e
                     INNER JOIN products AS p ON p.upc=e.upc
                 AND p.store_id = ?
@@ -105,6 +107,7 @@ class PendingAction extends PageLayoutA
                 $data[$row['upc']]['salePrice'][] = $row['special_price'];
                 $data[$row['upc']]['in_use'] = $row['inUse'];
                 $data[$row['upc']]['storeID'] = $row['storeID'];
+                $data[$row['upc']]['lastSold'] = $row['last_sold'];
                 if (!isset($data[$row['upc']]['note'])) {
                     $data[$row['upc']]['note'] = $row['note'];
                 }
@@ -115,25 +118,29 @@ class PendingAction extends PageLayoutA
 
         $ret .= '<form method="post" name="rmbtn" id="rmbtn">';
 
-        $table_1 =  '<div class="panel panel-default table-responsive"><table id="table_1" class="table table-striped table-bordered table-sm small">';
+        $table_1 =  '<div class="panel panel-default table-responsive"><table id="table_1" class="table table-striped table-bordered table-sm small"
+            style="box-shadow: 2px 2px rgba(255,55,10,0.3)">';
         $table_1 .=  '
             <thead>
                 <th>UPC</th>
                 <th>Brand</th>
                 <th>Description</th>
                 <th>Action Required</th>
-                <th>Timestamp</th>
+                <th>Last Sold</th>
+                <th>Entered</th>
                 <th></th>
                 <th></th>
             </thead>';
-        $table_2 =  '<div class="panel panel-default table-responsive"><table id="table_2" class="table table-striped table-bordered table-sm small">';
+        $table_2 =  '<div class="panel panel-default table-responsive"><table id="table_2" class="table table-striped table-bordered table-sm small"
+            style="box-shadow: 2px 2px rgba(55,55,255,0.3);">';
         $table_2 .=  '
             <thead>
                 <th>UPC</th>
                 <th>Brand</th>
                 <th>Description</th>
                 <th>Action Required</th>
-                <th>Timestamp</th>
+                <th>Last Sold</th>
+                <th>Submitted</th>
                 <th></th>
                 <th></th>
             </thead>';
@@ -147,6 +154,7 @@ class PendingAction extends PageLayoutA
                 $table_1 .= '<td>' . $array['brand'] . '</td>';
                 $table_1 .= '<td>' . $array['desc'] . '</td>';
                 $table_1 .= '<td>' . scanLib::strGetDate($array['note']) . '</td>';
+                $table_1 .= '<td>' . $array['lastSold'] . '</td>';
                 $table_1 .= '<td data-value="'.$action_data_value.'">' . $array['timestamp'] . '</td>';
                 $table_1 .= "<td><button name=\"rmItem\" class=\"scanicon scanicon-trash scanicon-sm btn btn-default\" value=$upc>&nbsp;</button></td>";
                 $table_1 .= "<td><span name=\"dnItem\" class=\"scanicon scanicon-down-arrow scanicon-sm btn btn-default\" onclick=\"moveUpc('dn', '$upc'); return false;\" value=$upc>&nbsp;</span>
@@ -158,6 +166,7 @@ class PendingAction extends PageLayoutA
                 $table_2 .= '<td>' . $array['brand'] . '</td>';
                 $table_2 .= '<td>' . $array['desc'] . '</td>';
                 $table_2 .= '<td>' . scanLib::strGetDate($array['note']) . '</td>';
+                $table_2 .= '<td>' . $array['lastSold'] . '</td>';
                 $table_2 .= '<td data-value="'.$action_data_value.'">' . $array['timestamp'] . '</td>';
                 $table_2 .= "<td><button name=\"rmItem\" class=\"scanicon scanicon-trash scanicon-sm btn btn-default\" value=$upc>&nbsp;</button></td>";
                 $table_2 .= "<td><span name=\"upItem\" class=\"scanicon scanicon-up-arrow scanicon-sm btn btn-default\" onclick=\"moveUpc('up', '$upc'); return false;\" value=$upc>&nbsp;</span>
@@ -172,9 +181,9 @@ class PendingAction extends PageLayoutA
         return <<<HTML
 <input type="hidden" id="store_id" value=$storeID />
 $ret
-Entered @ <h5 style="display: inline-block">Hillside</h5>
+Entered @ <h5 style="display: inline-block; background-color: rgba(255,55,10,0.3);">Hillside</h5>
 $table_1
-Entered @ <h5 style="display: inline-block">Denfeld</h5>
+Entered @ <h5 style="display: inline-block; background-color: rgba(10,55,255,0.2);">Denfeld</h5>
 $table_2
 HTML;
     }
