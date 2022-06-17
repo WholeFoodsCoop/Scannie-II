@@ -55,13 +55,14 @@ class ProductionItemMovement extends PageLayoutA
         }
 
         $td2 = "";
-        $prep = $dbc->prepare("select trans_num, p.description, tdate, DATE(tdate) AS date, d.upc, d.description, ROUND(total/p.normal_price,2) total from is4c_trans.dlog_15 AS d INNER JOIN is4c_op.products AS p on d.upc=p.upc and d.store_id=p.store_id where p.upc = ? AND card_no <> 5700 AND d.store_id = 2 ORDER BY tdate DESC;");
+        $prep = $dbc->prepare("select d.ItemQtty, trans_num, p.description, tdate, DATE(tdate) AS date, d.upc, d.description, ROUND(total/p.normal_price,2) total from is4c_trans.dlog_15 AS d INNER JOIN is4c_op.products AS p on d.upc=p.upc and d.store_id=p.store_id where p.upc = ? AND card_no <> 5700 AND d.store_id = 2 ORDER BY tdate DESC;");
         $res = $dbc->execute($prep, array($upc));
         while ($row = $dbc->fetchRow($res)) {
             $total = $row['total'];
+            $itemQtty = $row['ItemQtty'];
             $date = $row['date'];
             $transNum = $row['trans_num'];
-            $td2 .= "<tr><td>$date</td><td>$transNum</td><td>$total</td></tr>";
+            $td2 .= "<tr><td>$date</td><td>$transNum</td><td>$total</td><td>($itemQtty)</td></tr>";
         }
 
         $lastChange = "";
@@ -77,17 +78,20 @@ class ProductionItemMovement extends PageLayoutA
         return <<<HTML
 <div class="row" style="padding: 15px">
     <div class="col-lg-4">
-        <h5>Daily Scale Label Product Movement</h5>
+        <h5>Denfeld Daily Scale-Label-Product Movement</h5>
         <form method="get" action="ProductionItemMovement.php">
             <input type="text" name="upc" value="$upc" placeholder="upc" />
         </form>
         <div>$description</div> 
         <p>This table shows <strong>daily movement</strong> <i>excluding</i> NABs</p>
-        <table class="table table-bordered table-sm small"><thead></thead><tbody>$td</tbody></table>
+        <table class="table table-bordered table-sm small"><thead><th>Date</th><th>Movement/lb.</th></thead><tbody>$td</tbody></table>
     </div>
     <div class="col-lg-4">
         This table shows <strong>all</strong> transactions <i>excluding</i> NABs
-        <table class="table table-bordered table-sm small"><thead></thead><tbody>$td2</tbody></table>
+        <table class="table table-bordered table-sm small">
+            <thead><th>Date</th><th>TransNum</th><th>Mvmt/lb.</th><th>Inaccurate Qtty</th></thead>
+            <tbody>$td2</tbody>
+        </table>
     </div>
     <div class="col-lg-4">$lastChange</div>
 </div>
