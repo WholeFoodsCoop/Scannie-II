@@ -9,3 +9,4 @@ test.php
 *.backup
 SpecialPriceCheck.php
 content/Testing/fdfs/
+content/Testing/tmp_barcodes.pdf
