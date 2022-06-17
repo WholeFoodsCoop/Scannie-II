@@ -8,28 +8,16 @@ if (!class_exists('scanLib')) {
 }
 /*
 **  @class FDFBulkFormatter 
-*   Precursor to an FDF->PDF generator to fill out NCG templates for bulk bin labels
-*   Note: enter $organic and $local to match what is being printed for sanity check that 
-*   product types match the type being printed. This will go away once we can call pdftk in PHP,
-*   but for now, only one type of bin labels can be generated at a time, eg - local organic.
-*   I think the only thing storeID is being used for is generating the movement numbers.  
-*   Note that movement is not being re-calculated here, you may want to run the list of 
-*   UPCs through a sign printing page in Fannie and select HYBRID to re-calculate movement.
 *   Params: @storeID INT,  @organic bool, @local bool, @upcs array of INT
 */
 class FDFBulkFormatter 
 {
 
-    public $storeID = 2;
+    public $storeID = 1;
     public $parMod = array(3, 7);
-    // once pdftk is handled by PHP, a dimension may be added to $data for each flag set (conv, local conv, organic, local organic)
-    // but for now, this will have to be handled manually
     public $organic = true;
     public $local = false;
-    // I also need to flag whether the price is current or comming from a price change batch
-    public $upcs = array(
-'604', '489', '355', '277'
-);
+    public $upcs = array();
 
     public function __construct()
     {
@@ -38,6 +26,34 @@ class FDFBulkFormatter
             $tmp[] = scanLib::padUPC($upc);
         }
         $this->upcs = $tmp;
+    }
+
+    public function setUPCs($upcs)
+    {
+        $tmp = array();
+        foreach ($upcs as $upc) {
+            $tmp[] = scanLib::padUPC($upc);
+        }
+        $this->upcs = $tmp;
+    }
+
+    public function setBatchIDs($bids)
+    {
+        $tmp = array();
+        foreach ($bids as $bid) {
+            $tmp[] = $bid;
+        }
+        $this->bids = $tmp;
+    }
+
+    public function setOrganic($o)
+    {
+        $this->organic = $o;
+    }
+
+    public function setLocal($l)
+    {
+        $this->local = $l;
     }
 
     private function getDVs()
@@ -116,7 +132,8 @@ class FDFBulkFormatter
             "Potassium Percent",
             " Total Carb Percent" // [sic]
         );
-
+        
+        $this->storeID = COREPOS\Fannie\API\lib\Store::getIdByIp();
         $date = new DateTime();
         $DVS = $this->getDVs();
         $nutrients = $this->getItemNutrientVals();
@@ -147,7 +164,7 @@ trailer
         $data = array();
         list($inStr, $args) = $dbc->safeInClause($this->upcs);
 
-        $prp = $dbc->prepare("
+        $query = "
 SELECT 
 p.upc, 
 p.brand, 
@@ -155,15 +172,19 @@ CASE
     WHEN u.description IS NOT NULL THEN u.description
     ELSE p.description
 END AS description,
-v.sku,
-#CASE
-#    WHEN si.text != '' AND si.text IS NOT NULL THEN si.text
-#    ELSE u.long_text
-#END AS text,
-#si.text,
-p.normal_price,
+v.sku,";
+
+        if (count($this->bids) == 0) {
+            $query .= "
+p.normal_price,";
+        } else {
+            $query .= "
+bl.salePrice AS normal_price,";
+        }
+
+
+        $query .= "
 u.long_text AS text,
-#bl.salePrice AS normal_price,
 ven.vendorName,
 p.auto_par,
 CASE 
@@ -176,22 +197,38 @@ END AS local,
 n.servingSize, n.numServings, n.calories, n.fatCalories, n.totalFat, n.saturatedFat, n.transFat, n.cholesterol, n.sodium, n.totalCarbs, n.fiber, n.sugar, n.protein
 FROM products AS p 
 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
-LEFT JOIN vendorItems AS v ON v.upc=p.upc AND v.vendorID = 1
+LEFT JOIN vendorItems AS v ON v.upc=p.upc AND v.vendorID=p.default_vendor_id
 LEFT JOIN prodReview AS r ON r.upc=p.upc
 LEFT JOIN scaleItems AS si ON si.linkedPLU=p.upc
 LEFT JOIN productUser AS u ON u.upc=p.upc
 LEFT JOIN vendors AS ven ON ven.vendorID=p.default_vendor_id
 LEFT JOIN NutriFactReqItems AS n ON n.upc=p.upc
 LEFT JOIN batchList AS bl ON p.upc=bl.upc
-WHERE p.upc IN ($inStr)
-#AND bl.batchID IN (19697,19452)
+WHERE p.upc IN ($inStr)";
+
+        if (count($this->bids) == 0) {
+            $query .= "";
+        } else {
+            $tmp = '';
+            foreach ($this->bids as $i => $bid) {
+                $tmp .= $bid;
+                if (isset($this->bids[$i+1])) {
+                    $tmp .= ',';
+                }
+            } 
+            $query .= "
+AND bl.batchID IN ($tmp)
+            ";
+        }
+
+        $query .= "
 AND p.store_id = ?
 GROUP BY p.upc
 ORDER BY v.sku, r.reviewed
-        ");
+        ";
+        $prp = $dbc->prepare($query);
         $args[] = $this->storeID;
         $res = $dbc->execute($prp, $args);
-        //var_dump($res);
         while ($row = $dbc->fetchRow($res)) {
             $upc = $row['upc'];
             $desc = $row['description'];
@@ -205,14 +242,15 @@ ORDER BY v.sku, r.reviewed
             $local = $row['local'];
             $organic = $row['organic'];
 
-            // this chunk is temporary, for sanity check, only until pdftk is handled by PHP
+            // do not generate PDF if flags don't match
             if ($local != $this->local || $organic != $this->organic) {
+                echo "<div class=\"well\">";
                 $mode1 = ($this->organic == true) ? 'organic' : 'conventional';
                 $mode2 = ($this->local == true) ? 'local' : 'not local';
-                echo "This set: '$mode1' & '$mode2' \n";
-                if ($local != $this->local) echo "local discrepancy found for $upc \n";
-                if ($organic != $this->organic) echo "organic discrepancy found for $upc \n";
-                echo "FDF FILES HAVE NOT BEEN GENERATED \n";
+                echo "<div><strong>Selected Flags</strong>: $mode1, $mode2 </div>";
+                if ($local != $this->local) echo "<div>local discrepancy found for $upc </div>";
+                if ($organic != $this->organic) echo "<div>organic discrepancy found for $upc </div>";
+                echo "</div><div>FILES HAVE NOT BEEN GENERATED</div>";
 
                 return false;
             }
@@ -220,7 +258,6 @@ ORDER BY v.sku, r.reviewed
             $servingSize = $row['servingSize'];
             $numServings = $row['numServings'];
             $calories = $row['calories'];
-            //$fatCalories = $row['fatCalories'];
             $totalFat = $row['totalFat'];
             $saturatedFat = $row['saturatedFat'];
             $transFat = $row['transFat'];
@@ -259,7 +296,6 @@ ORDER BY v.sku, r.reviewed
                 $data[$upc]['Item Name 2nd Line'] = ''; // be sure to enter a blank line in second row
             }
 
-            // get all the straight forward data
             $data[$upc]['PLU#'] = substr($upc, -3);
             $data[$upc]['Price'] = $price;
             $data[$upc]['UNFI#'] = $sku;
@@ -276,14 +312,12 @@ ORDER BY v.sku, r.reviewed
             $data[$upc]['Total Sugars Amount'] = $sugar;
             $data[$upc]['Protein Amount'] = $protein;
 
-            // now staring in on percents
             $data[$upc]['Total Fat Percent'] = $this->getDVValue($DVS['Fat'], $totalFat)."%";
             $data[$upc]['Sat Fat Percent'] = $this->getDVValue($DVS['Sat Fat'], $saturatedFat)."%";
             $data[$upc]['Cholesterol Percent'] = $this->getDVValue($DVS['Cholesterol'], $cholesterol)."%";
             $data[$upc]['Sodium Percent'] = $this->getDVValue($DVS['Sodium'], $sodium)."%";
             $data[$upc]['Fiber Percent'] = $this->getDVValue($DVS['Fiber'], $fiber)."%";
             $data[$upc][' Total Carb Percent'] = $this->getDVValue($DVS['Carbohydrate'], $totalCarbs)."%";
-            //$data[$upc]['Added Sugars Percent'] = $this->getDVValue($DVS['Added Sugars'], $addedSugar); // doesn't exist yet
 
             if (isset($nutrients[$upc]['Vitamin D'])) {
                 $data[$upc]['Vitamin D Percent'] = $nutrients[$upc]['Vitamin D']."%";
@@ -309,24 +343,17 @@ ORDER BY v.sku, r.reviewed
 
         $fileNames = $this->createFileNames($data);
 
-        // NEXT - for every 4 items, produce a .FDF file
+        // produce a .FDF file for 4 items
         $sheetNum = 0;
         $quad = 1;
         $total = 0;
-        //$f = fopen('fdfs/'.uniqid().'.fdf', 'w');
         $f = fopen('fdfs/'.$fileNames[$sheetNum].'.fdf', 'w');
         fwrite($f, 'fdfs/'.$fdfHead, 1000);
-        //echo "\n".count($data);
+        chmod('fdfs/' . $fileNames[$sheetNum] . '.fdf', 0666);
         foreach ($data as $upc => $row) {
             $total++;
-            //echo "\nQuad: $quad";
-            if ($total == count($data)) { // before checking to create a new sheet, check if end of list met and end process before creating a new sheet
-                //$quad = 1;
-                //$sheetNum++;
-                //$f = fopen('fdfs/'.uniqid().'.fdf', 'w');
-                //fwrite($f, $fdfHead, 1000); 
+            if ($total == count($data)) { 
                 foreach ($row as $k => $v) {
-                    //echo "$k $quad" . ", " . $v  . "\n";
                     $fdfLine = "<<
 /T ($k $quad) /V ($v)
 >>";
@@ -334,37 +361,23 @@ ORDER BY v.sku, r.reviewed
                 }
                 fwrite($f, $fdfTail, 1000);
             } else if ($quad == 5) { 
-                //echo "\nQuad: $quad, Total: $total";
                 $quad = 1;
                 $sheetNum++;
                 fwrite($f, $fdfTail, 1000);
-                //$f = fopen('fdfs/'.uniqid().'.fdf', 'w');
                 $f = fopen('fdfs/'.$fileNames[$sheetNum].'.fdf', 'w');
+                chmod('fdfs/' . $fileNames[$sheetNum] . '.fdf', 0666);
                 fwrite($f, $fdfHead, 1000); 
             }
-            //echo $str = $row['PLU#'] . "\n";
             foreach ($row as $k => $v) {
-                //echo "$k $quad" . ", " . $v  . "\n";
                 $fdfLine = "<<
 /T ($k $quad) /V ($v)
 >>";
-                fwrite($f, $fdfLine, 1000);
+                @fwrite($f, $fdfLine, 1000);
             }
             $quad++;
         }
 
-
-/*  this is the format FDF format. /T is the name of the field, /V is the value to enter
-    each page contains 4 bulk templates. ever varaible has a " n" suffix at the end, numbered 1..4
-    these correspond with the 4 bulk item templates on the page.
-
-        $fdf.= "<<
-/T ($str) /V ($info)
->>";
-
-*/
-
-        return true;
+        return $fileNames[0];
     }
 
     private function createFileNames($data)
@@ -390,5 +403,7 @@ ORDER BY v.sku, r.reviewed
 
 }
 
-$obj = new FDFBulkFormatter();
-$obj->run();
+if (php_sapi_name() === 'cli' && basename($_SERVER['PHP_SELF']) == basename(__FILE__)) {
+    $obj = new FDFBulkFormatter();
+    $obj->run();
+}
