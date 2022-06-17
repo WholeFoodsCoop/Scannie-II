@@ -59,7 +59,7 @@ class MarginCalculator extends PageLayoutA
                     </div>
                     <div class="col-4">
                         <div class="form-group">
-                            <label class="small">% Markup</label>
+                            <label class="small" title="Leave blank if no shipping costs">Shipping %</label>
                             <input class="form-control form-control-sm" name="markup" id="markup" value="'.$markup.'">
                         </div>
                     </div>

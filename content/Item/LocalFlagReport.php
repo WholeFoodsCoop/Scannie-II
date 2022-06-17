@@ -14,6 +14,7 @@ class LocalFlagReport extends PageLayoutA
 
     protected $must_authenticate = true;
     protected $locals = array(0=>'not local', 1=>'SC', 2=>'MN/WI');
+    protected $connect = true;
 
     public function preprocess()
     {
@@ -26,7 +27,7 @@ class LocalFlagReport extends PageLayoutA
     public function postBrandHandler()
     {
         $brand = FormLib::get('brand');
-        $dbc = ScanLib::getConObj();
+        $dbc = $this->connect;
 
         $args = array($brand);
         $prep = $dbc->prepare("SELECT upc, brand, description, local 

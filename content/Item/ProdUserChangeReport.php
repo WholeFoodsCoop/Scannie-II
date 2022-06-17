@@ -29,11 +29,12 @@ class ProdUserChangeReport extends WebDispatch
     protected $title = "Products Updated By User";
     protected $description = "[Product Changes by D&U] Find products 
         modified by user for a given timespan.";
+    protected $connect = true;
     
     public function body_content()
     {           
         $ret = '';
-        $dbc = ScanLib::getConObj();
+        $dbc = $this->connect;
         
         $ret .= "<h4>".$this->title."</h4>";
         $ret .= $this->form_content($dbc);

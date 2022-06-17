@@ -121,8 +121,33 @@ class DataModel
         return true;
     }
 
-    public function setCost($upc, $cost)
+    public function setCost($upc=null, $cost=null, $vendorID=null, $user='')
     {
+
+        if ($upc == null || $cost == null) 
+            return false;
+
+        $pinfoA = array($upc);
+        $pinfoP = $this->connection->prepare("SELECT * FROM products WHERE upc = ?");
+        $pinfoR = $this->connection->execute($pinfoP, $pinfoA);
+        $pinfoW = $this->connection->fetchRow($pinfoR);
+
+        $updateA = array('EDIT', $upc, $pinfoW['description'], $pinfoW['normal_price'], $pinfoW['special_price'], 
+            $cost, $pinfoW['department'], $pinfoW['tax'], $pinfoW['foodstamp'], $pinfoW['wicable'], $pinfoW['scale'],
+            null, $user, $pinfoW['qttyEnforced'], $pinfoW['discount'], $pinfoW['inUse']);
+        $updateP = $this->connection->prepare("INSERT INTO prodUpdate (updateType, upc, description, price, salePrice, cost, dept, tax, fs, wic, scale, likeCode, modified, user, forceQty, noDisc, inUse, storeID) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NOW(),?,?,?,?,1);");
+        $updateR = $this->connection->execute($updateP, $updateA);
+        if ($er = $this->connection->error()) {
+            return $er;
+        }
+
+        $vendorA = array($cost, $upc, $vendorID);
+        $vendorP = $this->connection->prepare("UPDATE vendorItems SET cost = ? WHERE upc = ? AND vendorID = ?");
+        $vendorR = $this->connection->execute($vendorP, $vendorA);
+        if ($er = $this->connection->error()) {
+            return $er;
+        }
+
         $args = array($cost, $upc);
         $query = "UPDATE products SET cost = ? WHERE upc = ?";
         $prep = $this->connection->prepare($query);

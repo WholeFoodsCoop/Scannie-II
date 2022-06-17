@@ -11,6 +11,7 @@ if (!class_exists('PriceRounder')) {
 class Scanner extends PageLayoutA
 {
     protected $ui = false;
+    protected $connect = true;
     protected $enable_linea = true;
     protected $must_authenticate = TRUE;
 
@@ -32,7 +33,7 @@ class Scanner extends PageLayoutA
 
     private function mod_narrow_handler($upc)
     {
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $args = array($upc);
         $prep = $dbc->prepare("SELECT upc FROM productUser WHERE upc = ? AND narrow = 1");
         $res = $dbc->execute($prep, $args);
@@ -55,7 +56,7 @@ class Scanner extends PageLayoutA
     {
         echo "heya!";
         return false;
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $storeID = FormLib::get('storeID');
         $upc = FormLib::get('upc');
         $inUse = FormLib::get('inUse');
@@ -801,7 +802,7 @@ $hiddenColumnSelector .= "</div>";
         $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
         $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
 
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
         $storeID = scanLib::getStoreID();
         $rounder = new PriceRounder();

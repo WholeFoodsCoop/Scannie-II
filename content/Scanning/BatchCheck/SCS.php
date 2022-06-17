@@ -12,6 +12,7 @@ class SCS extends PageLayoutA
     public $description = "[Sales Change Scanner] is the portion of 
         batch check tools used for scanning barcodes.";
     public $ui = FALSE;
+    protected $connect = true;
     protected $enable_linea = true;
     protected $data = array();
     protected $batches = array();
@@ -23,7 +24,7 @@ class SCS extends PageLayoutA
             header('location: BatchCheckMenu.php');
         }
 
-        $dbc = scanLib::getConObj(); 
+        $dbc = $this->connect;
         if (FormLib::get('signout', false)) {
             session_unset();
             $this->addOnloadCommand('window.location.href = "SCS.php"');
@@ -600,6 +601,8 @@ HTML;
             $upc = $this->skuToUpc($upc);
         }
         $upc = scanLib::upcPreparse($upc);
+        /**
+         * For some reason, form does not submit on handheld
         if ($upc == 0) {
             return <<<HTML
 <div align="center" id="grandparent">
@@ -608,10 +611,13 @@ HTML;
             <input type="text" class="form-control" id="upc" name="upc" pattern="\d*" 
                 value="$upc" placeholder="upc">
         </div>
+        <input type="hidden" name="storeID" id="formStoreID" value="$storeID">
+        <input type="hidden" name="sessionName" id="formSession" value="$session">
     </form>
 </div>
 HTML;
         }
+         */
 
         $storeID = $_SESSION['storeID'];
         $queued = array();;
@@ -630,10 +636,11 @@ HTML;
         }
 
         // set scanner beep after page loads
-        $p = $dbc->prepare("SELECT scanBeep FROM woodshed_no_replicate.ScannieConfig WHERE session_id = ?");
-        $r = $dbc->execute($p, session_id());
-        $beep = $dbc->fetchRow($r);
-        $beep = $beep[0];
+        $beep = ($_SESSION['ScannieConfig']['AuditSettings']['scanBeep'] == 1) ? true : false;
+        //$p = $dbc->prepare("SELECT scanBeep FROM woodshed_no_replicate.ScannieConfig WHERE session_id = ?");
+        //$r = $dbc->execute($p, session_id());
+        //$beep = $dbc->fetchRow($r);
+        //$beep = $beep[0];
         if ($beep == true) {
             $this->addOnloadCommand("
                 WebBarcode.Linea.emitTones(
@@ -1203,7 +1210,7 @@ HTML;
 
     private function skuToUpc($upc)
     {
-        $dbc = scanLib::getConObj(); 
+        $dbc = $this->connect;
         $queryStr = 'SELECT upc
             FROM is4c_op.vendorItems
             WHERE vendorID = 1

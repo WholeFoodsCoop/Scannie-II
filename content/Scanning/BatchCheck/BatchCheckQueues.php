@@ -11,6 +11,7 @@ class BatchCheckQueues extends PageLayoutA
     
     protected $title = "Batch Check";
     protected $ui = TRUE;
+    protected $connect = true;
     protected $queueCounts = array();
     protected $options = array(
         0 => 'Unchecked',
@@ -31,7 +32,7 @@ class BatchCheckQueues extends PageLayoutA
         if (FormLib::get('option', false) == 99) {
             header('location: BatchCheckMenu.php');
         }
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         if (FormLib::get('loginSubmit', false)) {
             $this->loginSubmitHandler($dbc);
         }
@@ -95,7 +96,7 @@ class BatchCheckQueues extends PageLayoutA
     private function loginView()
     {
         $storeID = scanLib::getStoreID();
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $sessions = ''; 
         $args = array($storeID);
         $prep = $dbc->prepare("SELECT session FROM woodshed_no_replicate.batchCheckQueues WHERE storeID = ? GROUP BY session;");
@@ -599,7 +600,7 @@ HTML;
         $q = FormLib::get('option');
         //$ret .= "<h4>{$this->options[$q]}</h4>";
         if(isset($_POST['session'])) $_SESSION['session'] = $_POST['session'];
-        $dbc = Scanlib::getConObj();
+        $dbc = $this->connect; 
         $curQueue = $_GET['queue'];
 
         if ($this->options[$q]) {
@@ -630,7 +631,7 @@ HTML;
             if ($key == 'queue') $thisQueue = $value;
         }
         if(isset($_POST['session'])) $_SESSION['session'] = $_POST['session'];
-        $dbc = Scanlib::getConObj();
+        $dbc = $this->connect;
         $curQueue = (array_key_exists('queue', $_GET)) ? $_GET['queue'] : null;
 
         $table = $this->getTableContents($dbc);

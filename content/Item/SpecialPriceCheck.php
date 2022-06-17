@@ -104,23 +104,19 @@ class SpecialPriceCheck extends WebDispatch
         list($inStr, $args) = $dbc->safeInClause($upcs);
         $args[] = $store;
 
-        try {
-            $prep = $dbc->prepare("SELECT 
-                    upc, special_price, store_id
-                FROM products 
-                WHERE upc IN ($inStr)
-                    AND special_price = 0
-                    AND store_id = ?");
-            $res = $dbc->execute($prep, $args);
-            while ($row = $dbc->fetchRow($res)) {
-                $upc = $row['upc'];
-                $storeID = $row['store_id'];
-                $data[$upc][$storeID] = 1;
-            }
-            echo $dbc->error();
-        } catch (Execption $e) {
-            echo $e->getMessage();
+        $prep = $dbc->prepare("SELECT 
+                upc, special_price, store_id
+            FROM products 
+            WHERE upc IN ($inStr)
+                AND special_price = 0
+                AND store_id = ?");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $upc = $row['upc'];
+            $storeID = $row['store_id'];
+            $data[$upc][$storeID] = 1;
         }
+        echo $dbc->error();
 
         return $data;
     }
@@ -170,8 +166,12 @@ class SpecialPriceCheck extends WebDispatch
                 }
 
                 unset($missingLane);
-                foreach ($this->config->vars['FANNIE_HIL_LANES'] as $lane) {
-                    $missingLane[] = $this->checkLaneSales($upcs1, 1, $lane);
+                foreach ($this->config->vars['FANNIE_DEN_LANES'] as $lane) {
+                    try {
+                        $missingLane[] = $this->checkLaneSales($upcs1, 1, $lane);
+                    } catch (Exception $e) {
+                        echo $e->getMessage();
+                    }
                 }
                 foreach ($missingLane as $upcs) {
                     foreach ($upcs as $upc => $stores) {

@@ -54,15 +54,21 @@ class DBA extends PageLayoutA
 SELECT * FROM is4c_trans.dlog_90_view  WHERE upc = "0005599104902" AND tdate > '2022-04-27'
                 </span>
             </li>
-            <li><a href='#' class="quick_query">Check For Badscans Yesterday</a>
+            <li><a href='#' class="quick_query">Check For Badscans Today</a>
                 <span class="query">
+
 SELECT
-t.store_id, DATE(datetime) AS date, SUBSTRING(datetime, 12, 5) AS time, register_no, t.upc, t.description AS trans_desc, p.description AS p_description, CONCAT( emp_no, '-', register_no, '-',trans_no) AS trans_num
+t.store_id, DATE(datetime) AS date, SUBSTRING(datetime, 12, 5) AS time, register_no, t.upc, t.description AS trans_desc, p.description AS p_description, CONCAT( emp_no, '-', register_no, '-',trans_no) AS trans_num,
+i.reason
 FROM is4c_trans.dtransactions AS t
 LEFT JOIN products AS p ON p.upc=t.upc
+LEFT JOIN IgnoredBarcodes AS i ON i.upc=t.upc
 WHERE datetime > '2022-05-18' 
 AND t.description = 'BADSCAN'
-AND t.upc > 9999
+AND t.upc > 99999
+AND emp_no != 9999
+AND t.upc < 0999999999999
+GROUP BY t.upc, CONCAT( emp_no, '-', register_no, '-',trans_no)
 ORDER BY store_id, datetime DESC
                 </span>
             </li>

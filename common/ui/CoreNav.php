@@ -90,7 +90,8 @@ HTML;
             CORE-POS
         </a>
         <div class="dropdown-menu" aria-labelledby="navbarDropdown" id="corePosMenuOpts">
-          <a class="dropdown-item" href="http://{$FANNIE_ROOTDIR}">WFC - Duluth</a>
+          <a class="dropdown-item" href="http://{$FANNIE_ROOTDIR}">WFC - Duluth - KEY</a>
+          <a class="dropdown-item" href="http://steve/">WFC - Duluth - STEVE</a>
           <a class="dropdown-item" href="http://{$FANNIE_COREY_ROOT}">DEV - Corey(1)</a>
           <a class="dropdown-item" href="http://{$FANNIE_COREY2_ROOT}">DEV - Corey(2)</a>
           <a class="dropdown-item" href="http://{$FANNIE_ANDY_ROOT}">DEV - Andy</a>
@@ -109,7 +110,6 @@ HTML;
             Products 
         </a>
         <div class="dropdown-menu" aria-labelledby="navbarDropdown" id="productsMenuOpts">
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/NaturalizeProdInfo.php">Cleanup Sign Info</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/ProdUserChangeReport.php">Edits by User</a>
           <!--<a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/FloorSectionMapper.php">Floor Section Mapper</a>-->
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/LastSoldDates.php?paste_list=1">Last Sold</a>
@@ -169,6 +169,9 @@ HTML;
           <div class="nav-item nav-label" align=""><span class="nav-label">Misc. Utils.</span></div>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/Popups.php">Popups</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Links/Links.php">Useful Links</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/AuditScanner/KanteenScanner.php">Klean Kanteen Scanner</a>
+          <div class="nav-item nav-label" align=""><span class="nav-label">Misc. Tasks</span></div>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Testing/InUseDateTask.php">InUseDate Task</a>
           <div class="nav-item nav-label" align=""><span class="nav-label">Help</span></div>
           <a class="dropdown-item" onclick="{$helptoggle}" ><strong>Help!</strong></a>
         </div>
@@ -186,7 +189,7 @@ HTML;
         <img src="http://$MY_ROOTDIR/common/src/img/upArrowLight.png" style="margin-top: 10px; height: 15px; width: 15px" />
     </div>
     <form class="form-inline my-2 my-lg-0">
-      <input class="form-control mr-sm-2" type="search" id="nav-search" placeholder="Search" aria-label="Search">
+      <input class="form-control mr-sm-2" type="search" id="nav-search" placeholder="Search" aria-label="Search" pattern="\d*">
       <div id="search-resp"></div>
     </form>
     </div>

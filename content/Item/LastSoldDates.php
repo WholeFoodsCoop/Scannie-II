@@ -33,6 +33,7 @@ class LastSoldDates extends PageLayoutA
     protected $description = "[Last Sold Dates] Tracks last sale date, most
         recent purchase order and displays Vendor Item information relavant
         to the matching SKU in relation to the purchase order.";
+    protected $connect = true;
 
     private function last_sold_check_list($dbc)
     {
@@ -130,7 +131,7 @@ class LastSoldDates extends PageLayoutA
     {
         $ret = '';
         $item = array ( array() );
-        $dbc = scanlib::getConObj();
+        $dbc = $this->connect;
 
         if ($_GET['paste_list']) {
             $ret .= self::last_sold_check_list($dbc);

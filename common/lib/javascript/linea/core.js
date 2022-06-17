@@ -30,6 +30,11 @@ function lineaBarcode(upc, selector, callback) {
         } else {
             $(selector).closest('form').submit();
         }
+        //let main_form_exists = document.getElementById('my-form');
+        //if (main_form_exists != null) {
+        //    document.forms['main_form'].submit();
+        //}
+        //alert(main_form_exists);
     }
 }
 

@@ -33,6 +33,7 @@ class SignAlias extends PageLayoutA
     protected $description = "[Sign Alias] define special instructions 
         for printing signs for groups of items.";
     protected $ui = TRUE;
+    protected $connect = true;
 
     public function preprocess()
     {

@@ -9,6 +9,7 @@ class newpage extends PageLayoutA
     
     public $title = "Batch Check";
     public $ui = TRUE;
+    protected $connect = true;
     protected $options = array(
         0 => 'Unchecked',
         1 => 'Good',
@@ -50,7 +51,7 @@ class newpage extends PageLayoutA
     public function getLoginView()
     {
         session_unset();
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
         $storeID = scanLib::getStoreID();
         $sessions = ''; 
@@ -103,7 +104,7 @@ HTML;
 
     private function getQueueCount()
     {
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $storeID = scanLib::getStoreID();
         $session = FormLib::get('session', false);
         $args = array($session, $storeID);
@@ -139,7 +140,7 @@ HTML;
 
     private function getSampleUpcs($queue, $session)
     {
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $storeID = scanLib::getStoreID();
         if ($queue == 6) {
             list($in_str, $args) = $dbc->safeInClause(array(6,7,8));
@@ -223,7 +224,7 @@ HTML;
         if (!isset($_SESSION['sessionName']))  {
             return $this->getLoginView(); 
         }
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $queue = FormLib::get('queue');
         $session = FormLib::get('session');
         $this->storeID = $storeID = scanLib::getStoreID();

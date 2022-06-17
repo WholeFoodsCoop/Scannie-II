@@ -80,6 +80,7 @@ LEFT JOIN prodReview AS r ON p.upc=r.upc
 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
 WHERE last_sold > DATE_SUB(NOW(), INTERVAL 30 DAY)
 AND m.super_name NOT IN ('BRAND', 'MISC', 'PRODUCE')
+AND p.created < DATE_SUB(NOW(), INTERVAL 30 DAY)
 GROUP BY store_id
 ORDER BY r.reviewed;");
         $res = $dbc->execute($pre);
@@ -100,7 +101,7 @@ ORDER BY r.reviewed;");
         $tdDetailed = "";
         $pre = $dbc->prepare("SELECT 
 vendorName AS VendorName,
-COUNT(p.upc) AS ProductCount,
+COUNT(DISTINCT p.upc) AS ProductCount,
 SUM(CASE WHEN r.reviewed > DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS Thirty,
 SUM(CASE WHEN r.reviewed BETWEEN DATE_SUB(NOW(), INTERVAL 60 DAY) AND DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS Sixty,
 SUM(CASE WHEN r.reviewed BETWEEN DATE_SUB(NOW(), INTERVAL 90 DAY) AND DATE_SUB(NOW(), INTERVAL 60 DAY) THEN 1 ELSE 0 END) AS Ninty,
@@ -111,6 +112,7 @@ LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
 LEFT JOIN vendors AS v ON p.default_vendor_id=v.vendorID
 WHERE last_sold > DATE_SUB(NOW(), INTERVAL 30 DAY)
 AND m.super_name NOT IN ('BRAND', 'MISC', 'PRODUCE')
+AND p.created < DATE_SUB(NOW(), INTERVAL 30 DAY)
 GROUP BY vendorID
 ORDER BY COUNT(p.upc) DESC");
         $res = $dbc->execute($pre);
@@ -238,7 +240,6 @@ ORDER BY COUNT(p.upc) DESC");
                 <div class="card-title">
                     <h4>Scanning Department Dashboard <span class="smh4"><strong>Page last updated:</strong> $datetime</span></h4>
                 </div>
-                <!--<div>$tmpStr</div>-->
                 $table 
                 $multi
             </div>
@@ -262,9 +263,9 @@ ORDER BY COUNT(p.upc) DESC");
                         </thead>
                         <tbody>$tdReview</tbody>
                     </table>
-                    <legend data-toggle="collapse" data-target="#detailedView">Detailed View
+                    <legend data-toggle="collapse" data-target="#detailedView">
                         <span class="scanicon scanicon-expand"></span>
-                    </legend>
+                        Detailed View</legend>
                     <div id="detailedView" class="collapse">
                         <table class="table table-bordered small table-sm table-hover">
                             <thead>
@@ -601,7 +602,10 @@ HTML;
         $count = 0;
         $desc = 'Products Missing Organic Flag';
         $p = $dbc->prepare("SELECT upc, brand, description, numflag FROM products 
-            WHERE description LIKE '%,OG%' AND NOT numflag & (1<<16) <> 0;");
+            WHERE description LIKE '%,OG%' 
+                AND description NOT LIKE '%OG3%'
+                AND NOT numflag & (1<<16) <> 0
+                ");
         $r = $dbc->execute($p);
         $cols = array('upc', 'brand', 'description');
         $data = array();
@@ -613,6 +617,7 @@ HTML;
             FROM products AS p 
                 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
             WHERE brand LIKE '%organic%' 
+                AND brand NOT LIKE '%organicville%'
                 AND superID <> 6 
                 AND NOT numflag & (1<<16) <> 0;");
         $r = $dbc->execute($p);
@@ -653,7 +658,7 @@ HTML;
                 LEFT JOIN prodFlagsListView AS v ON p.upc=v.upc
             WHERE UPPER(p.brand) NOT LIKE '%ORGANIC%' 
                 AND UPPER(u.description) NOT LIKE '%ORGANIC%'
-                AND superID <> 6 
+                AND superID NOT IN (6,3)
                 AND p.inUse = 1
                 AND numflag & (1<<16) <> 0;");
         $r = $dbc->execute($p);
@@ -891,7 +896,9 @@ HTML;
             AND upc NOT IN (
                 0020140000000,
                 0020130000000,
-                0020120000000
+                0020120000000,
+                0024954010599,
+                0021249080499
             )
             AND m.superID IN (18,1,3,13,9,4,8,17,5)
             ;");
@@ -1260,6 +1267,14 @@ HTML;
             product locations.</p> 
     </li>
 </ul>    
+<label>Product Review Dashboard</label>
+<ul>
+    <li>This data reflects the number of products WFC has sold in the past 30 days and how 
+        recently those items have been reviewed. <i>Note</i> that the counts of items 
+        reviewed include duplicate upcs.
+    </li>
+</ul>
+    
 HTML;
     }
 

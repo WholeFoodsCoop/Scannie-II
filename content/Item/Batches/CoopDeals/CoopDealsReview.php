@@ -385,7 +385,7 @@ HTML;
     <div class="col-lg-2">
         <form method="get" class="">
             <div class="form-group">
-                <input type="input" class="form-control mainInput" name="startDate" id="startDate" value="{$v}">
+                <input type="input" class="form-control mainInput" name="startDate" id="startDate" value="{$v}" autocomplete="off">
             </div>
             <div class="form-group">
                 <input type="input" class="form-control mainInput" name="dealset" placeholder="DealSet" value="{$d}">

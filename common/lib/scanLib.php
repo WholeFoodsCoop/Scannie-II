@@ -40,7 +40,7 @@ class scanLib
         return abs($interval->format('%R%a'));
     }
 
-    public function getConObj($db="SCANDB")
+    public static function getConObj($db="SCANDB")
     {
         include(__DIR__.'/../../config.php');
         $dbc = new SQLManager($SCANHOST, 'pdo_mysql', ${$db}, $SCANUSER, $SCANPASS);
@@ -286,7 +286,7 @@ class scanLib
         return $str;
     }
 
-    public function upcParse($str)
+    public static function upcParse($str)
     {
         $rstr = str_replace(" ","",$str);
 

@@ -28,12 +28,16 @@ class Search
 
     private function parser($input)
     {
-        if (is_numeric($input)) {
+        $dto = new DateTime();
+        $today = $dto->format('Y-m-d');
+        if (1) {
             $pages = array(
-                '<i>CORE</i> Item Editor' => '/../../../../git/IS4C/fannie/item/ItemEditorPage.php?searchupc='.$input.'&ntype=UPC&searchBtn=',
-                '<i>CORE</i> Coop Deals Add' => '/../../../../git/IS4C/fannie/item/CoopDealsLookupPage.php?upc='.$input,
-                '<i>SCAN</i> Track Change' => '/../Scannie/content/Item/TrackItemChange.php?upc='.$input,
-                //'Batch Edit' => 'http://'.$FANNIEROOT_DIR.'/batches/newbatch/EditBatchPage.php?id='.$input,
+                'Item Editor UPC' => '/../../../../git/IS4C/fannie/item/ItemEditorPage.php?searchupc='.$input.'&ntype=UPC&searchBtn=',
+                'Item Editor SKU' => '/../../../../git/IS4C/fannie/item/ItemEditorPage.php?searchupc='.$input.'&ntype=SKU&searchBtn=',
+                //'Coop Deals Add' => '/../../../../git/IS4C/fannie/item/CoopDealsLookupPage.php?upc='.$input,
+                'Track Change' => '/../Scannie/content/Item/TrackItemChange.php?upc='.$input,
+                'Edit Batch Page' => '/../../../../git/IS4C/fannie/batches/newbatch/EditBatchPage.php?id='.$input,
+                "Trnx Lookup" => "/../../../../git/fannie/admin/LookupReceipt/RenderReceiptPage.php?date=$today&receipt=$input",
                 //'Item Batch History' => 'http://'.$FANNIEROOT_DIR.'/reports/ItemBatches/ItemBatchesReport.php?upc='.$input,
                 //'Batch Review' => 'http://'.$SCANROOT_DIR.'/item/Batches/BatchReview/BatchReviewPage.php?id='.$input,
                 //'Unfi_DB_Check' => 'https://customers.unfi.com/Pages/ProductSearch.aspx?SearchTerm='.$input
@@ -54,7 +58,8 @@ class Search
         $ret = $this->parser($s);
 
         foreach ($this->data as $name => $path) {
-            if ( (strstr($name,$s) || strstr($name,ucwords($s))) && strlen($s) > 2 || is_numeric($s) ) {
+            //if ( (strstr($name,$s) || strstr($name,ucwords($s))) && strlen($s) > 2 || is_numeric($s) ) {
+            if (1) {
                 $ret .= (is_numeric($s)) ? '<a class="search-resp" href="'.$path.'">' : '<a class="search-resp" href="'.$path.$name.'">';
                 $replace = '<b>'.$s.'</b>';
                 $newstring = str_replace($s,$replace,$name);

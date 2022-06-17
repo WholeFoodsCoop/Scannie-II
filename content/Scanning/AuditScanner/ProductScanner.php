@@ -250,19 +250,20 @@ HTML;
         $ret = '';
         $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
         $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
-        $dbc = scanLib::getConObj('SCANALTDB');
-        $p = $dbc->prepare("SELECT * FROM ScannieConfig WHERE session_id = ?");
-        $r = $dbc->execute($p, session_id());
-        $scannerConfig = array();
-        $cols = array('scanBeep', 'auditPar', 'auditCost', 'auditSrp',
-            'auditProdInfo', 'auditVendorInfo', 'auditSize', 'auditSignInfo',
-            'auditSaleInfo', 'auditLocations', 'socketDevice');
-        while ($row = $dbc->fetchRow($r)) {
-            foreach ($cols as $col) {
-                $scannerConfig[$col] = $row[$col];
-            }
-        }
-        $beep = $scannerConfig['scanBeep'];
+        //$dbc = scanLib::getConObj('SCANALTDB');
+        //$p = $dbc->prepare("SELECT * FROM ScannieConfig WHERE session_id = ?");
+        //$r = $dbc->execute($p, session_id());
+        //$scannerConfig = array();
+        //$cols = array('scanBeep', 'auditPar', 'auditCost', 'auditSrp',
+        //    'auditProdInfo', 'auditVendorInfo', 'auditSize', 'auditSignInfo',
+        //    'auditSaleInfo', 'auditLocations', 'socketDevice');
+        //while ($row = $dbc->fetchRow($r)) {
+        //    foreach ($cols as $col) {
+        //        $scannerConfig[$col] = $row[$col];
+        //    }
+        //}
+        $beep = ($_SESSION['ScannieConfig']['AuditSettings']['scanBeep'] == 1) ? true : false;
+        //$beep = $scannerConfig['scanBeep'];
         if ($beep == true) {
             $this->addOnloadCommand("
                 WebBarcode.Linea.emitTones(
@@ -297,7 +298,8 @@ HTML;
         $rounder = new PriceRounder();
         $storeID = scanLib::getStoreID();
         $upc = FormLib::get('upc');
-        $isSocketDevice = $scannerConfig['socketDevice'];
+        //$isSocketDevice = $scannerConfig['socketDevice'];
+        $isSocketDevice = 0;
         if ($isSocketDevice != 0 ) {
             // do something if scanner is socket mobile device
             //&& FormLib::get('isSocketDevice') != 1
@@ -425,6 +427,7 @@ HTML;
             $cost = $row['cost'];
             $price = $row['normal_price'];
             $prt = $row['prt'];
+            $prtBkgColor = ($row['prt']) ? 'rgba(255, 255, 255, 0.1)' : '';
             $desc = $row['description'];
             $brand = $row['brand'];
             $vendor = '<span class="vid">id['.$row['default_vendor_id'].'] </span>'.$row['vendorName'];
@@ -578,7 +581,7 @@ HTML;
                     <br />
                     <div id="auditPrtID">
                         <div class="row">
-                            <div class="col-12 info" ><span class="sm-label">PRT-ID:</span> <span id="PrtID_v">'.$prt.'</span></div>
+                            <div class="col-12 info" style="background-color: '.$prtBkgColor.';"><span class="sm-label">PRT-ID:</span> <span id="PrtID_v">'.$prt.'</span></div>
                         </div>
                     </div>
                     <div id="auditProdInfo">

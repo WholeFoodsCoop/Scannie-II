@@ -10,10 +10,11 @@ class BatchCheckChat extends PageLayoutA
     protected $title = "Batch Check Chat";
     protected $description = "[] ";
     protected $ui = FALSE;
+    protected $connect = true;
 
     public function preprocess()
     {
-        $dbc = scanLib::getConObj(); 
+        $dbc = $this->connect;
         if (FormLib::get('sendMsg', false)) {
             $this->sendMsgHandler($dbc);
         } elseif (FormLib::get('getNewMsg', false)) {

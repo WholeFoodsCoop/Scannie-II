@@ -10,10 +10,11 @@ class BatchCheckMenu extends PageLayoutA
     protected $title = "Batch Check Menu";
     protected $description = "[] ";
     protected $ui = FALSE;
+    protected $connect = true;
 
     public function preprocess()
     {
-        $dbc = scanLib::getConObj(); 
+        $dbc = $this->connect;
         if (FormLib::get('deleteSession', false)) {
             $this->displayFunction = $this->deleteSessionHandler();
             die();
@@ -29,7 +30,7 @@ class BatchCheckMenu extends PageLayoutA
 
     private function deleteSessionHandler()
     {
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $storeID = scanLib::getStoreID();
         $sessionName = FormLib::get('sessionName');
         $args = array($storeID,$sessionName);
@@ -43,7 +44,7 @@ class BatchCheckMenu extends PageLayoutA
 
     private function deleteView()
     {
-        $dbc = scanLib::getConObj();
+        $dbc = $this->connect;
         $storeID = scanLib::getStoreID();
         $sessions = ''; 
         $args = array($storeID);
