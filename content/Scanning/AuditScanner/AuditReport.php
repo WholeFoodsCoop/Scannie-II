@@ -15,6 +15,7 @@ class AuditReport extends PageLayoutA
     {
         $this->displayFunction = $this->postView();
         $this->__routes[] = 'post<test>';
+        $this->__routes[] = 'post<scrollMode>';
         $this->__routes[] = 'post<reviewList>';
         $this->__routes[] = 'post<notes>';
         $this->__routes[] = 'post<fetch>';
@@ -37,6 +38,14 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<vendCat>';
 
         return parent::preprocess();
+    }
+
+    public function postScrollModeHandler()
+    {
+        $scrollMode = FormLib::get('scrollMode');
+        $_SESSION['scrollMode'] = $scrollMode;
+
+        return true;
     }
 
     public function postVendCatHandler()
@@ -989,6 +998,10 @@ HTML;
             $storeID = 2;
         }
         $loaded = FormLib::get('loaded');
+        $scrollMode = 'on';
+        if (isset($_SESSION['scrollMode'])) {
+            $scrollMode = ($_SESSION['scrollMode'] == 0) ? 'on' : 'off';
+        }
         $test = new DataModel($dbc);
 
         if (!isset($_SESSION['columnBitSet'])) {
@@ -1134,13 +1147,13 @@ $modal
     <button id="clearNotesInputB" class="btn btn-secondary btn-sm page-control">Clear Notes</button>
 </div>
 <div class="form-group dummy-form">
-    <button id="saveReviewList" class="btn btn-secondary btn-sm page-control">Save Review List</button>
-</div>
-<div class="form-group dummy-form">
     <button id="clearAllInputB" class="btn btn-secondary btn-sm page-control">Clear Queue</button>
 </div>
 <div class="form-group dummy-form">
     <button class="btn btn-secondary btn-sm page-control" data-toggle="modal" data-target="#upcs_modal">Add Items</button>
+</div>
+<div class="form-group dummy-form">
+    <button id="saveReviewList" class="btn btn-secondary btn-sm page-control">Save Review List</button>
 </div>
 <div class="form-group dummy-form">
     <form method="post" action="AuditReport.php">
@@ -1244,7 +1257,7 @@ $columnCheckboxes
                 <h6 class="card-title">Simple Input Calculator 
                     <span id="hide-SIC" style="padding: 5px; padding-right: 10px; padding-left: 10px;border: 1px solid grey; font-size: 12px;
                         cursor: pointer;">
-                        lock: on</span></h6>
+                        lock:$scrollMode</span></h6>
                 <div class="row">
                     <div class="col-lg-9">
                         <input type="text" id="calculator" name="calculator" style="font-size: 12px" class="form-control small">
@@ -1284,6 +1297,7 @@ HTML;
 
         $config = $_SESSION['columnBitSet'];
         $columnBitSet = $_SESSION['columnBitSet'];
+        $scrollMode = (isset($_SESSION['scrollMode'])) ? $_SESSION['scrollMode'] : 0;
 
         return <<<JAVASCRIPT
 var startup = 1;
@@ -1291,6 +1305,7 @@ var columnSet = $config;
 var tableRows = $('#table-rows').val();
 var storeID = $('#storeID').val();
 var username = $('#username').val();
+var scrollMode = $scrollMode;
 var stripeTable = function(){
     $('tr.prod-row').each(function(){
         $(this).removeClass('stripe');
@@ -2011,7 +2026,7 @@ $('#loadCatBtn').on('click', function(){
     return c;
 });
 
-var scrollMode = 0;
+//var scrollMode = 0;
 $(window).scroll(function () {
     var scrollTop = $(this).scrollTop();
     if (scrollMode == 0) {
@@ -2032,14 +2047,25 @@ $(window).scroll(function () {
 $('#hide-SIC').click(function(){
     if (scrollMode == 0) {
         scrollMode = 1;
-        $(this).text('lock: off');
+        $(this).text('lock:off');
         $('#simpleInputCalc')
             .css('position', 'relative')
             .css('background-color', 'rgba(255,255,255,1)');
     } else {
         scrollMode = 0;
-        $(this).text('lock: on');
+        $(this).text('lock:on');
     }
+    $.ajax({
+        type: 'post',
+        data: 'scrollMode='+scrollMode,
+        url: 'AuditReport.php',
+        success: function(response) {
+            console.log('set scrollMode success');
+        },
+        error: function(response) {
+            console.log('set scrollMode error');
+        }
+    });
 });
 JAVASCRIPT;
     }
