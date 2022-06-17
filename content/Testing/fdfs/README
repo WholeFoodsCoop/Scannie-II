@@ -1,0 +1,24 @@
+## THE PROCESS
+1.  Run - $ php FDFBulkFormatter.php
+    -- ATM, this finds all UNFI items that appear to be in use at Denfeld, and creates a .fdf file in fdfs/ which can be used to generate a completed bulk bin form.
+2.  Use pdftk to create bulk bins from .fdf files
+    -- Before doing this, clean all .fdf files out of fdfs/ dir
+    -- $ pdftk <editable-pdf-name.pdf> fill_form <filename>.fdf output <outfile-name>.pdf
+    -- Note, the editable-pdf-templates must be in this dir
+    -- eg - $ for file in *.fdf; do pdftk og.pdf fill_form $file output $file.'.fin.pdf'; done
+
+2.2 I'm sick of typing these commands repeatedly
+    -- for file in *.fin.pdf; do mv $file finishedPdfs/; done
+    -- for file in *.fdf; do rm $file; done
+    ## check form input field names/info
+    -- pdftk input.pdf dump_data_fields
+
+
+## MISSING PIECES
+1.  FDFBulkFormatter.php doesn't yet include nutritional info, this can easily be added. 
+2.  Data entry of nutrition facts
+3.  In FDFBulkFormatter.php, separate organic, conventional, etc. 
+4.  See if barcodes can be created via fdf 
+
+## NOTES
+1.  Most bulk items don't have ingredients. The ingredients that are being included currently are only if the bulk item has a corresponding scaleItem on linkedPLU
