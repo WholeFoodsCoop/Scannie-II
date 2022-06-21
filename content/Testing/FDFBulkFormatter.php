@@ -230,11 +230,12 @@ ORDER BY v.sku, r.reviewed
         $args[] = $this->storeID;
         $res = $dbc->execute($prp, $args);
         while ($row = $dbc->fetchRow($res)) {
+            $lbtxt = ($row['upc'] != 312) ?  "/lb" : "/ea";
             $upc = $row['upc'];
             $desc = $row['description'];
             $brand = $row['brand'];
             $sku = $row['sku'];
-            $price = $row['normal_price']."/lb";
+            $price = $row['normal_price'].$lbtxt;
             $vendorName = $row['vendorName'];
             $ingredients = $row['text'];
             $ingredients = preg_replace('#<br\s*/?>#i', "\n", $ingredients);
