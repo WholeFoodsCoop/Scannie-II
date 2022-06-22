@@ -71,7 +71,8 @@ class VendorReviewSchedule extends PageLayoutA
             SUM(CASE WHEN pr.reviewed > DATE_SUB(NOW(), INTERVAL 1 MONTH) THEN 1 ELSE 0
                 END) AS rev30,
             SUM(CASE WHEN pr.reviewed > DATE_SUB(NOW(), INTERVAL 3 MONTH) THEN 1 ELSE 0
-                END) AS rev90
+                END) AS rev90,
+            GROUP_CONCAT(DISTINCT SUBSTRING(m.super_name, 1, 4) ORDER BY m.super_name) AS departments
             FROM vendors AS v
                 LEFT JOIN vendorItems AS i ON i.vendorID = v.vendorID
                 LEFT JOIN products AS p ON p.upc=i.upc AND p.default_vendor_id=i.vendorID
@@ -94,6 +95,15 @@ class VendorReviewSchedule extends PageLayoutA
             $countMerch = $row['countMerch'];
             $rev30 = $row['rev30'];
             $rev90 = $row['rev90'];
+            $depts = $row['departments'];
+
+            $tmpDepts = explode(",", $depts);
+            $styleDepts = '';
+            foreach ($tmpDepts as $name) {
+                $rgb = '#'.substr(md5($name), 0, 6);
+                $styleDepts .= "<span style=\"font-weight: bold; color: $rgb;\">$name</span>, ";
+            }
+            $styleDepts = rtrim($styleDepts, " ,");
 
             if ($countMerch > 0) {
                 $schedule[$i][$vendorID]['name'] = $vendorName;
@@ -101,6 +111,7 @@ class VendorReviewSchedule extends PageLayoutA
                 $schedule[$i][$vendorID]['itemCount'] = $itemCount;
                 $schedule[$i][$vendorID]['rev30'] = $rev30;
                 $schedule[$i][$vendorID]['rev90'] = $rev90;
+                $schedule[$i][$vendorID]['depts'] = $styleDepts;
                 $i++;
                 if ($i == 13)
                     $i = 1;
@@ -109,18 +120,19 @@ class VendorReviewSchedule extends PageLayoutA
                 $schedule[$j][$vendorID]['itemCount'] = $itemCount;
                 $schedule[$j][$vendorID]['rev30'] = $rev30;
                 $schedule[$j][$vendorID]['rev90'] = $rev90;
+                $schedule[$j][$vendorID]['depts'] = $styleDepts;
                 $j++;
                 if ($j == 13)
                     $j = 1;
             }
         }
         $schedTxt = '';
-        $thead = "<thead><th>ID</th><th>Vendor</th><th>Item Count</th><th>rev30</th><th>rev90</thead>";
+        $thead = "<thead><th>ID</th><th>Vendor</th><th>Item Count</th><th>rev30</th><th>rev90</th><th>Master Depts</th></thead>";
         for ($i=1; $i<13; $i++) {
             $dateObj = DateTime::createFromFormat('!m', $i);
             $monthName = $dateObj->format('F');
-            $schedTxt .= "<h4>$monthName Review List</h4>";
-            $td = "<div id='$monthName'>"; // tab stuff goes here
+            $td = "<div id='$monthName' class='monthTable'>"; // tab stuff goes here
+            $td .= "<h4>$monthName Review List</h4>";
             $td .= "<table class=\"table table-bordered table-sm small\">$thead";
             foreach ($schedule[$i] as $id => $row) {
                 $td .= "<tr>";
@@ -129,6 +141,7 @@ class VendorReviewSchedule extends PageLayoutA
                 $td .= "<td>{$row['itemCount']}</td>";
                 $td .= "<td>{$row['rev30']}</td>";
                 $td .= "<td>{$row['rev90']}</td>";
+                $td .= "<td>{$row['depts']}</td>";
                 $td .= "</tr>";
             }
             $td .= "</table>";
@@ -140,6 +153,8 @@ class VendorReviewSchedule extends PageLayoutA
 <div class="container" style="padding:15px">
 <h4>Vendor Invoices To Watch</h4>
 $invoiceWatch
+<a href="#" onclick="viewCurrentMonth(); false">View Only Current Month</a> | 
+<a href="#" onclick="viewAllMonth(); false">View All</a>
 $schedTxt
 </div>
 HTML;
@@ -147,7 +162,12 @@ HTML;
 
     public function javascriptContent()
     {
+        $m = date('m');
+        $dateObj = DateTime::createFromFormat('!m', $m);
+        $currentMonth = $dateObj->format('F');
+
         return <<<JAVASCRIPT
+var currentMonth = "$currentMonth";
 $('tr').each(function(){
     let count = $(this).find('td:eq(2)').text();
     let rev30 = $(this).find('td:eq(3)').text();
@@ -177,6 +197,23 @@ $('.editable-details').focusout(function() {
         });
     }
 });
+
+var viewCurrentMonth = function()
+{
+    $('div.monthTable').each(function(){
+        let id = $(this).attr('id');
+        if (id !== 'undefined' && id != currentMonth) {
+            $(this).hide();
+        }
+        console.log('id:'+id+',cm:'+currentMonth);
+    });
+}
+var viewAllMonth = function()
+{
+    $('div.monthTable').each(function(){
+        $(this).show();
+    });
+}
 JAVASCRIPT;
     }
 
