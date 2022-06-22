@@ -15,8 +15,34 @@ class VendorReviewSchedule extends PageLayoutA
     {
         $this->displayFunction = $this->pageContent();
         $this->__routes[] = 'post<details>';
+        $this->__routes[] = 'post<watch>';
+        $this->__routes[] = 'post<remove>';
 
         return parent::preprocess();
+    }
+
+    public function postRemoveHandler()
+    {
+        $dbc = scanLib::getConObj('SCANALTDB');
+        $id = FormLib::get('id', false);
+
+        $args = array($id);
+        $prep = $dbc->prepare("DELETE FROM invoices2Look4 WHERE vendorID = ?");
+        $res = $dbc->execute($prep, $args);
+
+        return false;
+    }
+
+    public function postWatchHandler()
+    {
+        $dbc = scanLib::getConObj('SCANALTDB');
+        $id = FormLib::get('watch', false);
+
+        $args = array($id);
+        $prep = $dbc->prepare("INSERT IGNORE into invoices2Look4 (vendorID, details) values (?, '[[Please enter details]]')");
+        $res = $dbc->execute($prep, $args);
+
+        return header('location: VendorReviewSchedule.php');
     }
 
     public function postDetailsHandler()
@@ -47,6 +73,14 @@ class VendorReviewSchedule extends PageLayoutA
         $dbc = ScanLib::getConObj();
         $schedule = array();
         $invoiceWatch = "<table class=\"table table-bordered table-sm small\"><thead></thead><tbody>";
+        $vendorOpts = "<option value=0>Choose A Vendor</option>";
+
+        $vendP = $dbc->prepare("SELECT vendorID, vendorName
+            FROM vendors");
+        $vendR = $dbc->execute($vendP);
+        while ($row = $dbc->fetchRow($vendR)) {
+            $vendorOpts .= "<option value=\"{$row['vendorID']}\">{$row['vendorName']}</option>";
+        }
 
         $prep = $dbc->prepare("select i.vendorID, v.vendorName , i.details 
             from woodshed_no_replicate.invoices2Look4 as i 
@@ -60,6 +94,7 @@ class VendorReviewSchedule extends PageLayoutA
             $invoiceWatch .= "<td>$id</td>";
             $invoiceWatch .= "<td>$name</td>";
             $invoiceWatch .= "<td class=\"editable-details\" data-id=\"$id\" contentEditable=true>$details</td>";
+            $invoiceWatch .= "<td><a href=\"#\" onclick=\"removeWatch($id); return false;\">Remove</a></td>";
             $invoiceWatch .= "</tr>";
         }
         $invoiceWatch .= "</tbody></table>";
@@ -152,6 +187,22 @@ class VendorReviewSchedule extends PageLayoutA
         return <<<HTML
 <div class="container" style="padding:15px">
 <h4>Vendor Invoices To Watch</h4>
+    <div class="row">
+        <div class="col-lg-6">
+        </div>
+        <div class="col-lg-4">
+            <form action="VendorReviewSchedule.php" method="post">
+            <div class="form-group">
+                <select class="form-control" name="watch" id="watch">$vendorOpts</select>
+            </div>
+        </div>
+        <div class="col-lg-2">
+            <div class="form-group">
+                <input type="submit" class="btn btn-default form-control">
+            </div>
+        </div>
+    </div>
+</form>
 $invoiceWatch
 <a href="#" onclick="viewCurrentMonth(); false">View Only Current Month</a> | 
 <a href="#" onclick="viewAllMonth(); false">View All</a>
@@ -212,6 +263,17 @@ var viewAllMonth = function()
 {
     $('div.monthTable').each(function(){
         $(this).show();
+    });
+}
+
+var removeWatch = function(id) {
+    $.ajax({
+        type: 'post',
+        data: 'id='+id+'&remove=1',
+        url: 'VendorReviewSchedule.php',
+        success: function(resp) {
+            location.reload();
+        }
     });
 }
 JAVASCRIPT;
