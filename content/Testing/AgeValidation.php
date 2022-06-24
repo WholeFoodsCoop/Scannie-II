@@ -82,7 +82,7 @@ class AgeValidation extends PageLayoutA
                     <input type="text" name="age" class="form-control" style="width: 300px" pattern="\d*" />
                 </div>
             </form>
-            <p style="text-align: center; color: white; font-size: 18px; ">Type customer birthdate YYYMMDD</p>
+            <p style="text-align: center; color: white; font-size: 18px; ">Type customer birthdate YYYYMMDD</p>
             <p style="text-align: center; color: white; font-size: 18px; ">$message</p>
         </div>
     </div>
