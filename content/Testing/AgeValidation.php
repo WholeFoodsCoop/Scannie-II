@@ -29,7 +29,11 @@ class AgeValidation extends PageLayoutA
         $d = substr($date, -2);
 
         $formattedDate = "$y-$m-$d";
-        $bdate = new DateTime($formattedDate);
+        try {
+            $bdate = new DateTime($formattedDate);
+        } catch(Exception $e) {
+            return 'error';
+        }
 
         $minDate = new DateTime();
         $minDate = $minDate->sub(new DateInterval('P21Y'));
@@ -56,8 +60,11 @@ class AgeValidation extends PageLayoutA
             if ($res === true) {
                 $message = "Customer Age Verified";
                 $hue = $hues['good'];
+            } elseif ($res == 'error') {
+                $message = "INVALID DATE ENTERED";
+                $hue = $hues['bad'];
             } else {
-                $message = "Minimum DOB for sale is $res";
+                $message = "Minimum DOB is $res";
                 $hue = $hues['bad'];
             }
         }
