@@ -120,7 +120,7 @@ ORDER BY p.brand</span>
                 <span class="query">
 # Upload Basics file to Generic Upload to use this query
 # To check CSCS, change prid 6 to 12 and upload the CSCS file to Generic Upload
-SELECT p.upc, v.sku, p.brand, p.description, p.last_sold, p.inUse FROM products AS p LEFT JOIN vendorItems AS v ON p.upc=v.upc AND p.default_vendor_id=v.vendorID LEFT JOIN PriceRules AS r ON p.price_rule_id=r.priceRuleID WHERE r.priceRuleTypeID = 6 AND p.upc NOT IN (SELECT upc FROM GenericUpload) AND p.inUse = 1 AND p.last_sold >= DATE(NOW() - INTERVAL 60 DAY);
+SELECT p.upc, v.sku, p.brand, p.description, p.last_sold, p.inUse FROM products AS p LEFT JOIN vendorItems AS v ON p.upc=v.upc AND p.default_vendor_id=v.vendorID LEFT JOIN PriceRules AS r ON p.price_rule_id=r.priceRuleID WHERE r.priceRuleTypeID = 6 AND p.upc NOT IN (SELECT LPAD(SUBSTRING(g.upc,1,12),13,"0") FROM GenericUpload) AND p.inUse = 1 AND p.last_sold >= DATE(NOW() - INTERVAL 60 DAY);
                 </span>
             </li>
             <li><a href='#' class="quick_query">Get Alberts Price File</a>
