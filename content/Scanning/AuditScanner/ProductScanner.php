@@ -558,12 +558,12 @@ HTML;
                         </div>
                         <div class="col-4 info" >
                             <div style="float: left; color: rgba(255,255,255,0.6)">price</div><br />
-                                <span class="text-'.$warning['price'].'" style="font-weight: bold; font-size: 18px; text-shadow: 1px 1px darkslategrey">
+                                <span style="font-weight: bold; font-size: 18px; text-shadow: 1px 1px darkslategrey">
                                     '.$price.'</span>
                                     '.$price_rule.'<br />&nbsp;
                         </div>
                         <div class="col-4 info" >
-                            <div style="float: left; color: rgba(255,255,255,0.6)">margin</div><br /><span class="text-'.$warning['margin'].'">'.sprintf('%0.2f%%',$margin*100).'</span>
+                            <div style="float: left; color: rgba(255,255,255,0.6)">margin</div><br /><span class="">'.sprintf('%0.2f%%',$margin*100).'</span>
                                 <br /> <span class="text-tiny">target: </span><span style="color: rgba(255,255,255,0.6); text-shadow: 0px  0px 1px white">'.($dMargin*100).'%</span>
                         </div>
                     </div>
@@ -575,7 +575,7 @@ HTML;
                             <div style="float: left; color: rgba(255,255,255,0.6)" class="text-'.$sWarn.'">srp</div><br />'.$srp.'
                         </div>
                         <div class="col-4 info" >
-                            <div style="float: left; color: rgba(255,255,255,0.6)">newMarg</div><br />'.sprintf('%0.2f%%',$sMargin*100).'
+                            <div style="float: left; color: rgba(255,255,255,0.6)">margin@srp</div><br />'.sprintf('%0.2f%%',$sMargin*100).'
                         </div>
                     </div>
                     <br />
