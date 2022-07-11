@@ -869,7 +869,7 @@ class AuditReport extends PageLayoutA
             //$td .= "<td class=\"\" title=\"\">$received</td>";
             $td .= "<td class=\"price\">$price</td>";
             $td .= "<td class=\"sale\">$sale</td>";
-            $td .= "<td class=\"autoPar\" title=\"$parVerb\">$autoPar</td>";
+            $td .= "<td class=\"autoPar\">$autoPar</td>";
             $diff = round($curMargin - $margin, 1);
             $curMargin = round($curMargin, 1);
             $td .= "<td class=\"margin_target_diff\">
@@ -1028,7 +1028,8 @@ HTML;
             $date = $row['date'];
             $saved = $row['savedAs'];
             $sel = ($saved == $loaded) ? ' selected ' : '';
-            $savedLists .= "<option value=\"$saved\" $sel>[$date] $saved</option>";
+            $style = (strpos(strtolower($saved), 'review') !== false) ? "style=\"background-color: #FFFFCC; border: 1px solid grey;\"" : "";
+            $savedLists .= "<option value=\"$saved\" $style  $sel>[$date] $saved</option>";
             $datalist .= "<option value=\"$saved\">";
         }
         $datalist .= "</datalist>";
