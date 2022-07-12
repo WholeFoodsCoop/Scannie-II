@@ -520,7 +520,7 @@ class AuditReport extends PageLayoutA
         $storeID = FormLib::get('storeID');
         $username = FormLib::get('username');
         $args = array($storeID, $username);
-        $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan SET notes = '' WHERE storeID = ? AND username = ?");
+        $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan SET notes = '' WHERE storeID = ? AND username = ? AND savedAs = 'default'");
         $dbc->execute($query, $args);
 
         $json = array('test'=>'successful');
