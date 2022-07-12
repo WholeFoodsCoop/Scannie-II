@@ -162,7 +162,7 @@ class DataModel
     public function setNotes($upc, $storeID, $notes, $username)
     {
         $args = array($notes, $upc, $storeID, $username);
-        $query = "UPDATE AuditScan SET notes = ? WHERE upc = ? AND storeID = ? AND username = ?";
+        $query = "UPDATE AuditScan SET notes = ? WHERE upc = ? AND storeID = ? AND username = ? AND savedAs = 'default'";
         $prep = $this->connection->prepare($query);
         $res = $this->connection->execute($prep, $args);
         if ($er = $this->connection->error()) {
