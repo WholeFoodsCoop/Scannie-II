@@ -1,4 +1,5 @@
 <?php
+header('location: ProductScanner.php'); // don't use this page, it was a failure before it was launched 
 if (!class_exists('PageLayoutA')) {
     include(__DIR__.'/../../PageLayoutA.php');
 }

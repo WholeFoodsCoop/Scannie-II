@@ -856,10 +856,12 @@ class AuditReport extends PageLayoutA
             $reviewComments = $row['comment'];
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
-            $td .= "<td class=\"sku editable editable-sku\">$sku</td>";
-            $td .= "<td class=\"brand editable editable-brand\" data-table=\"products\">$brand</td>";
+            $td .= "<td class=\"sku\">$sku</td>";
+            $td .= "<td class=\"brand editable editable-brand\" data-table=\"products\"
+                style=\"text-transform:uppercase;\">$brand</td>";
             $td .= "<td class=\"sign-brand editable editable-brand \" data-table=\"productUser\">$signBrand</td>";
-            $td .= "<td class=\"description editable editable-description\" data-table=\"products\">$description</td>";
+            $td .= "<td class=\"description editable editable-description\" data-table=\"products\" 
+                style=\"text-transform:uppercase;\" maxlength=\"30\">$description</td>";
             $td .= "<td class=\"sign-description editable editable-description \" data-table=\"productUser\">$signDescription</td>";
             $td .= "<td class=\"size\">$size</td>";
             $td .= "<td class=\"units\">$units</td>";
@@ -1235,6 +1237,9 @@ $columnCheckboxes
             </div>
             <div class="form-group dummy-form">
                 <button class="btn btn-default btn-sm small" id="check-prices">Check Prices</button>
+            </div>
+            <div class="form-group dummy-form">
+                <button class="btn btn-default btn-sm small" id="validate-notes-cost">VNC</button>
             </div>
         </div>
     </div>
@@ -2068,6 +2073,18 @@ $('#hide-SIC').click(function(){
         }
     });
 });
+
+$('#validate-notes-cost').click(function(){
+    $('tr').each(function(){
+        var col1 = $(this).find('td.netCost').text();
+        var col2 = $(this).find('td.notes').text();
+        if (col1 == col2) {
+            $(this).css('background-color', 'tomato');
+        }
+        console.log('col1: '+col1+', col2: '+col2);
+    });
+});
+
 JAVASCRIPT;
     }
 
