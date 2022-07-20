@@ -675,7 +675,8 @@ class AuditReport extends PageLayoutA
         $parA = array($username);
         $parP = $dbc->prepare("SELECT p.upc, 
                 ROUND(auto_par*7,1) AS autoPar, 
-                p.store_id
+                p.store_id,
+                DATEDIFF(NOW(), p.last_sold) AS daysWOsale
             FROM products AS p
                 RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON a.upc=p.upc
             WHERE p.upc != '0000000000000'
@@ -686,6 +687,7 @@ class AuditReport extends PageLayoutA
         $parR = $dbc->execute($parP, $parA);
         while ($row = $dbc->fetchRow($parR)) {
             $pars[$row['upc']][$row['store_id']] = $row['autoPar'];
+            $woSales[$row['upc']][$row['store_id']] = $row['daysWOsale'];
         }
 
         $td = "";
@@ -731,9 +733,6 @@ class AuditReport extends PageLayoutA
         </tr>
         ";
 
-        $parMod = (scanLib::getStoreID() == 1) ? 3 : 7;
-        // tmp
-        $parMod = 7;
 
         // this is the first thead row (column sorting)
         $th = "
@@ -792,23 +791,23 @@ class AuditReport extends PageLayoutA
             $sku = $row['sku'];
             list($recentPurchase, $received) = $this->getRecentPurchase($dbc,$upc);
             $brand = $row['brand'];
-            //$autoPar = round($row['auto_par'],1);
-            $autoPar = '| ';
-            foreach ($pars[$upc] as $par) {
-                $autoPar .= "$par | ";
+            $autoPar = '';
+            foreach ($pars[$upc] as $storeID => $par) {
+                $woSalesText = '';
+                if ($woSales[$upc][$storeID] < 20) {
+                    $woSalesText = 'lightgreen';
+                }
+                if ($woSales[$upc][$storeID] > 19) {
+                    $woSalesText = 'orange';
+                }
+                if ($woSales[$upc][$storeID] > 29) {
+                    $woSalesText = 'tomato';
+                }
+                if ($woSales[$upc][$storeID] > 60) {
+                    $woSalesText = 'darkred';
+                }
+                $autoPar .= "<span style=\"border: 1px solid $woSalesText;\"><span style=\"color: $woSalesText\">&#9608;</span> $par</span> ";
             }
-            $parMod = 0;
-            //$parVerb = '';
-            //if (scanLib::getStoreID() == 1) {
-            //    $parMod = 3;
-            //    $parVerb = "({$autoPar}*3)";
-            //} elseif ($storeID == 2) {
-            //    $parMod = 7;
-            //    $parVerb = "({$autoPar}*7)";
-            //}
-            // tmp
-            $parMod = 7;
-            //$autoPar = round($row['auto_par'] * $parMod, 1);
             $signBrand = $row['signBrand'];
             $description = $row['description'];
             $signDescription = $row['signDescription'];
@@ -2204,6 +2203,15 @@ HTML;
         <li><strong>Recent Purchase / PO-Cost</strong> Most recent cost found in Purchase Order Items.</li>
         <li><strong>Price</strong> Current normal price in POS.</li>
         <li><strong>Sale</strong> Corrent sale price of item, if any.</li>
+        <li><strong>autoPar</strong> Automated PAR (average of sales over 90 days), multiplied by 7 (average of item(s) sold in one week). 
+            <ul> 
+                <li><u>Borders:</u></li>
+                <li><b><span style="color: lightgreen">Green</span></b> item as sold in past 20 days</li>
+                <li><b><span style="color: orange">Yellow</span></b> item has not sold in less than 20 days</li>
+                <li><b><span style="color: tomato">Red</span></b> item last sold > 30 days</li>
+                <li><b><span style="color: darkred">Dark Red</span></b> it has been 60+ days since this item has sold</li>
+            </ul>
+        </li>
         <li><strong>Margin Target Diff</strong> Lists current margin, then target margin based on vendor and department, then the difference between the two.</li>
         <li><strong>RSRP</strong> Our WFC calculated SRP before applying rounding rules.</li>
         <li><strong>SRP</strong> SRP after rounding.</li>
