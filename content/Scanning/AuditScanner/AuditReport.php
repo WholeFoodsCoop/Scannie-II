@@ -2076,12 +2076,16 @@ $('#hide-SIC').click(function(){
 
 $('#validate-notes-cost').click(function(){
     $('tr').each(function(){
-        var col1 = $(this).find('td.netCost').text();
-        var col2 = $(this).find('td.notes').text();
-        if (col1 == col2) {
-            $(this).css('background-color', 'tomato');
+        if ($(this).hasClass('prod-row')) {
+            var col1 = $(this).find('td.netCost').text();
+            col1 = parseFloat(col1);
+            var col2 = $(this).find('td.notes').text();
+            col2 = parseFloat(col2);
+            if (col1 == col2) {
+                $(this).css('background-color', 'tomato');
+            }
+            console.log('col1: '+col1+', col2: '+col2);
         }
-        console.log('col1: '+col1+', col2: '+col2);
     });
 });
 
