@@ -348,6 +348,7 @@ HTML;
                 LEFT JOIN products AS p ON bl.upc=p.upc
             WHERE startDate = '{$startDate}'
                 AND p.normal_price <= bl.salePrice
+                AND bl.pricemethod = 0
             GROUP BY bl.upc
             ORDER BY bl.batchID;
         ");
