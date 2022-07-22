@@ -673,14 +673,17 @@ class AuditReport extends PageLayoutA
         // get autopar for all stores
         $pars = array();
         $parA = array($username);
-        $parP = $dbc->prepare("SELECT p.upc, 
-                ROUND(auto_par*7,1) AS autoPar, 
+        $parP = $dbc->prepare("
+            SELECT p.upc,
+                ROUND(auto_par*7,1) AS autoPar,
                 p.store_id,
-                DATEDIFF(NOW(), p.last_sold) AS daysWOsale
+                CASE WHEN DATEDIFF(NOW(), p.last_sold) > 0 THEN DATEDIFF(NOW(), p.last_sold)
+                    ELSE 9999
+                END AS daysWOsale
             FROM products AS p
                 RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON a.upc=p.upc
             WHERE p.upc != '0000000000000'
-                AND a.username = ?
+                AND a.username = ? 
                 AND a.savedAS = 'default'
             ORDER BY p.upc, p.store_id
         ");
@@ -1035,7 +1038,7 @@ HTML;
         }
         $datalist .= "</datalist>";
 
-        $vselect = '';
+        $vselect = '<option value="">Select A Vendor Catalog To Load</option>';
         $curVendor = FormLib::get('vendor');
         $prep = $dbc->prepare("SELECT vendorName, vendorID FROM vendors 
             WHERE vendorID NOT IN (-2,-1,1,2)
@@ -1056,6 +1059,7 @@ HTML;
         $tempInputVal = '';
         $countTemp = $dbc->numRows($res);
         $tempBtn = ""; $tempClass = '';
+        $saveReviewBtn = '';
         $tempBtnID = "prevent-default";
         if ($_COOKIE['user_type'] == 2) {
             $tempClass = "btn-secondary";
@@ -1068,6 +1072,10 @@ HTML;
                 $tempInputVal = 'open';
             }
             $tempBtnID = "temp-btn";
+
+            $reviewBtn = "<button class=\"btn $tempClass btn-sm page-control\" id=\"$tempBtnID\">$tempBtn</button>";
+
+            $saveReviewBtn = '<button id="saveReviewList" class="btn btn-secondary btn-sm page-control">Save Review List</button>';
         }
 
         $options = $this->getNotesOpts($dbc,$storeID,$username);
@@ -1155,11 +1163,11 @@ $modal
     <button class="btn btn-secondary btn-sm page-control" data-toggle="modal" data-target="#upcs_modal">Add Items</button>
 </div>
 <div class="form-group dummy-form">
-    <button id="saveReviewList" class="btn btn-secondary btn-sm page-control">Save Review List</button>
+    $saveReviewBtn
 </div>
 <div class="form-group dummy-form">
     <form method="post" action="AuditReport.php">
-        <button class="btn $tempClass btn-sm page-control" id="$tempBtnID">$tempBtn</button>
+        $reviewBtn
         <input type="hidden" name="review" value="$tempInputVal"/>
         <input type="hidden" name="username" value="$username"/>
     </form>
@@ -2040,11 +2048,13 @@ $(window).scroll(function () {
                 .css('position', 'fixed')
                 .css('top', '0px')
                 .css('right', '0px')
-                .css('background-color', 'rgba(255,255,255,1)');
+                .css('background-color', 'rgba(255,255,255,1)')
+                .css('width', '309px');
         } else {
             $('#simpleInputCalc')
                 .css('position', 'relative')
-                .css('background-color', 'rgba(255,255,255,1)');
+                .css('background-color', 'rgba(255,255,255,1)')
+                .css('width', '309px');
         }
     }
 });
@@ -2086,6 +2096,10 @@ $('#validate-notes-cost').click(function(){
             console.log('col1: '+col1+', col2: '+col2);
         }
     });
+});
+
+$( function() {
+    $('#simpleInputCalc').draggable();
 });
 
 JAVASCRIPT;
