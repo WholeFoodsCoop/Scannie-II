@@ -15,16 +15,39 @@ class RoundBatchPrice extends PageLayoutA
 {
 
     protected $must_authenticate = true;
-    protected $BATCHID = 19745;
+    protected $batchID = 20852;
 
     public function preprocess()
     {
         $this->displayFunction = $this->pageContent();
+        $this->__routes[] = "post<batchID>";
 
         return parent::preprocess();
     }
 
+
     public function pageContent()
+    {
+        return <<<HTML
+<div class="row" style="padding-top: 25px">
+    <div class="col-lg-4"></div>
+    <div class="col-lg-4">
+        <form action="RoundBatchPrice.php" method="post">
+            <div class="form-group">
+                <label>Enter Batch ID of Batch To Round</label>
+                <input type="text" name="batchID" class="form-control" />
+            </div>
+            <div class="form-group">
+                <input type="submit" class="form-control btn btn-default"/>
+            </div>
+        </form>
+    </div>
+    <div class="col-lg-4"></div>
+</div>
+HTML;
+    }
+
+    public function postBatchIDView()
     {
         include(__DIR__.'/../../common/lib/PriceRounder.php');
         $rounder = new PriceRounder();
@@ -32,8 +55,12 @@ class RoundBatchPrice extends PageLayoutA
         $data = array();
         $ret = '';
         $items = array();
+        $this->batchID = FormLib::get('batchID', false);
+        if ($this->batchID === false) {
+            return header('location: RoundBatchPrice.php');
+        }
 
-        $args = array($this->BATCHID);
+        $args = array($this->batchID);
         $prep = $dbc->prepare("SELECT upc, salePrice FROM batchList WHERE batchID = ?");
         $res = $dbc->execute($prep, $args);
         $ret .= $dbc->error();
@@ -44,8 +71,8 @@ class RoundBatchPrice extends PageLayoutA
 
         $updateP = $dbc->prepare("UPDATE batchList SET salePrice = ? WHERE upc = ? AND batchID = ?");
         foreach ($items as $upc => $salePrice) {
-            $updateA = array($salePrice, $upc, $this->BATCHID);
-            //$dbc->execute($updateP, $updateA);
+            $updateA = array($salePrice, $upc, $this->batchID);
+            $dbc->execute($updateP, $updateA);
         }
 
         return <<<HTML
@@ -54,7 +81,8 @@ class RoundBatchPrice extends PageLayoutA
         <div class="col-lg-1"></div>
         <div class="col-lg-10">
             $ret
-            Done!
+            <div class="alert alert-success">Done!</div>
+            <a href="#" onClick="window.location.href = 'RoundBatchPrice.php';">Back</a>
         </div>
         <div class="col-lg-2"></div>
     </div>
