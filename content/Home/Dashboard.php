@@ -1052,7 +1052,7 @@ HTML;
         $desc = "Products missing cost";
         $data = array();
         $pre = $dbc->prepare("SELECT upc, brand, description, 
-            p.department, default_vendor_id, cost, created
+            p.department, default_vendor_id, cost, created, DATEDIFF(NOW(), p.last_sold) AS days
             FROM products AS p
                 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
             WHERE m.superID IN (1,13,9,4,8,17,5,18) 
@@ -1065,11 +1065,12 @@ HTML;
                     WHERE method = 'getProdMissingCost'   
                         AND page = 'Dashboard'
                 )
-            GROUP BY upc;");
+            GROUP BY upc
+            ORDER BY last_sold DESC;");
         $res = $dbc->execute($pre);
         $count = $dbc->numRows($res);
         $cols = array('upc', 'brand', 'description', 'department',
-             'default_vendor_id', 'cost', 'created');
+             'default_vendor_id', 'cost', 'created', days);
         while ($row = $dbc->fetchRow($res)) {
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
         }
