@@ -136,6 +136,7 @@ HTML;
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/DeliReusePluReport.php">Deli, Find PLUs to Reuse</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/PriceRuleTypeReport.php">Price Rule Report</a>
           <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/Batches/CoopDeals/CoopDealsReview.php">Q.A. & Breakdowns</a>
+          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/VendorReviewSchedule.php">Vendor Review Schedule</a>
         </div>
       </li>
       <li class="nav-item dropdown">

@@ -81,6 +81,19 @@ units*
 FROM NutriFactStd   
                 </span>
             </li>
+            <li><a href='#' class="quick_query">Double Check Price Change Batches</a>
+                <span class="query">
+select 
+p.upc, p.brand, p.description,
+p.normal_price, l.salePrice,
+round(1-(p.normal_price / l.saleprice),2) AS percent 
+from batchList as l
+left join products as p
+on p.upc=l.upc
+where l.batchID in ("12345")
+order by  1-(p.normal_price / l.saleprice) DESC
+                </span>
+            </li>
             <li><a href='#' class="quick_query">UNFI Bulk SKU Check</a>
                 <span class="query">
 SELECT 
@@ -118,9 +131,17 @@ ORDER BY p.brand</span>
             </li>
             <li><a href='#' class="quick_query">Find Items Removed From Basics</a>
                 <span class="query">
-# Upload Basics file to Generic Upload to use this query
-# To check CSCS, change prid 6 to 12 and upload the CSCS file to Generic Upload
-SELECT p.upc, v.sku, p.brand, p.description, p.last_sold, p.inUse FROM products AS p LEFT JOIN vendorItems AS v ON p.upc=v.upc AND p.default_vendor_id=v.vendorID LEFT JOIN PriceRules AS r ON p.price_rule_id=r.priceRuleID WHERE r.priceRuleTypeID = 6 AND p.upc NOT IN (SELECT LPAD(SUBSTRING(g.upc,1,12),13,"0") FROM GenericUpload) AND p.inUse = 1 AND p.last_sold >= DATE(NOW() - INTERVAL 60 DAY);
+SELECT 
+p.upc, p.brand, p.description, r.maxPrice, p.normal_price, r.reviewDate
+FROM
+products AS p
+LEFT JOIN PriceRules AS r ON r.priceRuleID = p.price_rule_ID
+WHERE p.inUse = 1
+AND r.reviewDate < DATE(NOW() - INTERVAL 30 DAY)
+AND r.maxPrice <> 0
+AND r.priceRuleTypeID IN (6 ,12)
+AND p.upc > 999
+GROUP BY p.upc ;
                 </span>
             </li>
             <li><a href='#' class="quick_query">Get Alberts Price File</a>
@@ -207,7 +228,7 @@ order by department, upc
                 </span>
             </li>
             <li><a href='#' class="quick_query">Get Items Created</a>
-                <span class="query">select upc, brand, description from products where created > '2020-09-25 09:00:00' 
+                <span class="query">select upc, brand, description from products where created > DATE(NOW())
 group by upc</span>
             </li>
             <li><a href='#' class="quick_query">Get Linked PLU Single Item</a>
