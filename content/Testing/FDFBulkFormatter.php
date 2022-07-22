@@ -194,7 +194,7 @@ END AS organic,
 CASE WHEN p.local <> 0 THEN true 
     ELSE false
 END AS local,
-n.servingSize, n.numServings, n.calories, n.fatCalories, n.totalFat, n.saturatedFat, n.transFat, n.cholesterol, n.sodium, n.totalCarbs, n.fiber, n.sugar, n.protein
+n.servingSize, n.numServings, n.calories, n.fatCalories, n.totalFat, n.saturatedFat, n.transFat, n.cholesterol, n.sodium, n.totalCarbs, n.fiber, n.sugar, n.addedSugar, n.protein
 FROM products AS p 
 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
 LEFT JOIN vendorItems AS v ON v.upc=p.upc AND v.vendorID=p.default_vendor_id
@@ -267,6 +267,7 @@ ORDER BY v.sku, r.reviewed
             $totalCarbs = $row['totalCarbs'];
             $fiber = $row['fiber'];
             $sugar = $row['sugar'];
+            $addedSugar = $row['addedSugar'];
             $protein = $row['protein'];
             $data[$upc]['Ingredients'] = $ingredients;
             $data[$upc]['Eff. Date'] = $date->format('Y-m-d') . ' | MT: ' . $movement;
@@ -311,6 +312,7 @@ ORDER BY v.sku, r.reviewed
             $data[$upc]['Total Carb Amount'] = $totalCarbs;
             $data[$upc]['Fiber Amount'] = $fiber;
             $data[$upc]['Total Sugars Amount'] = $sugar;
+            $data[$upc]['Added Sugars Amount'] = $addedSugar;
             $data[$upc]['Protein Amount'] = $protein;
 
             $data[$upc]['Total Fat Percent'] = $this->getDVValue($DVS['Fat'], $totalFat)."%";
@@ -319,6 +321,7 @@ ORDER BY v.sku, r.reviewed
             $data[$upc]['Sodium Percent'] = $this->getDVValue($DVS['Sodium'], $sodium)."%";
             $data[$upc]['Fiber Percent'] = $this->getDVValue($DVS['Fiber'], $fiber)."%";
             $data[$upc][' Total Carb Percent'] = $this->getDVValue($DVS['Carbohydrate'], $totalCarbs)."%";
+            $data[$upc]['Added Sugars Percent'] = $this->getDVValue($DVS['Added Sugars'], $addedSugar)."%";
 
             if (isset($nutrients[$upc]['Vitamin D'])) {
                 $data[$upc]['Vitamin D Percent'] = $nutrients[$upc]['Vitamin D']."%";

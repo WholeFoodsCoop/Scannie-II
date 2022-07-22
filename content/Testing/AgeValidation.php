@@ -50,6 +50,7 @@ class AgeValidation extends PageLayoutA
 
     public function pageContent()
     {
+        $year = date('Y');
         $message = "";
         $hues = array('prompt' => "#004080", 'good' => "#318000", 'bad' => "#801100");
         $input = FormLib::get('age', false);
@@ -75,6 +76,7 @@ class AgeValidation extends PageLayoutA
 <div class="row">
     <div class="col-lg-4"> </div>
     <div class="col-lg-4">
+        <h4 style="text-align: center; padding: 15px;">21+ Age Verification</h4>
         <div style="background-color: $hue; height: 200px; width: 100%; border-radius: 3px;">
             <p style="text-align: center; color: white; font-size: 18px; padding-top: 25px;"><strong>Customer Age</strong></p>
             <form name="myform" action="AgeValidation.php" method="post">
@@ -85,6 +87,7 @@ class AgeValidation extends PageLayoutA
             <p style="text-align: center; color: white; font-size: 18px; ">Type customer birthdate YYYYMMDD</p>
             <p style="text-align: center; color: white; font-size: 18px; ">$message</p>
         </div>
+    <div style="font-size: 14; text-align: center; padding: 25px;">Whole Foods Community Co-op &copy; $year</div>
     </div>
     <div class="col-lg-4"> </div>
 </div>
