@@ -178,7 +178,7 @@ class TrackItemChange extends PageLayoutA
         <div class="col-lg-3">
             <form class="form-inline">
                     <span class="input-group-text" id="basic-addon1">UPC</span> &nbsp;
-                    <input type="text" value="$upc" name="upc" id="upc" class="form-control form-control-sm" pattern="\d*" />
+                    <input type="text" value="$upc" name="upc" id="upc" class="form-control form-control-sm" pattern="\d*" autofocus/>
                 &nbsp;
                     <button type="submit" class="btn btn-default btn-sm">Submit</button>
             </form>
