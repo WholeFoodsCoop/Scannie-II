@@ -1060,9 +1060,24 @@ HTML;
         $countTemp = $dbc->numRows($res);
         $tempBtn = ""; $tempClass = '';
         $saveReviewBtn = '';
+        $vncBtn = '';
+        $checkPriceBtn = '';
         $tempBtnID = "prevent-default";
+        $reviewForm = '';
         if ($_COOKIE['user_type'] == 2) {
+            // user is csather
             $tempClass = "btn-secondary";
+            $vncBtn = '
+        <div class="form-group dummy-form">
+            <button class="btn btn-default btn-sm small" id="validate-notes-cost">VNC</button>
+        </div>';
+            $checkPriceBtn = '
+        <div class="form-group dummy-form">
+            <button class="btn btn-default btn-sm small" id="check-prices">Check Prices</button>
+            </div>
+                ';
+
+            // choose verbiage for review button
             if ($countTemp > 0) {
                 $tempBtn = 'Close Review';
                 $tempInputVal = 'close';
@@ -1072,10 +1087,20 @@ HTML;
                 $tempInputVal = 'open';
             }
             $tempBtnID = "temp-btn";
-
             $reviewBtn = "<button class=\"btn $tempClass btn-sm page-control\" id=\"$tempBtnID\">$tempBtn</button>";
-
             $saveReviewBtn = '<button id="saveReviewList" class="btn btn-secondary btn-sm page-control">Save Review List</button>';
+
+            $reviewForm = '
+<div class="form-group dummy-form">
+    <form method="post" action="AuditReport.php">
+        '.$reviewBtn.'
+        <input type="hidden" name="review" value="'.$tempInputVal.'"/>
+        <input type="hidden" name="username" value="'.$username.'"/>
+    </form>
+</div>';
+
+        } else {
+            // user is not csather
         }
 
         $options = $this->getNotesOpts($dbc,$storeID,$username);
@@ -1165,13 +1190,7 @@ $modal
 <div class="form-group dummy-form">
     $saveReviewBtn
 </div>
-<div class="form-group dummy-form">
-    <form method="post" action="AuditReport.php">
-        $reviewBtn
-        <input type="hidden" name="review" value="$tempInputVal"/>
-        <input type="hidden" name="username" value="$username"/>
-    </form>
-</div>
+$reviewForm
 <div class="form-group dummy-form">
     <a class="btn btn-info btn-sm page-control" href="ProductScanner.php ">Scanner</a>
 </div>
@@ -1242,12 +1261,8 @@ $columnCheckboxes
             <div class="form-group dummy-form">
                 <button class="btn btn-default btn-sm small" id="view-all">View All</button>
             </div>
-            <div class="form-group dummy-form">
-                <button class="btn btn-default btn-sm small" id="check-prices">Check Prices</button>
-            </div>
-            <div class="form-group dummy-form">
-                <button class="btn btn-default btn-sm small" id="validate-notes-cost">VNC</button>
-            </div>
+            $checkPriceBtn
+            $vncBtn
         </div>
     </div>
     <div class="col-lg-3" >
