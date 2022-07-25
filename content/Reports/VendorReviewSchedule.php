@@ -50,6 +50,7 @@ class VendorReviewSchedule extends PageLayoutA
         $dbc = scanLib::getConObj('SCANALTDB');
         $id = FormLib::get('id', false);
         $details = FormLib::get('details', false);
+        $details = urldecode($details);
 
         $args = array($details, $id);
         $prep = $dbc->prepare("UPDATE invoices2Look4 SET details = ?
@@ -93,7 +94,7 @@ class VendorReviewSchedule extends PageLayoutA
             $invoiceWatch .= "<tr>";
             $invoiceWatch .= "<td>$id</td>";
             $invoiceWatch .= "<td>$name</td>";
-            $invoiceWatch .= "<td class=\"editable-details\" data-id=\"$id\" contentEditable=true>$details</td>";
+            $invoiceWatch .= "<td class=\"editable-details\" data-id=\"$id\" id=\"id$id\" contentEditable=true>$details</td>";
             $invoiceWatch .= "<td><a href=\"#\" onclick=\"removeWatch($id); return false;\">Remove</a></td>";
             $invoiceWatch .= "</tr>";
         }
@@ -234,9 +235,12 @@ $('.editable-details').on('focus', function(){
 });
 $('.editable-details').focusout(function() {
     var text = $(this).text();
+    text = encodeURIComponent(text);
     var id = $(this).attr('data-id');
     console.log('id: '+id+', text: ',+text);
     if (text != lastEditDetails) {
+        var curElemID = $(this).attr('id');
+        console.log(curElemID);
         lastEditDetails = text;
         $.ajax({
             type: 'post',
@@ -244,6 +248,13 @@ $('.editable-details').focusout(function() {
             url: 'VendorReviewSchedule.php',
             success: function(resp) {
                 console.log(resp);
+                if (resp == 'saved') {
+                    $('#'+curElemID).animate({backgroundColor: '#AFE1AF'}, 'slow')
+                        .animate({backgroundColor: '#FFFFFF'}, 'slow');
+                } else {
+                    $('#'+curElemID).animate({backgroundColor: '#AFE1AF'}, 'slow')
+                        .animate({backgroundColor: '#FF6347'}, 'slow');
+                }
             }
         });
     }
