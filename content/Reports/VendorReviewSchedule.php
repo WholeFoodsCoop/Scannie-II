@@ -101,29 +101,27 @@ class VendorReviewSchedule extends PageLayoutA
         $invoiceWatch .= "</tbody></table>";
 
         $prep = $dbc->prepare("
-            SELECT v.vendorID, v.vendorName, count(p.upc) AS count,
-            SUM(CASE WHEN m.superID IN (1,3,4,5,8,9,13,17,18) THEN 1 ELSE 0
-                END) AS countMerch,
-            SUM(CASE WHEN pr.reviewed > DATE_SUB(NOW(), INTERVAL 1 MONTH) THEN 1 ELSE 0
+            SELECT sch.month, v.vendorID, v.vendorName, count(p.upc) AS count,
+            SUM(CASE WHEN pr.reviewed >= DATE_SUB(NOW(), INTERVAL 1 MONTH) THEN 1 ELSE 0
                 END) AS rev30,
-            SUM(CASE WHEN pr.reviewed > DATE_SUB(NOW(), INTERVAL 3 MONTH) THEN 1 ELSE 0
+            SUM(CASE WHEN pr.reviewed >= DATE_SUB(NOW(), INTERVAL 3 MONTH) THEN 1 ELSE 0
                 END) AS rev90,
             GROUP_CONCAT(DISTINCT SUBSTRING(m.super_name, 1, 4) ORDER BY m.super_name) AS departments
-            FROM vendors AS v
-                LEFT JOIN vendorItems AS i ON i.vendorID = v.vendorID
-                LEFT JOIN products AS p ON p.upc=i.upc AND p.default_vendor_id=i.vendorID
-                LEFT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
-                LEFT JOIN prodReview AS pr ON pr.upc=p.upc
+            FROM woodshed_no_replicate.FixedVendorReviewSchedule AS sch
+                LEFT JOIN is4c_op.vendors AS v ON v.vendorID = sch.vendorID
+                LEFT JOIN is4c_op.vendorItems AS i ON i.vendorID = v.vendorID
+                LEFT JOIN is4c_op.products AS p ON p.upc=i.upc AND p.default_vendor_id=i.vendorID
+                LEFT JOIN is4c_op.MasterSuperDepts AS m ON m.dept_ID=p.department
+                LEFT JOIN is4c_op.prodReview AS pr ON pr.upc=p.upc
             WHERE p.inUse = 1
                 AND p.last_sold > DATE_SUB(NOW(), INTERVAL 2 MONTH)
                 AND v.vendorID NOT IN ( 1, 2, 70, 7, 22, 23, 25, 28, 30, 35, 38, 42, 61, 65,127,143,146,147,171,191,196,228,230,232,263,264,358,374)
                 AND v.vendorID NOT IN (SELECT vid FROM woodshed_no_replicate.top25)
-            GROUP BY v.vendorID
-            ORDER BY count(p.upc) DESC, v.vendorID
-            ");
+            GROUP BY sch.vendorID, sch.month
+            ORDER BY sch.month ASC, count(p.upc) DESC
+        ");
+        $data = array();
         $res = $dbc->execute($prep);
-        $i=1;
-        $j=7;
         while ($row = $dbc->fetchRow($res)) {
             $vendorName = $row['vendorName'];
             $vendorID = $row['vendorID'];
@@ -132,6 +130,7 @@ class VendorReviewSchedule extends PageLayoutA
             $rev30 = $row['rev30'];
             $rev90 = $row['rev90'];
             $depts = $row['departments'];
+            $month = $row['month'];
 
             $tmpDepts = explode(",", $depts);
             $styleDepts = '';
@@ -141,49 +140,55 @@ class VendorReviewSchedule extends PageLayoutA
             }
             $styleDepts = rtrim($styleDepts, " ,");
 
-            if ($countMerch > 0) {
-                $schedule[$i][$vendorID]['name'] = $vendorName;
-                $schedule[$i][$vendorID]['id'] = $vendorID;
-                $schedule[$i][$vendorID]['itemCount'] = $itemCount;
-                $schedule[$i][$vendorID]['rev30'] = $rev30;
-                $schedule[$i][$vendorID]['rev90'] = $rev90;
-                $schedule[$i][$vendorID]['depts'] = $styleDepts;
-                $i++;
-                if ($i == 13)
-                    $i = 1;
-                $schedule[$j][$vendorID]['name'] = $vendorName;
-                $schedule[$j][$vendorID]['id'] = $vendorID;
-                $schedule[$j][$vendorID]['itemCount'] = $itemCount;
-                $schedule[$j][$vendorID]['rev30'] = $rev30;
-                $schedule[$j][$vendorID]['rev90'] = $rev90;
-                $schedule[$j][$vendorID]['depts'] = $styleDepts;
-                $j++;
-                if ($j == 13)
-                    $j = 1;
-            }
+            $data[$month][] = array(
+                'name' => $vendorName,
+                'id' => $vendorID,
+                'count' => $itemCount,
+                'r30' => $rev30,
+                'r90' => $rev90,
+                'depts' => $styleDepts
+            );
+
         }
-        $schedTxt = '';
         $thead = "<thead><th>ID</th><th>Vendor</th><th>Item Count</th><th>rev30</th><th>rev90</th><th>Master Depts</th></thead>";
-        for ($i=1; $i<13; $i++) {
-            $dateObj = DateTime::createFromFormat('!m', $i);
+        $tablesRet = '';
+        $td = '';
+        $checklists = '';
+        foreach ($data as $month => $arr) {
+            $i = 1;
+            $dateObj = DateTime::createFromFormat('!m', $month);
             $monthName = $dateObj->format('F');
-            $td = "<div id='$monthName' class='monthTable'>"; // tab stuff goes here
+            $td = "<div id='$monthName' class='monthTable'>";
             $td .= "<h4>$monthName Review List</h4>";
-            $td .= "<table class=\"table table-bordered table-sm small\">$thead";
-            foreach ($schedule[$i] as $id => $row) {
+            $td .= "<table class=\"table table-bordered table-sm small\">$thead<tbody>";
+            $checklists = "<div class=\"checklists-sql\" data-month=\"$monthName\"><div>
+                <label><strong>$monthName</strong> INSERT INTO Checklists Query</label></div>";
+            foreach ($arr as $k => $row) {
+                $checklistName = str_replace("'", "", $row['name']);
+                $checklistName = strtoupper($checklistName);
                 $td .= "<tr>";
                 $td .= "<td>{$row['id']}</td>";
                 $td .= "<td>{$row['name']}</td>";
-                $td .= "<td>{$row['itemCount']}</td>";
-                $td .= "<td>{$row['rev30']}</td>";
-                $td .= "<td>{$row['rev90']}</td>";
+                $td .= "<td>{$row['count']}</td>";
+                $td .= "<td>{$row['r30']}</td>";
+                $td .= "<td>{$row['r90']}</td>";
                 $td .= "<td>{$row['depts']}</td>";
                 $td .= "</tr>";
+                $checklists .= "INSERT INTO checklists (tableID, description, active, row) VALUES ('SMV', '$checklistName', 1, $i); ";
+                $i++;
             }
-            $td .= "</table>";
-            $td .= "</div>";
-            $schedTxt .= $td;
+            $checklists .= "</div>";
+            $td .= "</tbody></table>$checklists</div>";
+            $tablesRet .= $td;
+
         }
+
+        /*
+            run one time to get a snapshot of generated schedule in order to create a fixed schedule
+        var_dump($schedule);
+        $json = json_encode($schedule);
+        file_put_contents('test.json', $json);
+        */
 
         return <<<HTML
 <div class="container" style="padding:15px">
@@ -207,7 +212,8 @@ class VendorReviewSchedule extends PageLayoutA
 $invoiceWatch
 <a href="#" onclick="viewCurrentMonth(); false">View Only Current Month</a> | 
 <a href="#" onclick="viewAllMonth(); false">View All</a>
-$schedTxt
+$tablesRet
+$checklists
 </div>
 HTML;
     }
@@ -222,8 +228,12 @@ HTML;
 var currentMonth = "$currentMonth";
 $('tr').each(function(){
     let count = $(this).find('td:eq(2)').text();
+    count = parseFloat(count);
     let rev30 = $(this).find('td:eq(3)').text();
-    if (count == rev30) {
+    rev30 = parseFloat(rev30);
+    percent = rev30 / count;
+    //if (count == rev30) {
+    if (percent > 0.70) {
         $(this).css('background-color', 'lightgrey');
     }
 });
@@ -267,8 +277,10 @@ var viewCurrentMonth = function()
         if (id !== 'undefined' && id != currentMonth) {
             $(this).hide();
         }
+        $(this).find('.checklists-sql').show();
         console.log('id:'+id+',cm:'+currentMonth);
     });
+
 }
 var viewAllMonth = function()
 {
@@ -295,6 +307,10 @@ JAVASCRIPT;
         return <<<HTML
 table {
     box-shadow: 2px 2px lightgrey;
+}
+.checklists-sql {
+    padding: 25px;
+    display: none;
 }
 HTML;
     }
