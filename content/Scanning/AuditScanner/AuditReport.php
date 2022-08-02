@@ -1261,6 +1261,9 @@ $columnCheckboxes
             <div class="form-group dummy-form">
                 <button class="btn btn-default btn-sm small" id="view-all">View All</button>
             </div>
+            <div class="form-group dummy-form">
+                <button class="btn btn-default btn-sm small" id="invert-show">View Invert</button>
+            </div>
             $checkPriceBtn
             $vncBtn
         </div>
@@ -1775,6 +1778,17 @@ $('.row-check').click(function(){
     });
 });
 styleChecked();
+
+$('#invert-show').click(function(){
+    $('tr.prod-row').each(function(){
+        var visible = $(this).is(':visible');
+        if (visible) {
+            $(this).hide();
+        } else {
+            $(this).show();
+        }
+    });
+});
 
 $('.column-filter').each(function(){
     $(this).attr('contentEditable', true);
