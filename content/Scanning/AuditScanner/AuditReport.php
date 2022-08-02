@@ -720,7 +720,7 @@ class AuditReport extends PageLayoutA
             <td title=\"rsrp\" data-column=\"rsrp\"class=\"rsrp column-filter\"></td>
             <td title=\"prid\" data-column=\"prid\"class=\"prid column-filter\"></td>
             <td title=\"dept\" data-column=\"dept\"class=\"dept column-filter\"></td>
-            <td title=\"subdebt\" data-column=\"subdepts\"class=\"subdept column-filter\"></td>
+            <td title=\"subdebt\" data-column=\"subdept\"class=\"subdept column-filter\"></td>
             <td title=\"local\" data-column=\"local\"class=\"local column-filter\"></td>
             <td title=\"flags\" data-column=\"flags\"class=\"flags column-filter\"></td>
             <td title=\"vendor\" data-column=\"vendor\"class=\"vendor column-filter\"></td>
