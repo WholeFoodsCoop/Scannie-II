@@ -277,7 +277,15 @@ HTML;
             'ubrand', 'udesc', 'size', 'last_sold');
         $prep = $dbc->prepare("
             SELECT p.*, u.brand AS ubrand, u.description AS udesc, 
-                p.size, DATE(p.last_sold) AS last_sold
+                p.size, DATE(p.last_sold) AS last_sold,
+                CASE 
+                    WHEN p.last_sold IS NULL THEN DATEDIFF(NOW(), p.created)
+                    ELSE
+                    CASE 
+                        WHEN DATEDIFF(NOW(), p.last_sold) > 0 THEN DATEDIFF(NOW(), p.last_sold)
+                        ELSE 9999
+                    END
+                END AS daysWOsale
             FROM products AS p
                 LEFT JOIN productUser AS u ON p.upc=u.upc
             WHERE p.upc IN ($in_str)
@@ -289,6 +297,7 @@ HTML;
                 $data[$upc][$col] = $row[$col];
                 $data[$upc]['queues'] = null;
                 $data[$upc]['note'] = null;
+                $data[$upc]['daysWOsale'] = $row['daysWOsale'];
             }
         }
 
@@ -436,6 +445,25 @@ HTML;
                 $udesc = (isset($row['udesc'])) ? $row['udesc'] : null;
                 $batchType = (isset($row['batchType'])) ? $row['batchType'] : 0;
                 $salePrice = (isset($row['salePrice'])) ? $row['salePrice'] : 0;
+                $daysWOsale = (isset($row['daysWOsale'])) ? $row['daysWOsale'] : 0;
+                $daysWOsaleText = '';
+                if ($daysWOsale < 20 && $daysWOsale != 0 ) {
+                    $color = 'lightgreen';
+                }
+                if ($daysWOsale  > 19) {
+                    $color = 'orange';
+                }
+                if ($daysWOsale  > 29) {
+                    $color = 'tomato';
+                }
+                if ($daysWOsale  > 60) {
+                    $color = 'darkred';
+                }
+                if ($daysWOsale == 0) {
+                    $color = 'grey';
+                }
+                $daysWOsaleText = "<span style=\"color: $color; float: right\">&#9608;</span>$daysWOsale</span>";
+
 
                 $extraData = <<<HTML
 [lastsold]     $lastSold\r\n
@@ -486,7 +514,7 @@ HTML;
                     $brand = ($ubrand != null) ? $ubrand : $brand,
                     $note, $note, $desc = ($udesc != null) ? $udesc . $noteChr : $description . $noteChr,
                     $extraData, $extraData, $salePrice, $dealDot,
-                    $row['floorsection'], 
+                    $row['floorsection'] . '' . $daysWOsaleText, 
                     $queues,
                     $upc, $upc, $upc, $upc, $upc, $queue
                 );
