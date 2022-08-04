@@ -677,8 +677,13 @@ class AuditReport extends PageLayoutA
             SELECT p.upc,
                 ROUND(auto_par*7,1) AS autoPar,
                 p.store_id,
-                CASE WHEN DATEDIFF(NOW(), p.last_sold) > 0 THEN DATEDIFF(NOW(), p.last_sold)
-                    ELSE 9999
+                CASE 
+                    WHEN p.last_sold IS NULL THEN DATEDIFF(NOW(), p.created)
+                    ELSE
+                    CASE 
+                        WHEN DATEDIFF(NOW(), p.last_sold) > 0 THEN DATEDIFF(NOW(), p.last_sold)
+                        ELSE 9999
+                    END
                 END AS daysWOsale
             FROM products AS p
                 RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON a.upc=p.upc
