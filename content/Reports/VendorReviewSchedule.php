@@ -17,8 +17,27 @@ class VendorReviewSchedule extends PageLayoutA
         $this->__routes[] = 'post<details>';
         $this->__routes[] = 'post<watch>';
         $this->__routes[] = 'post<remove>';
+        $this->__routes[] = 'post<vendorID>';
 
         return parent::preprocess();
+    }
+
+    public function postVendorIDHandler()
+    {
+        $dbc = scanLib::getConObj('SCANALTDB');
+        $vendorID = FormLib::get('vendorID');
+        $month = FormLib::get('month');
+        $date = new DateTime("2022-$month-01");
+        $date2 = $date->modify('+6 months');
+        $monthB = $date->format('m');
+
+        $prep = $dbc->prepare("INSERT INTO FixedVendorReviewSchedule
+            (vendorID, month) VALUES (?, ?); INSERT INTO FixedVendorReviewSchedule
+            (vendorID, month) VALUES (?, ?)
+            ");
+        $res = $dbc->execute($prep, array($vendorID, $month, $vendorID, $monthB));
+
+        return header('location: VendorReviewSchedule.php');
     }
 
     public function postRemoveHandler()
@@ -74,7 +93,11 @@ class VendorReviewSchedule extends PageLayoutA
         $dbc = ScanLib::getConObj();
         $schedule = array();
         $invoiceWatch = "<table class=\"table table-bordered table-sm small\"><thead></thead><tbody>";
-        $vendorOpts = "<option value=0>Choose A Vendor</option>";
+        $vendorOpts = "<option value=0>Add a Vendor to List</option>";
+        $moCount = array();
+
+        $missingVendors = $this->getMissingVendors($dbc);
+        $missingHTML = '<h4>Vendors Missing From Schedule</h4>';
 
         $vendP = $dbc->prepare("SELECT vendorID, vendorName
             FROM vendors");
@@ -148,21 +171,52 @@ class VendorReviewSchedule extends PageLayoutA
                 'r90' => $rev90,
                 'depts' => $styleDepts
             );
+            if (!isset($moCount[$month])) {
+                $moCount[$month] = 0;
+            } else {
+                $moCount[$month] += $itemCount;
+            }
 
         }
+
+        $low = 99999;
+        foreach ($moCount as $month => $count) {
+            if ($count < $low) {
+                $low = $count;
+                $lowMonth = $month;
+            }
+        }
+        $quickAddVendor = '';
+        foreach ($missingVendors as $id => $row) {
+            $uid = uniqid();
+            $name = $row['name'];
+            $count = $row['count'];
+            $missingHTML .= "<li><strong>$name</strong> $count items in use in catalog. ";
+            $missingHTML .= <<<HTML
+<a href="#" onclick="document.forms['$uid'].submit(); return false;">Add to Schedule</a></li>
+<form action="VendorReviewSchedule.php" method="post" name="$uid">
+    <input type="hidden" name="month" value="$lowMonth" />
+    <input type="hidden" name="vendorID" value="$id" />
+</form>
+HTML;
+        }
+
         $thead = "<thead><th>ID</th><th>Vendor</th><th>Item Count</th><th>rev30</th><th>rev90</th><th>Master Depts</th></thead>";
         $tablesRet = '';
         $td = '';
         $checklists = '';
+        $itemCounts = array();
+        $itemCountsHTML = '';
         foreach ($data as $month => $arr) {
             $i = 1;
             $dateObj = DateTime::createFromFormat('!m', $month);
             $monthName = $dateObj->format('F');
             $td = "<div id='$monthName' class='monthTable'>";
             $td .= "<h4>$monthName Review List</h4>";
-            $td .= "<table class=\"table table-bordered table-sm small\">$thead<tbody>";
+            $td .= "<table class=\"table table-bordered table-sm small table-review\" id=\"table-$monthName\">$thead<tbody>";
             $checklists = "<div class=\"checklists-sql\" data-month=\"$monthName\"><div>
                 <label><strong>$monthName</strong> INSERT INTO Checklists Query</label></div>";
+            $itemCounts[$monthName] = 0;
             foreach ($arr as $k => $row) {
                 $checklistName = str_replace("'", "", $row['name']);
                 $checklistName = strtoupper($checklistName);
@@ -176,46 +230,80 @@ class VendorReviewSchedule extends PageLayoutA
                 $td .= "</tr>";
                 $checklists .= "INSERT INTO checklists (tableID, description, active, row) VALUES ('SMV', '$checklistName', 1, $i); ";
                 $i++;
+                $itemCounts[$monthName] += $row['count'];
             }
+            $itemCountsHTML .= "<input type=\"hidden\" class=\"table-count\" name=\"$monthName\" value=\"{$itemCounts[$monthName]}\" />";
             $checklists .= "</div>";
             $td .= "</tbody></table>$checklists</div>";
             $tablesRet .= $td;
 
         }
 
-        /*
-            run one time to get a snapshot of generated schedule in order to create a fixed schedule
-        var_dump($schedule);
-        $json = json_encode($schedule);
-        file_put_contents('test.json', $json);
-        */
+        $missingHTML = (!empty($missingVendors)) ? '<div class="alert alert-warning" id="missing-html">' . $missingHTML . '</div>' : '';
 
         return <<<HTML
-<div class="container" style="padding:15px">
-<h4>Vendor Invoices To Watch</h4>
-    <div class="row">
-        <div class="col-lg-6">
-        </div>
-        <div class="col-lg-4">
-            <form action="VendorReviewSchedule.php" method="post">
-            <div class="form-group">
-                <select class="form-control" name="watch" id="watch">$vendorOpts</select>
+<div class="container" style="padding: 15px;">
+$missingHTML
+<div style="background-color: #F8F8F8; border: 1px solid lightgrey;">
+    <div style="padding:15px">
+        <h4>Vendor Invoices To Watch</h4>
+        <div class="row">
+            <div class="col-lg-6">
             </div>
-        </div>
-        <div class="col-lg-2">
-            <div class="form-group">
-                <input type="submit" class="btn btn-default form-control">
+            <div class="col-lg-4">
+                <form action="VendorReviewSchedule.php" method="post">
+                <div class="form-group">
+                    <select class="form-control" name="watch" id="watch">$vendorOpts</select>
+                </div>
+            </div>
+            <div class="col-lg-2">
+                <div class="form-group">
+                    <input type="submit" class="btn btn-default form-control">
+                </div>
+                </form>
             </div>
         </div>
     </div>
-</form>
+</div>
 $invoiceWatch
 <a href="#" onclick="viewCurrentMonth(); false">View Only Current Month</a> | 
 <a href="#" onclick="viewAllMonth(); false">View All</a>
 $tablesRet
 $checklists
+$itemCountsHTML
 </div>
 HTML;
+    }
+
+    public function getMissingVendors($dbc)
+    {
+        $missing = array();
+
+        $p = $dbc->prepare("
+            SELECT vendorID, vendorName, 
+                ROUND(COUNT(upc) / 2, 0) AS count,
+                GROUP_CONCAT(DISTINCT SUBSTRING(m.super_name, 1, 4) ORDER BY m.super_name) AS departments
+            FROM products AS p
+                LEFT JOIN vendors AS v ON v.vendorID=p.default_vendor_id
+                LEFT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
+            WHERE p.inUse = 1
+                AND vendorID NOT IN (SELECT vendorID FROM woodshed_no_replicate.FixedVendorReviewSchedule)
+                AND vendorID NOT IN (SELECT vid FROM woodshed_no_replicate.top25)
+                AND vendorID > 0
+                AND vendorID NOT IN (54, 70, 260)
+                AND m.super_name NOT IN ('PRODUCE', 'BRAND', 'MISC')
+            GROUP BY v.vendorID
+        ");
+        $r = $dbc->execute($p);
+        while ($row = $dbc->fetchRow($r)) {
+            $count = $row['count'];
+            $name = $row['vendorName'];
+            $id = $row['vendorID'];
+            $missing[$id]['name'] = $name;
+            $missing[$id]['count'] = $count;
+        }
+
+        return $missing;
     }
 
     public function javascriptContent()
@@ -299,6 +387,7 @@ var removeWatch = function(id) {
         }
     });
 }
+
 JAVASCRIPT;
     }
 
