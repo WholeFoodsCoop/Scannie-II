@@ -684,7 +684,11 @@ class AuditReport extends PageLayoutA
                         WHEN DATEDIFF(NOW(), p.last_sold) > 0 THEN DATEDIFF(NOW(), p.last_sold)
                         ELSE 9999
                     END
-                END AS daysWOsale
+                END AS daysWOsale,
+                CASE
+                    WHEN p.last_sold IS NULL THEN 'created'
+                    ELSE 'last_sold'
+                END AS daysWOtype 
             FROM products AS p
                 RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON a.upc=p.upc
             WHERE p.upc != '0000000000000'
@@ -696,6 +700,7 @@ class AuditReport extends PageLayoutA
         while ($row = $dbc->fetchRow($parR)) {
             $pars[$row['upc']][$row['store_id']] = $row['autoPar'];
             $woSales[$row['upc']][$row['store_id']] = $row['daysWOsale'];
+            $woType[$row['upc']][$row['store_id']] = $row['daysWOtype'];
         }
 
         $td = "";
@@ -813,6 +818,9 @@ class AuditReport extends PageLayoutA
                 }
                 if ($woSales[$upc][$storeID] > 60) {
                     $woSalesText = 'darkred';
+                }
+                if ($woSales[$upc][$storeID] == 1 && $woType[$upc][$storeID] == 'last_sold') {
+                    $woSalesText = 'lightblue';
                 }
                 $autoPar .= "<span style=\"border: 1px solid $woSalesText;\"><span style=\"color: $woSalesText\">&#9608;</span> $par</span> ";
             }
@@ -2254,6 +2262,7 @@ HTML;
         <li><strong>autoPar</strong> Automated PAR (average of sales over 90 days), multiplied by 7 (average of item(s) sold in one week). 
             <ul> 
                 <li><u>Borders:</u></li>
+                <li><b><span style="color: lightblue">Blue</span></b> item has sales as of yesterday</li>
                 <li><b><span style="color: lightgreen">Green</span></b> item as sold in past 20 days</li>
                 <li><b><span style="color: orange">Yellow</span></b> item has not sold in less than 20 days</li>
                 <li><b><span style="color: tomato">Red</span></b> item last sold > 30 days</li>
