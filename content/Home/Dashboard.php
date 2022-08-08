@@ -761,6 +761,7 @@ HTML;
                 AND inUse = 1
                 AND p.department NOT IN (240, 241, 250)
                 AND m.superID IN (1,13,9,4,8,17,5,18) 
+                AND p.default_vendor_id <> 200 #klean kanteen
         ");
         $r = $dbc->execute($p, $a);
         $cols = array('upc', 'brand', 'description', 'department', 'store_id');
@@ -1004,10 +1005,21 @@ HTML;
     {
         $count = 0;
         $desc = "Vendors missing from Vendor Review Schedule";
-        $p = $dbc->prepare("SELECT vendorID, vendorName FROM vendors 
-            WHERE vendorID NOT IN (SELECT vid AS vendorID FROM vendorReviewSchedule)
-            AND vendorID <> -2
-            ORDER BY vendorID");
+        $p = $dbc->prepare("
+            SELECT vendorID, vendorName, 
+                count(upc), GROUP_CONCAT(DISTINCT SUBSTRING(m.super_name, 1, 4) ORDER BY m.super_name) AS departments
+            FROM products AS p
+                LEFT JOIN vendors AS v ON v.vendorID=p.default_vendor_id
+                LEFT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
+            WHERE p.inUse = 1
+                AND vendorID NOT IN (SELECT vendorID FROM woodshed_no_replicate.FixedVendorReviewSchedule)
+                AND vendorID NOT IN (SELECT vid FROM woodshed_no_replicate.top25)
+                AND vendorID > 0
+                AND vendorID NOT IN (54, 70, 260)
+                AND m.super_name NOT IN ('PRODUCE', 'BRAND', 'MISC')
+                AND p.numflag & (1<<19) = 0
+            GROUP BY v.vendorID
+        ");
         $r = $dbc->execute($p);
         $data = array();
         $cols = array('vendorID', 'vendorName');
