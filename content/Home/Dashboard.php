@@ -210,7 +210,10 @@ ORDER BY COUNT(p.upc) DESC");
                 'handler' => self::getLocalDiscrepancies($dbc),
                 'ranges' => array(1, 10, 999),
             ),
-            //
+            array(
+                'handler' => self::getZeroVendorItems($dbc),
+                'ranges' => array(1, 10, 999),
+            ),
         );
 
         $muData = $this->multiStoreDiscrepCheck($dbc);
@@ -872,6 +875,24 @@ HTML;
             if (count($local) > 1) {
                 $data[$brand]['brand'] = $brand;
             }
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
+    public function getZeroVendorItems($dbc)
+    {
+        $count = 0;
+        $desc = "Items In Vendor Items With UPC 000000000000";
+        $cols = array('count');
+        $data = array();
+        $prep = $dbc->prepare("SELECT COUNT(upc) FROM vendorItems WHERE upc = 0");
+        //$res = $dbc->execute($prep);
+        $val = $dbc->getValue($prep);
+        $count = $val;        
+        if ($count > 0) {
+            $data['count'] = $count;
         }
 
         return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
