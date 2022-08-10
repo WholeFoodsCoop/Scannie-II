@@ -1022,7 +1022,24 @@ HTML;
         $test = new DataModel($dbc);
 
         if (!isset($_SESSION['columnBitSet'])) {
-            $_SESSION['columnBitSet'] = 1708975;
+            // define default columns to show
+            $_SESSION['columnBitSet'] = 0;
+            $x = 0;
+            $x |= 1 << 0;
+            $x |= 1 << 1;
+            $x |= 1 << 2;
+            $x |= 1 << 3;
+            $x |= 1 << 5;
+            $x |= 1 << 7;
+            $x |= 1 << 8;
+            $x |= 1 << 9;
+            $x |= 1 << 12;
+            $x |= 1 << 13;
+            $x |= 1 << 14;
+            $x |= 1 << 19;
+            $x |= 1 << 25;
+            $x |= 1 << 26;
+            $_SESSION['columnBitSet'] = $x;
         }
 
         $args = array($username, $storeID);
@@ -1082,12 +1099,14 @@ HTML;
             $tempClass = "btn-secondary";
             $vncBtn = '
         <div class="form-group dummy-form">
-            <button class="btn btn-default btn-sm small" id="validate-notes-cost">VNC</button>
+            <button class="btn btn-default btn-sm small" id="validate-notes-cost">VNC</button> |
+            <button class="btn btn-default btn-sm small" id="hide-validated">Hide VNC\'d</button>
         </div>';
             $checkPriceBtn = '
-        <div class="form-group dummy-form">
+        <!--
+            <div class="form-group dummy-form">
             <button class="btn btn-default btn-sm small" id="check-prices">Check Prices</button>
-            </div>
+            </div> -->
                 ';
 
             // choose verbiage for review button
@@ -1191,9 +1210,11 @@ $modal
     <input type="hidden" id="username" value="$username" />
 </form>
 
+<!--
 <div class="form-group dummy-form">
     <button id="clearNotesInputB" class="btn btn-secondary btn-sm page-control">Clear Notes</button>
 </div>
+-->
 <div class="form-group dummy-form">
     <button id="clearAllInputB" class="btn btn-secondary btn-sm page-control">Clear Queue</button>
 </div>
@@ -1275,7 +1296,7 @@ $columnCheckboxes
                 <button class="btn btn-default btn-sm small" id="view-all">View All</button>
             </div>
             <div class="form-group dummy-form">
-                <button class="btn btn-default btn-sm small" id="invert-show">View Invert</button>
+                <button class="btn btn-default btn-sm small" id="invert-show">Invert View</button>
             </div>
             $checkPriceBtn
             $vncBtn
@@ -2133,10 +2154,16 @@ $('#validate-notes-cost').click(function(){
             var col2 = $(this).find('td.notes').text();
             col2 = parseFloat(col2);
             if (col1 == col2) {
-                $(this).css('background-color', 'tomato');
+                $(this).css('background-color', 'tomato')
+                    .addClass('validated');
             }
             console.log('col1: '+col1+', col2: '+col2);
         }
+    });
+});
+$('#hide-validated').click(function(){
+    $('tr.validated').each(function(){
+        $(this).hide();
     });
 });
 
