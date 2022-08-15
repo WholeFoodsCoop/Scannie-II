@@ -377,7 +377,10 @@ class AuditReport extends PageLayoutA
         $vendorName = $row['vendorName'] . " REVIEW LIST";
 
         $args = array($username, $storeID, $vendorName);
-        $prep = $dbc->prepare("INSERT INTO AuditScan (id, date, upc, username, storeID, notes, checked, savedAs) SELECT id, date, upc, ?, ?, notes, checked, ? from AuditScan where savedAs = 'default' and notes != ''");
+        $prep = $dbc->prepare("INSERT IGNORE INTO AuditScan (id, date, upc, username, storeID, notes, checked, savedAs) 
+            SELECT id, date, upc, ?, ?, notes, checked, ? 
+            FROM AuditScan where savedAs = 'default' and notes != ''
+            ");
         $res = $dbc->execute($prep, $args);
 
         $json['saved'] = 1;
@@ -639,6 +642,7 @@ class AuditReport extends PageLayoutA
                 c.difference AS costChange,
                 c.date AS costChangeDate,
                 subdepts.subdept_name AS subdept,
+                p.price_rule_id,
                 CASE 
                     WHEN p.local = 0 THEN ''
                     WHEN p.local = 1 THEN 'SC'
@@ -832,8 +836,18 @@ class AuditReport extends PageLayoutA
             $ogCost = null;
             $adjcost = $row['adjcost'];
             $price = $row['price'];
+            $priceRuleID = $row['price_rule_id'];
             $sale = $row['sale'];
-            $sale = ($sale == '0.00') ? '' : "$$sale";
+            if ($sale == '0.00') {
+                $sale = '';
+            } else if ($sale == $price) {
+                $sale = 'BOGO';
+            } else {
+                $sale = "$$sale";
+            }
+            if ($priceRuleID != 0) {
+                $price = "$price <span style=\"font-weight: bold; color: blue; \">*</span>";
+            }
             $margin = round($row['margin'], 2);
             $curMargin = round($row['curMargin'], 2);
             $rsrp = round($row['rsrp'], 2);
@@ -885,7 +899,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"recentPurchase\" title=\"$received\">$recentPurchase</td>";
             //$td .= "<td class=\"\" title=\"\">$received</td>";
             $td .= "<td class=\"price\">$price</td>";
-            $td .= "<td class=\"sale\">$sale</td>";
+            $td .= "<td class=\"sale\"><span style=\"color: darkgreen; font-weight: bold;\">$sale</span></td>";
             $td .= "<td class=\"autoPar\">$autoPar</td>";
             $diff = round($curMargin - $margin, 1);
             $curMargin = round($curMargin, 1);
@@ -1037,8 +1051,8 @@ HTML;
             $x |= 1 << 13;
             $x |= 1 << 14;
             $x |= 1 << 19;
-            $x |= 1 << 25;
             $x |= 1 << 26;
+            $x |= 1 << 27;
             $_SESSION['columnBitSet'] = $x;
         }
 
