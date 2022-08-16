@@ -65,6 +65,7 @@ class DataModel
     public function setBrand($upc, $brand, $table='products')
     {
         $tableName = null;
+        $brand = strtoupper($brand);
         if ($table == 'products') {
             $tableName = 'products';
         } elseif ($table == 'productUser') {
@@ -88,6 +89,7 @@ class DataModel
     public function setDescription($upc, $description, $table='products')
     {
         $tableName = null;
+        $description = strtoupper($description);
         if ($table == 'products') {
             $tableName = 'products';
         } elseif ($table == 'productUser') {
