@@ -36,8 +36,17 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<loadList>';
         $this->__routes[] = 'post<deleteList>';
         $this->__routes[] = 'post<vendCat>';
+        $this->__routes[] = 'post<setStoreID>';
 
         return parent::preprocess();
+    }
+
+    public function postSetStoreIDHandler()
+    {
+        $storeID = FormLib::get('setStoreID', false);
+        $_SESSION['AuditReportStoreID'] = $storeID;
+
+        return false;
     }
 
     public function postScrollModeHandler()
@@ -81,9 +90,9 @@ class AuditReport extends PageLayoutA
         $upcs = array();
         $dbc = ScanLib::getConObj();
 
-        $args = array($username, $storeID);
+        $args = array($username);
         $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan
-            WHERE username = ? AND storeID = ? AND savedAs = 'default'");
+            WHERE username = ? AND savedAs = 'default'");
         $res = $dbc->execute($prep, $args);
         while ($row = $dbc->fetchRow($res)) {
             $upcs[$row['upc']] = $row['upc'];
@@ -101,11 +110,10 @@ class AuditReport extends PageLayoutA
         $dbc = ScanLib::getConObj('SCANALTDB');
         $delete = FormLib::get('deleteList');
         $username = FormLib::get('username');
-        $storeID = FormLib::get('storeID');
 
-        $args = array($username, $storeID, $delete);
+        $args = array($username, $delete);
         $prep = $dbc->prepare("DELETE FROM AuditScan WHERE username = ?
-            AND storeID = ? AND savedAs = ? OR savedAs = 'default'");
+            AND savedAs = ? OR savedAs = 'default'");
         $res = $dbc->execute($prep, $args);
 
         return header("location: AuditReport.php");
@@ -115,9 +123,9 @@ class AuditReport extends PageLayoutA
     {
         $dbc = ScanLib::getConObj('SCANALTDB');
 
-        $args = array($username, $storeID);
+        $args = array($username);
         $prep = $dbc->prepare("DELETE FROM AuditScan WHERE username = ?
-            AND storeID = ? AND savedAs = 'default'");
+            AND savedAs = 'default'");
         $res = $dbc->execute($prep, $args);
 
         foreach ($upcs as $upc) {
@@ -139,9 +147,9 @@ class AuditReport extends PageLayoutA
         $username = FormLib::get('username');
         $storeID = FormLib::get('storeID');
 
-        $args = array($username, $storeID);
+        $args = array($username);
         $prep = $dbc->prepare("DELETE FROM AuditScan WHERE username = ?
-            AND storeID = ? AND savedAs = 'default'");
+            AND savedAs = 'default'");
         $res = $dbc->execute($prep, $args);
 
         $args = array($username, $storeID, $load);
@@ -164,9 +172,9 @@ class AuditReport extends PageLayoutA
         $upcs = explode("\r\n", $list);
         
         $notes = array();
-        $args = array($username, $storeID);
+        $args = array($username);
         $prep = $dbc->prepare("SELECT upc, notes FROM AuditScan 
-            WHERE username = ? AND storeID = ? AND savedAs = 'default'");
+            WHERE username = ? AND savedAs = 'default'");
         $res = $dbc->execute($prep, $args);
         while ($row = $dbc->fetchRow($res)) {
             $notes[$row['upc']] = $row['notes'];
@@ -343,12 +351,11 @@ class AuditReport extends PageLayoutA
         $checked = FormLib::get('checked');
         $checked = ($checked == 'false') ? 0 : 1;
         $username = FormLib::get('username');
-        $storeID = FormLib::get('storeID');
         $json = array();
 
         $dbc = ScanLib::getConObj();
-        $args = array($checked, $storeID, $username, $upc);
-        $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan SET checked = ? WHERE storeID = ? AND username = ? AND upc = ?");
+        $args = array($checked, $username, $upc);
+        $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan SET checked = ? WHERE username = ? AND upc = ?");
         $dbc->execute($query, $args);
         if ($er = $dbc->error())
             $json['error'] = $er;
@@ -366,11 +373,11 @@ class AuditReport extends PageLayoutA
 
         $dbc = ScanLib::getConObj('SCANALTDB');
 
-        $args = array($username, $storeID);
+        $args = array($username);
         $prep = $dbc->prepare("SELECT v.vendorName FROM AuditScan AS a 
             LEFT JOIN is4c_op.products AS p ON p.upc=a.upc
             LEFT JOIN is4c_op.vendors AS v ON v.vendorID=p.default_vendor_id
-            WHERE username = ? AND storeID = ? AND savedAs = 'default' 
+            WHERE username = ? AND savedAs = 'default' 
             LIMIT 1");
         $res = $dbc->execute($prep, $args);
         $row = $dbc->fetchRow($res);
@@ -483,15 +490,14 @@ class AuditReport extends PageLayoutA
 
     public function postDeleteRowHandler()
     {
-        $storeID = FormLib::get('storeID');
         $username = FormLib::get('username');
         $upc = FormLib::get('upc');
         $json = array();
         $json['test'] = 'test';
 
         $dbc = ScanLib::getConObj();
-        $args = array($upc, $storeID, $username);
-        $prep = $dbc->prepare('DELETE FROM woodshed_no_replicate.AuditScan WHERE upc = ? AND storeID = ? AND username = ? AND savedAs = "default"');
+        $args = array($upc, $username);
+        $prep = $dbc->prepare('DELETE FROM woodshed_no_replicate.AuditScan WHERE upc = ? AND username = ? AND savedAs = "default"');
         $dbc->execute($prep, $args);
         if ($er = $dbc->error()) {
             $json['dbc-error'] = $er;
@@ -504,10 +510,9 @@ class AuditReport extends PageLayoutA
     public function postClearHandler()
     {
         $dbc = ScanLib::getConObj();
-        $storeID = FormLib::get('storeID');
         $username = FormLib::get('username');
-        $args = array($storeID, $username);
-        $query = $dbc->prepare("DELETE FROM woodshed_no_replicate.AuditScan WHERE storeID = ? AND username = ? AND savedAs = 'default'");
+        $args = array($username);
+        $query = $dbc->prepare("DELETE FROM woodshed_no_replicate.AuditScan WHERE username = ? AND savedAs = 'default'");
         $dbc->execute($query, $args);
 
         $json = array('test'=>'successful');
@@ -520,10 +525,9 @@ class AuditReport extends PageLayoutA
     public function postNotesHandler()
     {
         $dbc = ScanLib::getConObj();
-        $storeID = FormLib::get('storeID');
         $username = FormLib::get('username');
-        $args = array($storeID, $username);
-        $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan SET notes = '' WHERE storeID = ? AND username = ? AND savedAs = 'default'");
+        $args = array($username);
+        $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan SET notes = '' WHERE username = ? AND savedAs = 'default'");
         $dbc->execute($query, $args);
 
         $json = array('test'=>'successful');
@@ -564,15 +568,11 @@ class AuditReport extends PageLayoutA
 
         $json = array('count' => null);
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
-        $storeID = scanLib::getStoreID();
-        // tmp
-        $storeID = 2;
-        $args = array($username, $storeID);
+        $args = array($username);
         $query = $dbc->prepare("
             SELECT upc
             FROM woodshed_no_replicate.AuditScan
             WHERE username = ?
-                AND storeID = ?
         ");
         $result = $dbc->execute($query, $args);
         $json['count'] = $dbc->numRows($result);
@@ -585,15 +585,10 @@ class AuditReport extends PageLayoutA
     {
         $dbc = ScanLib::getConObj();
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
-        $storeID = scanLib::getStoreID();
-        // tmp
-        $storeID = 2;
+        $storeID = (isset($_SESSION['AuditReportStoreID'])) ? $_SESSION['AuditReportStoreID'] : scanLib::getStoreID();
         $rounder = new PriceRounder();
 
         $upcs = array();
-        //$upcs = $this->getUpcList($username, $storeID);
-        // flags[upc][storeID] = flags string.
-        //$flagData = $this->getProdFlagsListView($dbc, $upcs);
 
         $args = array($username, $storeID);
         $prep = $dbc->prepare("
@@ -657,7 +652,7 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN PriceRuleTypes AS t ON r.priceRuleTypeID=t.priceRuleTypeID
                 LEFT JOIN departments AS d ON p.department=d.dept_no
                 LEFT JOIN vendors AS e ON p.default_vendor_id=e.vendorID
-                RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON p.upc=a.upc AND p.store_id=a.storeID
+                RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON p.upc=a.upc 
                 LEFT JOIN deptMargin AS dm ON p.department=dm.dept_ID
                 LEFT JOIN vendorDepartments AS vd
                     ON vd.vendorID = p.default_vendor_id AND vd.posDeptID = p.department
@@ -936,29 +931,6 @@ class AuditReport extends PageLayoutA
         $textarea .= "</textarea></div>";
         $rows = $dbc->numRows($result);
 
-        /*
-         *  This section was used to show items that aren't in POS. I'm commenting out 
-            because it's causing a MYSQL error and it doesn't work anyway. Corey 2021-10-06
-        $args = array($username, $storeID);
-        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan
-            WHERE username = ? AND storeID = ? AND savedAs = 'default'");
-        $res = $dbc->execute($prep);
-        while ($row = $dbc->fetchRow($res)) {
-            $upc = $row['upc'];
-            $uLink = '<a class="upc" href="../../../../git/fannie/item/ItemEditorPage.php?searchupc='.$upc.
-                '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
-            if (!in_array($upc, $upcs)) {
-                $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
-                $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
-                $td .= "<td></td><td></td><td><i>Unknown PLU / Create New Product</i></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>";
-                $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td><td></td>";
-                $td .= "</tr>";
-                $rows++;
-            }
-        }
-        echo $dbc->error();
-        */
-
         $ret = <<<HTML
 <input type="hidden" id="table-rows" val(ue)="$rows" />
 <div class="table-responsive">
@@ -1002,10 +974,10 @@ HTML;
         return array($unitCost, $received);
     }
 
-    private function getNotesOpts($dbc,$storeID,$username)
+    private function getNotesOpts($dbc,$username)
     {
-        $args = array($storeID,$username);
-        $query = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE storeID = ? AND username = ? 
+        $args = array($username);
+        $query = $dbc->prepare("SELECT notes FROM woodshed_no_replicate.AuditScan WHERE username = ? 
             and savedAs = 'default' GROUP BY notes;");
         $result = $dbc->execute($query,$args);
         $options = array();
@@ -1018,22 +990,37 @@ HTML;
         return $options;
     }
 
+    public function StoreSelector($storeID='storeID',$onChange='')
+    {
+        $select = "<select class=\"form-control\" id=\"storeSelector-$storeID\" name=\"$storeID\" onChange=\"$onChange\">";
+        $dbc = scanLib::getConObj();
+        $current = (isset($_SESSION['AuditReportStoreID'])) ? $_SESSION['AuditReportStoreID'] : null;
+
+        $prep = $dbc->prepare("SELECT storeID, description FROM Stores");
+        $res = $dbc->execute($prep); 
+        while ($row = $dbc->fetchRow($res)) {
+            $id = $row['storeID'];
+            $d = $row['description'];
+            $selected = ($current == $id) ? ' selected ' : '';
+            $select .= "<option value=\"$id\" $selected>$d</option>";
+        }
+        $select .= "</select>";
+
+        return $select;
+    }
+
     public function postView()
     {
         $dbc = scanLib::getConObj();
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
-        $storeID = scanLib::getStoreID();
-        // tmp
-        // override storeID while working from home
-        if ($username == 'csather') {
-            $storeID = 2;
-        }
+        $storeID = (isset($_SESSION['AuditReportStoreID'])) ? $_SESSION['AuditReportStoreID'] : scanLib::getStoreID();
         $loaded = FormLib::get('loaded');
         $scrollMode = 'on';
         if (isset($_SESSION['scrollMode'])) {
             $scrollMode = ($_SESSION['scrollMode'] == 0) ? 'on' : 'off';
         }
         $test = new DataModel($dbc);
+
 
         if (!isset($_SESSION['columnBitSet'])) {
             // define default columns to show
@@ -1056,9 +1043,9 @@ HTML;
             $_SESSION['columnBitSet'] = $x;
         }
 
-        $args = array($username, $storeID);
+        $args = array($username);
         $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan
-            WHERE username = ? AND storeID = ? AND savedAs = 'default'");
+            WHERE username = ? AND savedAs = 'default'");
         $res = $dbc->execute($prep, $args);
         $list = '<textarea name="list" style="display: none;">';
         while ($row = $dbc->fetchRow($res)) {
@@ -1066,9 +1053,9 @@ HTML;
         }
         $list .= '</textarea>';
 
-        $args = array($username, $storeID);
+        $args = array($username);
         $prep = $dbc->prepare("SELECT savedAs, DATE(date) AS date FROM woodshed_no_replicate.AuditScan
-            WHERE username = ? AND storeID = ? AND savedAs != 'default' GROUP BY savedAs ORDER BY date DESC");
+            WHERE username = ? AND savedAs != 'default' GROUP BY savedAs ORDER BY date DESC");
         $res = $dbc->execute($prep, $args);
         $savedLists = "";
         $datalist = "<datalist id=\"savedLists\">";
@@ -1149,7 +1136,7 @@ HTML;
             // user is not csather
         }
 
-        $options = $this->getNotesOpts($dbc,$storeID,$username);
+        $options = $this->getNotesOpts($dbc,$username);
         $noteStr = "";
         $noteStr .= "<select id=\"notes\" style=\"font-size: 10px; font-weight: normal; margin-left: 5px; border: 1px solid lightgrey\">";
         $noteStr .= "<option value=\"viewall\">View All</option>";
@@ -1241,6 +1228,9 @@ $modal
 $reviewForm
 <div class="form-group dummy-form">
     <a class="btn btn-info btn-sm page-control" href="ProductScanner.php ">Scanner</a>
+</div>
+<div class="form-group dummy-form" style="float: right;">
+    {$this->StoreSelector('storeID')}
 </div>
 <div></div>
 <form name="load" id="loadList" method="post" action="AuditReport.php" style="display: inline-block">
@@ -1587,11 +1577,6 @@ $('.editable-notes').focusout(function(){
 
 });
 
-//var lastSku = null
-//$('.editable').each(function(){
-//    $(this).attr('contentEditable', true);
-//    $(this).attr('spellCheck', false);
-//});
 $('.editable-notes').each(function(){
     $(this).attr('contentEditable', true);
     $(this).attr('spellCheck', false);
@@ -2185,6 +2170,23 @@ $( function() {
     $('#simpleInputCalc').draggable();
 });
 
+$('#storeSelector-storeID').css('border', '1px solid brown');
+$('#storeSelector-storeID').change(function(){
+    var id = $(this).find(':selected').val();
+    $.ajax({
+        type: 'post',
+        data: 'setStoreID='+id,
+        url: 'AuditReport.php',
+        success: function(re) {
+            console.log(re);
+            location.reload();
+        },
+        error: function(re) {
+            console.log('AJAX ERROR: '+response)
+        },
+    });
+});
+
 JAVASCRIPT;
     }
 
@@ -2299,7 +2301,8 @@ HTML;
         <li><strong>Cost</strong> POS cost <i>after</i> adjustments.</li>
         <li><strong>Recent Purchase / PO-Cost</strong> Most recent cost found in Purchase Order Items.</li>
         <li><strong>Price</strong> Current normal price in POS.</li>
-        <li><strong>Sale</strong> Corrent sale price of item, if any.</li>
+        <li><strong>Sale</strong> Current sale price of item, if any. <b>Note </b>that this column will show only the sale price
+            for the selected store. </li>
         <li><strong>autoPar</strong> Automated PAR (average of sales over 90 days), multiplied by 7 (average of item(s) sold in one week). 
             <ul> 
                 <li><u>Borders:</u></li>
