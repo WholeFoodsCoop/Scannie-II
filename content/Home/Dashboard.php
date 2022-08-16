@@ -214,6 +214,10 @@ ORDER BY COUNT(p.upc) DESC");
                 'handler' => self::getZeroVendorItems($dbc),
                 'ranges' => array(1, 10, 999),
             ),
+            array(
+                'handler' => self::getNewSuperValueItems($dbc),
+                'ranges' => array(1, 10, 999),
+            ),
         );
 
         $muData = $this->multiStoreDiscrepCheck($dbc);
@@ -881,6 +885,29 @@ HTML;
             'desc'=>$desc);
     }
 
+    public function getNewSuperValueItems($dbc)
+    {
+        $count = 0;
+        $desc = "NEW UNFI Conventional / Supervalue Items";
+        $cols = array('upc', 'brand', 'description');
+        $data = array();
+        $prep = $dbc->prepare("SELECT brand, description, p.upc
+            FROM products AS p
+            WHERE p.default_vendor_id = 401
+                AND p.upc NOT IN (SELECT upc FROM woodshed_no_replicate.unfiConvRev);");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+        }
+        $count = $val;        
+        if ($count > 0) {
+            $data['count'] = $count;
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
     public function getZeroVendorItems($dbc)
     {
         $count = 0;
@@ -1036,7 +1063,7 @@ HTML;
                 AND vendorID NOT IN (SELECT vendorID FROM woodshed_no_replicate.FixedVendorReviewSchedule)
                 AND vendorID NOT IN (SELECT vid FROM woodshed_no_replicate.top25)
                 AND vendorID > 0
-                AND vendorID NOT IN (54, 70, 260)
+                AND vendorID NOT IN (54, 70, 260, 401)
                 AND m.super_name NOT IN ('PRODUCE', 'BRAND', 'MISC')
                 AND p.numflag & (1<<19) = 0
             GROUP BY v.vendorID
