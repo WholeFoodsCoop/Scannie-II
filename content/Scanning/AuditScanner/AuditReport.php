@@ -994,7 +994,7 @@ HTML;
     {
         $select = "<select class=\"form-control\" id=\"storeSelector-$storeID\" name=\"$storeID\" onChange=\"$onChange\">";
         $dbc = scanLib::getConObj();
-        $current = (isset($_SESSION['AuditReportStoreID'])) ? $_SESSION['AuditReportStoreID'] : null;
+        $current = (isset($_SESSION['AuditReportStoreID'])) ? $_SESSION['AuditReportStoreID'] : scanLib::getStoreID();
 
         $prep = $dbc->prepare("SELECT storeID, description FROM Stores");
         $res = $dbc->execute($prep); 
