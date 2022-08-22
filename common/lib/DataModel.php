@@ -89,9 +89,9 @@ class DataModel
     public function setDescription($upc, $description, $table='products')
     {
         $tableName = null;
-        $description = strtoupper($description);
         if ($table == 'products') {
             $tableName = 'products';
+            $description = strtoupper($description);
         } elseif ($table == 'productUser') {
             $tableName = 'productUser';
         }
