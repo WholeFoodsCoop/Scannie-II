@@ -368,7 +368,7 @@ class AuditReport extends PageLayoutA
     {
         $username = FormLib::get('username');
         $storeID = FormLib::get('storeID');
-        $vendorName = 1;
+        $listName = '';
         $json = array();
 
         $dbc = ScanLib::getConObj('SCANALTDB');
@@ -381,9 +381,9 @@ class AuditReport extends PageLayoutA
             LIMIT 1");
         $res = $dbc->execute($prep, $args);
         $row = $dbc->fetchRow($res);
-        $vendorName = $row['vendorName'] . " REVIEW LIST";
+        $listName = $row['vendorName'] . " REVIEW LIST";
 
-        $args = array($username, $storeID, $vendorName);
+        $args = array($username, $storeID, $listName);
         $prep = $dbc->prepare("INSERT IGNORE INTO AuditScan (id, date, upc, username, storeID, notes, checked, savedAs) 
             SELECT id, date, upc, ?, ?, notes, checked, ? 
             FROM AuditScan where savedAs = 'default' and notes != ''
@@ -541,6 +541,7 @@ class AuditReport extends PageLayoutA
         $dbc = ScanLib::getConObj();
         $storeID = FormLib::get('storeID');
         $username = FormLib::get('username');
+        $deleteList = FormLib::get('add-delete-list', false);
 
         $upcs = FormLib::get('upcs');
         $plus = array();
@@ -550,12 +551,23 @@ class AuditReport extends PageLayoutA
             $str = scanLib::upcPreparse($str);
             $plus[] = $str;
         }
-        foreach ($plus as $upc) {
-            if ($upc != 0) {
-                $args = array($upc, $username, $storeID);
-                $prep = $dbc->prepare("INSERT IGNORE INTO woodshed_no_replicate.AuditScan (upc, username, storeID, date, savedAs)
-                    VALUES (?, ?, ?, NOW(), 'default');");
-                $res = $dbc->execute($prep, $args);
+
+        if ($deleteList == false) {
+            foreach ($plus as $upc) {
+                if ($upc != 0) {
+                    $args = array($upc, $username, $storeID);
+                    $prep = $dbc->prepare("INSERT IGNORE INTO woodshed_no_replicate.AuditScan (upc, username, storeID, date, savedAs)
+                        VALUES (?, ?, ?, NOW(), 'default');");
+                    $res = $dbc->execute($prep, $args);
+                }
+            }
+        } else {
+            foreach ($plus as $upc) {
+                if ($upc != 0) {
+                    $args = array($upc, $username);
+                    $prep = $dbc->prepare("DELETE FROM woodshed_no_replicate.AuditScan WHERE upc = ? AND username = ? AND savedAs = 'default'");
+                    $res = $dbc->execute($prep, $args);
+                }
             }
         }
 
@@ -1019,8 +1031,6 @@ HTML;
         if (isset($_SESSION['scrollMode'])) {
             $scrollMode = ($_SESSION['scrollMode'] == 0) ? 'on' : 'off';
         }
-        $test = new DataModel($dbc);
-
 
         if (!isset($_SESSION['columnBitSet'])) {
             // define default columns to show
@@ -1176,6 +1186,10 @@ HTML;
                                     </div>
                                     <div class=\"form-group\">
                                         <button type=\"submit\" class=\"btn btn-default btn-xs\">Submit</button>
+                                    </div>
+                                    <div class=\"form-group\" align=\"right\">
+                                        <label for=\"add-delete-list\"><span style=\"font-weight: bold; color: tomato\">Delete</span> Instead of Add</label>
+                                        <input type=\"checkbox\" id=\"add-delete-list\" name=\"add-delete-list\" value=1 />
                                     </div>
                                     <input type=\"hidden\" name=\"storeID\" value=\"$storeID\" />
                                     <input type=\"hidden\" name=\"username\" value=\"$username\" />
