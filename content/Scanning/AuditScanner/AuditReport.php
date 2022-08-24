@@ -634,6 +634,7 @@ class AuditReport extends PageLayoutA
                     WHEN vd.margin > 0.01 THEN vd.margin ELSE d.margin
                 END, 4) AS margin,
                 a.notes,
+                a.PRN, 
                 CASE
                     WHEN vd.margin > 0.01 THEN p.cost / (1 - vd.margin) ELSE p.cost / (1 - dm.margin)
                 END AS rsrp,
@@ -751,6 +752,7 @@ class AuditReport extends PageLayoutA
             <td title=\"costChange\" data-column=\"costChange\"class=\"costChange column-filter\"></td>
             <td title=\"floorSections\" data-column=\"floorSections\"class=\"floorSections column-filter\"></td>
             <td title=\"comment\" data-column=\"comment\"class=\"comment column-filter\"></td>
+            <td title=\"PRN\" data-column=\"PRN\"class=\"PRN column-filter\"></td>
             <td title=\"notes\" data-column=\"notes\"class=\"notes column-filter\"></td>
             <td title=\"check\" data-column=\"check\" class=\"check column-filter\"></td>
             <td title=\"trash-icon\" data-column=\"trash-icon\" class=\"trash-icon column-filter\"></td> <!-- you cannot filter this column -->
@@ -790,6 +792,7 @@ class AuditReport extends PageLayoutA
             <th class=\"costChange\">last cost change</th>
             <th class=\"floorSections\">floor sections</th>
             <th class=\"comment\">comment</th>
+            <th class=\"PRN\">PRN</th>
             <th class=\"notes\">notes</th>
             <th class=\"trash\"></th>
             <th class=\"check\"></th>
@@ -890,6 +893,7 @@ class AuditReport extends PageLayoutA
             $costChange = $row['costChange'];
             $floorSections = $row['floorSections'];
             $reviewComments = $row['comment'];
+            $prn = $row['PRN'];
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku\">$sku</td>";
@@ -934,6 +938,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"costChange\">$oper$costChange - $costChangeDate</td>";
             $td .= "<td class=\"floorSections\">$floorSections</td>";
             $td .= "<td class=\"comment\">$reviewComments</td>";
+            $td .= "<td class=\"PRN\">$prn</td>";
             $td .= "<td class=\"notes editable editable-notes\">$notes</td>";
             $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td></td>";
             $td .= "<td class=\"check\"><input type=\"checkbox\" name=\"check\" class=\"row-check\" $checked/></td>";
@@ -1158,7 +1163,7 @@ HTML;
 
         $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
             'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
-            'notes', 'reviewed', 'costChange', 'floorSections', 'comment');
+            'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         $i = count($columns) - 1;
         foreach ($columns as $column) {
