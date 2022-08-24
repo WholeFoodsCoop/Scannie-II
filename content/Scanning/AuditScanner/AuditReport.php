@@ -1110,8 +1110,8 @@ HTML;
             $tempClass = "btn-secondary";
             $vncBtn = '
         <div class="form-group dummy-form">
-            <button class="btn btn-default btn-sm small" id="validate-notes-cost">VNC</button> |
-            <button class="btn btn-default btn-sm small" id="hide-validated">Hide VNC\'d</button>
+            <button class="btn btn-default btn-sm small text-secondary" id="validate-notes-cost">VNC</button> |
+            <button class="btn btn-default btn-sm small text-secondary" id="hide-validated">Hide VNC\'d</button>
         </div>';
             $checkPriceBtn = '
         <!--
@@ -1314,7 +1314,7 @@ $columnCheckboxes
                 <button class="btn btn-default btn-sm small" id="view-all">View All</button>
             </div>
             <div class="form-group dummy-form">
-                <button class="btn btn-default btn-sm small" id="invert-show">Invert View</button>
+                <button class="btn btn-default btn-sm small text-secondary" id="invert-show">Invert View</button>
             </div>
             $checkPriceBtn
             $vncBtn
