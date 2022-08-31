@@ -285,7 +285,11 @@ HTML;
                         WHEN DATEDIFF(NOW(), p.last_sold) > 0 THEN DATEDIFF(NOW(), p.last_sold)
                         ELSE 9999
                     END
-                END AS daysWOsale
+                END AS daysWOsale,
+                CASE
+                    WHEN p.last_sold IS NULL THEN 'created'
+                    ELSE 'last_sold'
+                END AS daysWOtype 
             FROM products AS p
                 LEFT JOIN productUser AS u ON p.upc=u.upc
             WHERE p.upc IN ($in_str)
@@ -446,7 +450,10 @@ HTML;
                 $batchType = (isset($row['batchType'])) ? $row['batchType'] : 0;
                 $salePrice = (isset($row['salePrice'])) ? $row['salePrice'] : 0;
                 $daysWOsale = (isset($row['daysWOsale'])) ? $row['daysWOsale'] : 0;
+                $daysWOtype = (isset($row['daysWOtype'])) ? $row['daysWOtype'] : 0;
                 $daysWOsaleText = '';
+                $border = '';
+                $symbol = "&#9608;";
                 if ($daysWOsale < 20 && $daysWOsale != 0 ) {
                     $color = 'lightgreen';
                 }
@@ -462,7 +469,11 @@ HTML;
                 if ($daysWOsale == 0) {
                     $color = 'grey';
                 }
-                $daysWOsaleText = "<span style=\"color: $color; float: right\">&#9608;</span>$daysWOsale</span>";
+                if ($daysWOsale == 1 && $daysWOtype == 'last_sold') {
+                    $border = 'box-shadow: 2px 2px lightgreen';
+                    $symbol = "&#9733;";
+                }
+                $daysWOsaleText = "<span style=\"color: $color; float: right; $border\">$symbol</span></span>";
 
 
                 $extraData = <<<HTML
