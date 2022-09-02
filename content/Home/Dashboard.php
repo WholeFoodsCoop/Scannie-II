@@ -898,8 +898,8 @@ HTML;
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+            $count++;
         }
-        $count = $val;        
         if ($count > 0) {
             $data['count'] = $count;
         }
@@ -1130,7 +1130,7 @@ HTML;
         $res = $dbc->execute($pre);
         $count = $dbc->numRows($res);
         $cols = array('upc', 'brand', 'description', 'department',
-             'default_vendor_id', 'cost', 'created', days);
+             'default_vendor_id', 'cost', 'created', 'days');
         while ($row = $dbc->fetchRow($res)) {
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
         }
