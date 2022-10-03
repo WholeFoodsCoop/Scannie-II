@@ -50,6 +50,7 @@ class SpecialPriceCheck extends WebDispatch
             WHERE endDate >= NOW() 
                 AND startDate <= NOW()
                 AND salePrice > 0
+                AND b.batchType <> 13
             ");
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
