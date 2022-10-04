@@ -48,9 +48,10 @@ class ProductScanner extends PageLayoutA
         echo $action;
         $upc = FormLib::get('upc');
         $upc = scanLib::upcPreparse($upc);
+        $storeID = scanLib::getStoreID();
 
         if ($action == 'mod-narrow') {
-            $this->mod_narrow_handler($upc);
+            $this->mod_narrow_handler($upc, $storeID);
             die();
         } elseif ($action == 'mod-in-use') {
             $this->mod_inuse_handler($upc);
@@ -134,21 +135,21 @@ class ProductScanner extends PageLayoutA
         return false;
     }
 
-    private function mod_narrow_handler($upc)
+    private function mod_narrow_handler($upc, $storeID)
     {
         $dbc = $this->connect;
-        $args = array($upc);
-        $prep = $dbc->prepare("SELECT upc FROM productUser WHERE upc = ? AND narrow = 1");
+        $args = array($upc, $storeID);
+        $prep = $dbc->prepare("SELECT upc FROM SignProperties WHERE upc = ? AND storeID = ? AND narrow = 1");
         $res = $dbc->execute($prep, $args);
         while ($row = $dbc->fetchRow($res)) {
             $narrow = $row['upc'];
         }
         echo $narrow;
         if ($narrow > 0) {
-            $prep = $dbc->prepare("UPDATE productUser SET narrow = 0 WHERE upc = ?");
+            $prep = $dbc->prepare("UPDATE SignProperties SET narrow = 0 WHERE upc = ? AND storeID = ?");
             $res = $dbc->execute($prep, $args);
         } else {
-            $prep = $dbc->prepare("UPDATE productUser SET narrow = 1 WHERE upc = ?");
+            $prep = $dbc->prepare("UPDATE SignProperties SET narrow = 1 WHERE upc = ? AND storeID = ?");
             $res = $dbc->execute($prep, $args);
         }
 
@@ -402,7 +403,7 @@ HTML;
                 v.shippingMarkup,
                 v.discountRate,
                 fslv.sections AS locations,
-                CASE when pu.narrow=1 THEN '<span class=\'badge badge-warning\'>Flagged Narrow</span>' ELSE NULL end as narrow,
+                CASE when sp.narrow=1 THEN '<span class=\'badge badge-warning\'>Flagged Narrow</span>' ELSE NULL end as narrow,
                 CASE when p.size is not null THEN p.size ELSE vi.size END AS size
             FROM products AS p
                 LEFT JOIN productUser AS pu ON p.upc = pu.upc
@@ -417,6 +418,7 @@ HTML;
                 LEFT JOIN FloorSectionsListView AS fslv ON p.upc=fslv.upc AND p.store_id=fslv.storeID
                 LEFT JOIN PriceRules AS pr ON p.price_rule_id=pr.priceRuleID
                 LEFT JOIN PriceRuleTypes AS prt ON pr.priceRuleTypeID=prt.priceRuleTypeID
+                LEFT JOIN SignProperties AS sp ON sp.upc=p.upc AND sp.storeID=p.store_id
             WHERE p.store_id = ?
                 AND p.upc = ?
             LIMIT 1
@@ -455,8 +457,8 @@ HTML;
             $ret .= "
                 <div id=\"auditPar\">
                     <table class=\"table table-borderless table-sm small\">
-                        <tr><td>PAR</td><td>$weekPar</td><td><i>avg. sold in $multiplier days</i></td>
-                            <td><span style=\"font-size: 10px;\">auto_par: ".round($auto_par, 1)."</span></td>
+                        <tr><td>Movement</td><td>$weekPar</td><td>(<i>avg sold in $multiplier days</i>)</td>
+                            <td><span style=\"font-size: 10px;\">auto_par: ".round($auto_par, 1)."/d</span></td>
                             </tr>
                     </table>
                 </div>
