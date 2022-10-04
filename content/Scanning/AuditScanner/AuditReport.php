@@ -846,6 +846,7 @@ class AuditReport extends PageLayoutA
             $ogCost = null;
             $adjcost = $row['adjcost'];
             $price = $row['price'];
+            $badPrice = ($netCost > $price) ? ' style="color: tomato; font-weight: bold"; title="Price Below Cost" ' : '';
             $priceRuleID = $row['price_rule_id'];
             $sale = $row['sale'];
             if ($sale == '0.00') {
@@ -909,7 +910,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"cost\" $ogCost>$cost</td>";
             $td .= "<td class=\"recentPurchase\" title=\"$received\">$recentPurchase</td>";
             //$td .= "<td class=\"\" title=\"\">$received</td>";
-            $td .= "<td class=\"price\">$price</td>";
+            $td .= "<td class=\"price\" $badPrice>$price</td>";
             $td .= "<td class=\"sale\"><span style=\"color: darkgreen; font-weight: bold;\">$sale</span></td>";
             $td .= "<td class=\"autoPar\">$autoPar</td>";
             $diff = round($curMargin - $margin, 1);
@@ -1327,7 +1328,7 @@ $columnCheckboxes
     </div>
     <div class="col-lg-3" >
         <div class="card" style="margin: 5px; box-shadow: 1px 1px lightgrey;">
-            <div class="card-body">
+            <div class="card-body" style="background-color: rgba(211,211,211,0.2);">
                 <h6 class="card-title">Average Calculator</h6>
                     <div class="form-group">
                         <textarea rows=1 id="avgCalc" name="avgCalc" style="font-size: 12px" class="form-control small" ></textarea>
@@ -1341,7 +1342,7 @@ $columnCheckboxes
     </div>
     <div class="col-lg-3">
         <div class="card" style="margin: 5px; box-shadow: 1px 1px lightgrey;" id="simpleInputCalc">
-            <div class="card-body">
+            <div class="card-body" style="background-color: rgba(211,211,211,0.2);">
                 <h6 class="card-title">Simple Input Calculator 
                     <span id="hide-SIC" style="padding: 5px; padding-right: 10px; padding-left: 10px;border: 1px solid grey; font-size: 12px;
                         cursor: pointer;">
@@ -2175,7 +2176,7 @@ $('#validate-notes-cost').click(function(){
                 $(this).css('background-color', 'tomato')
                     .addClass('validated');
             }
-            console.log('col1: '+col1+', col2: '+col2);
+            //console.log('col1: '+col1+', col2: '+col2);
         }
     });
 });
@@ -2205,6 +2206,7 @@ $('#storeSelector-storeID').change(function(){
         },
     });
 });
+
 
 JAVASCRIPT;
     }
