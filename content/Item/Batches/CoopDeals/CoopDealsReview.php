@@ -88,7 +88,6 @@ class CoopDealsReview extends WebDispatch
                 <div class='row'>
                     <div class='col-lg-4'>
                         <div class='table-responsive'>
-                            {$this->getSkuMatch($dbc,$dealSet)}
                         </div>
                     </div>
                     <div class='col-lg-4'>
@@ -342,7 +341,7 @@ HTML;
             <legend class="panel-heading small">Items with Bad Sale Prices</legend>';
 
         $query = $dbc->prepare("
-            SELECT bl.*, p.brand, p.description
+            SELECT bl.*, p.brand, p.description, p.price_rule_id
             FROM batchList AS bl
                 LEFT JOIN batches AS b ON bl.batchID=b.batchID
                 LEFT JOIN products AS p ON bl.upc=p.upc
@@ -356,15 +355,16 @@ HTML;
         $result = $dbc->execute($query);
 		$ret .= '<table class="table table-default table-sm small table-striped">';
         while ($row = $dbc->fetchRow($result)) {
+            echo $edlp = ($row['price_rule_id'] != 0) ? ' *(EDLP) ' : '';
             $editL = '<a href="http://'.$HTTP_HOST.'/git/fannie/item/ItemEditorPage.php?searchupc=' . $row['upc'] . '" target="_blank">' . $row['upc'] . '</a> ';
             $batchL = '<a href="http://'.$HTTP_HOST.'/git/fannie/batches/newbatch/EditBatchPage.php?id='
-				. $row['batchID'] .'" target="_blank">' . $row['batchID'] . '</a>';
-			$ret .= '<tr>';
-			$ret .= '<td>' . $row['upc'] . '</td>';
-			$ret .= '<td>' . $batchL . '</td>';
-			$ret .= '<td>' . $row['brand'] . '</td>';
-			$ret .= '<td>' . $row['description'] . '</td>';
-			$ret .= '</tr>';
+                . $row['batchID'] .'" target="_blank">' . $row['batchID'] . '</a>';
+            $ret .= '<tr>';
+            $ret .= '<td>' . $row['upc'] . '</td>';
+            $ret .= '<td>' . $batchL . '</td>';
+            $ret .= '<td>' . $row['brand'] . $edlp . '</td>';
+            $ret .= '<td>' . $row['description'] . '</td>';
+            $ret .= '</tr>';
         }
 		$ret .= '</table>';
 
@@ -484,6 +484,9 @@ HTML;
 }
 body {
     overflow-x: hidden;
+}
+.edlp {
+    font-weight: bold;
 }
 HTML;
     }
