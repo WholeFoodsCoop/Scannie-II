@@ -225,6 +225,27 @@ class scanLib
         }
     }
 
+    public function StoreSelector($selectName="storeID", $onChange="", $current)
+    {
+        $data = array();
+        $data['html'] = "<select id=\"$selectName\" name=\"$selectName\" class=\"form-control\" onChange=\"$onChange\">";
+        $dbc = self::getConObj();
+        //$suggest = ($current == "") ? self::getStoreID() : $current;
+
+        $prep = $dbc->prepare("SELECT storeID, description FROM Stores");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            $storeID = $row['storeID'];
+            $desc = $row['description'];
+            $data['stores'][$storeID] = $desc;
+            $sel = ($storeID == $current) ? ' selected ' : '';
+            $data['html'] .= "<option val=\"$storeID\" $sel>$desc</option>";
+        }
+        $data['html'] .= "</select>";
+
+        return $data;
+    }
+
     public function convert_unix_time($secs) {
         $bit = array(
             'y' => $secs / 31556926 % 12,
