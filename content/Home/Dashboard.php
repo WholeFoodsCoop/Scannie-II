@@ -45,28 +45,22 @@ class Dashboard extends PageLayoutA
     {
         $SCANALTDB = $this->config->vars['SCANALTDB'];
         $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
+        $curEdlpSet = '';
+        if (isset($_SESSION['dashEdlpSet'])) {
+            $curEdlpSet = $_SESSION['dashEdlpSet'];
+        } else {
+            $date = new DateTime('first day of this month');
+            $curEdlpSet = $date->format('Y-m-d');
+            $_SESSION['dashEdlpSet'] = $curEdlpSet;
+        }
+        if (isset($_SESSION['dashEdlpSet']))
+            $_SESSION['dashEdlpSet'];
         $this->ALTDB = $SCANALTDB;
         $ret = '';
         $dbc = scanLib::getConObj();
         $data = "";
         $d = new DateTime();
         $datetime = $d->format('Y-m-d H:i');
-
-        /* just today/tomorrow 2021-10-07
-        $itemP = $dbc->prepare("SELECT upc, SUM(itemQtty) AS SoldToday, DATE(tdate), trans_num AS Date, store_id
-        FROM is4c_trans.dlog_90_view
-        WHERE upc IN ('0007172807040')
-        GROUP BY Date(tdate)");
-        $itemR = $dbc->execute($itemP);
-        $itemRow = $dbc->fetchRow($itemR);
-        $tmpStr = '2021-10-07 Search For Bilinski Mystery Sausage Sale: ';
-        foreach ($itemRow as $row => $v) {
-            if (!is_numeric($row)) {
-                $v = (is_null($v)) ? '-' : $v;
-                $tmpStr .= "[$row] $v, ";
-            }
-        }
-        */
 
         $tdReview = "";
         $pre = $dbc->prepare("SELECT 
@@ -218,11 +212,19 @@ ORDER BY COUNT(p.upc) DESC");
                 'handler' => self::getNewSuperValueItems($dbc),
                 'ranges' => array(1, 10, 999),
             ),
+            array(
+                'handler' => self::getProdMissingEDLP($dbc),
+                'ranges' => array(1, 10, 999),
+            ),
+            array(
+                'handler' => self::getProdMissingSale($dbc),
+                'ranges' => array(1, 10, 999),
+            ),
         );
 
         $muData = $this->multiStoreDiscrepCheck($dbc);
         $multi = $this->getReportHeader(array('desc'=>'Discrepancies between stores', 'data'=>$muData['data']), array(5, 10, 999));
-        $multi .= " <button class='btn-collapse' data-target='#tableMulti'>view</button><br/>";
+        $multi .= " <button class='btn-collapse' data-target='#tableMulti' type='button'>view</button><br/>";
         $multi .= "<div id='tableMulti' class='table-responsive-lg'>";
         $multi .= "<div class='card'><div class='card-body' style='overflow-x: scroll'>";
         $multi .= $muData['table'] . "</div></div></div>";
@@ -234,6 +236,8 @@ ORDER BY COUNT(p.upc) DESC");
             $table .= self::getTable($data);
         }
 
+        $edlpMonths = $this->getEdlpMonths($curEdlpSet);
+        
         $this->addScript('http://'.$MY_ROOTDIR.'/common/javascript/tablesorter/js/jquery.tablesorter.min.js');
         $this->addScript('http://'.$MY_ROOTDIR.'/common/javascript/tablesorter/js/jquery.metadata.js');
         $this->addOnloadCommand('$(".table").tablesorter();');
@@ -246,6 +250,11 @@ ORDER BY COUNT(p.upc) DESC");
             <div class="card-body">
                 <div class="card-title">
                     <h4>Scanning Department Dashboard <span class="smh4"><strong>Page last updated:</strong> $datetime</span></h4>
+                </div>
+                <div class="row">
+                    <div class="col-lg-4">$edlpMonths</div>
+                    <div class="col-lg-4"></div>
+                    <div class="col-lg-4"></div>
                 </div>
                 $table 
                 $multi
@@ -370,7 +379,7 @@ HTML;
     public function getTable($data)
     {
         $tid = substr(md5(microtime()),rand(0,26),5);
-        $table = " <button class='btn-collapse' data-target='#table$tid'>view</button><br/>";
+        $table = " <button class='btn-collapse' data-target='#table$tid' type='button'>view</button><br/>";
         $table .= "<div id='table$tid'><table class='table table-sm table-bordered tablesorter'><thead>";
         foreach ($data['cols'] as $col) {
             $table .= "<th>$col</th>"; 
@@ -908,6 +917,99 @@ HTML;
             'desc'=>$desc);
     }
 
+    public function getEdlpMonths($curEdlpSet)
+    {
+        $dates = array();
+        $date1 = new DateTime('first day of this month');
+        $dates[1] = $date1->format('Y-m-d');
+        $date2 = new DateTime('first day of last month');
+        $dates[0] = $date2->format('Y-m-d');
+        $date3 = new DateTime('first day of next month');
+        $dates[2] = $date3->format('Y-m-d');
+
+        $html = "
+                <label for=\"curEdlp\" >Current EDLP Set:</label>
+                <div id=\"curEdlpLabel\"></div>
+                <form action=\"Dashboard.php\" method=\"post\">
+                <div  class=\"form-group\">
+                    <select name=\"curEdlp\" id=\"curEdlp\" class=\"form-control\">
+        ";
+        foreach ($dates as $date) {
+            $sel = ($curEdlpSet == $date) ? ' selected ' : '';
+            $html .="<option val=\"$date\" $sel>$date</option>";
+        }
+        $html .= "
+                </select>
+            </div>
+        ";
+
+        return $html;
+    }
+
+    public function getProdMissingEDLP($dbc)
+    {
+        $count = 0;
+        $desc = "New/Returning Items Missing EDLP Pricing";
+        $cols = array('upc', 'brand', 'description', 'cost', 'ecost', 'normal_price', 
+            'maxprice', 'EdlpSet', 'type', 'created', 'vendorID');
+        $data = array();
+        $dateTime = new DateTime('first day of this month');
+        $curMonth = (isset($_SESSION['dashEdlpSet'])) ? $_SESSION['dashEdlpSet'] : $dateTime->format('Y-m-d');
+        //$curMonth = '2022-10-01';
+        $args = array($curMonth);
+        $prep = $dbc->prepare("SELECT brand, description, p.upc, p.normal_price, p.cost, 
+                e.cost AS ecost, e.maxprice, DATE_FORMAT(date, '%b-%Y') AS EdlpSet, 
+                e.type,
+                DATE(p.created) AS created,
+                p.default_vendor_id AS vendorID
+            FROM products AS p
+                LEFT JOIN woodshed_no_replicate.EdlpItems AS e ON e.upc=p.upc
+            WHERE p.normal_price <> e.maxprice
+                AND date = ?
+                AND p.inUse = 1
+                AND p.normal_price <> 54.95
+        ");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+            $count++;
+        }
+        if ($count > 0) {
+            $data['count'] = $count;
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
+    public function getProdMissingSale($dbc)
+    {
+        // what are we looking for?
+        // a: coop deals items that are missing from batch list
+        $count = 0;
+        $desc = "New/Returning Items Missing EDLP Pricing";
+        $cols = array('upc', 'brand', 'description', 'cost', 'edlpcost', 'normal_price', 'maxprice');
+        $data = array();
+        $prep = $dbc->prepare("SELECT b.brand, b.description, p.upc, 
+            FROM batchList AS bl
+                LEFT JOIN CoopDealsItems AS i ON i.upc=p.upc
+                LEFT JOIN batches AS b ON b.batchID=bl.batchID
+            WHERE b.startDate > NOW()
+                AND b.endDate < NOW()
+                ");
+        //$res = $dbc->execute($prep);
+        //while ($row = $dbc->fetchRow($res)) {
+        //    foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+        //    $count++;
+        //}
+        if ($count > 0) {
+            $data['count'] = $count;
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
     public function getZeroVendorItems($dbc)
     {
         $count = 0;
@@ -1226,18 +1328,23 @@ $(document).ready(function(){
     $('.btn-collapse').each(function(){
         $(this).trigger('click');
     });
-    //$.ajax({
-    //    type: 'post',
-    //    data: 'dummyvalue=1',
-    //    url: '../Admin/DoNotTrack.php',
-    //    success: function(response) {
-    //        $('#doNotTrack').html(response);
-    //    }
-    //});
 });
 $('.btn-collapse').click(function(){
     var target = $(this).attr('data-target');
     $(target).toggle();
+});
+
+$('#curEdlp').change(function(){
+    var edlpDate = $(this).find(':selected').val();
+    $.ajax({
+        type: 'post',
+        data: 'edlpDate='+edlpDate,
+        url: 'dashboardajax.php',
+        success: function(resp) {
+            console.log('success, I guess');
+            $('#curEdlpLabel').html('<i>-page must be reloaded to apply changes-</i>');
+        }
+    });
 });
 JAVASCRIPT;
     }
