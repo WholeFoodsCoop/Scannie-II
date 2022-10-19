@@ -26,7 +26,7 @@ class DBA extends PageLayoutA
 
         $dbc = scanLib::getConObj('SCANALTDB'); 
 
-        $prep = $dbc->prepare("SELECT name, query FROM quickQueries");
+        $prep = $dbc->prepare("SELECT name, query FROM quickQueries ORDER BY name ASC");
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
             $quickQueries .= <<<HTML
@@ -51,7 +51,7 @@ HTML;
         <div onclick="expandTextArea();" style="position: relative; z-index: 999; user-select: none;">
             <span class="scanicon scanicon-expand" style="position: absolute; top: -42; right: 0">&nbsp;</span>
         </div>
-        <div class="form-group">
+        <div class="form-group" style="margin-top: 50px;">
             <button id="submit" class="form-control btn btn-default">Submit</button>
         </div>
         <div class="form-group" style="position: relative">
@@ -136,7 +136,7 @@ $(document).mousedown(function(e){
     if (e.which == 1 && $('#keydown').val() == 16) {
         e.preventDefault();
         // SHIFT + LEFT CLICK
-        //console.log(e.target);
+        /*
         var target = $(e.target);
         if (target.hasClass('highlight-row')) {
             target.removeClass('highlight-row');
@@ -144,6 +144,7 @@ $(document).mousedown(function(e){
             target.addClass('highlight-row');
         }
         $('#keydown').val(0);
+        */
     }
 });
 
