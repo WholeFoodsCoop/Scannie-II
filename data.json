@@ -1,0 +1,42 @@
+[{
+    "rootdir": "lildoodlecloud.com/newChecklists/",
+    "js": {
+        "jquery/dist/": {
+            "0": "ui/jquery-1-7.js",
+            "1": "ui/keycode.js",
+            "2": "ui/widget.js",
+            "3": "ui/widgets/autocomplete.js",
+            "4": "ui/widgets/selectmenu.js",
+            "5": "ui/plugin.js"
+        },
+        "jquery-ui/": {
+            "0": "ui/jquery-1-7.js",
+            "1": "ui/keycode.js"
+        },
+        "../common/assets/": {
+            "0": "jquery-1.12.4.js",
+            "1": "jquery-ui.js"
+        },
+        "../common/ui/": {
+            "0": "CoreNav.js",
+            "1": ""
+        },
+        "bootstrap/dist/js/": {
+            "0": "bootstrap.min.js"
+        }
+    },
+    "css": {
+        "bootstrap/dist/css/": {
+            "0": "bootstrap.min.css",
+            "1": ""
+        },
+        "jquery-ui/themes/base/": {
+            "0": "all.css",
+            "1": ""
+        },
+        "../common/css/": {
+            "0": "commonInterface.css",
+            "1": ""
+        }
+    }
+}]

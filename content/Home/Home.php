@@ -9,6 +9,9 @@ if (!class_exists('SQLManager')) {
 class Home extends PageLayoutA
 {
 
+    public $ui = true;
+    public $must_authenticate = true;
+
     public function preprocess()
     {
         $this->displayFunction = $this->pageContent();
@@ -23,11 +26,11 @@ class Home extends PageLayoutA
 
         return <<<HTML
 <div align="center" style="padding-top: 35vh; font-size: 22px; font-weight: bold; text-shadow: 1px 1px lightgrey;">
-    Scannie - version 2.0
+    Research Website - 0.0.1 
     <div>&nbsp;</div>
     <div style="font-size: 14">by Corey Sather</div>
     <div style="font-size: 14">Duluth, MN</div>
-    <div style="font-size: 14">Whole Foods Community Co-op &copy; $year</div>
+    <div style="font-size: 14">Corey Sather &copy; $year</div>
     <!--<div style="font-size: 10"><p style="width: 300px; margin-top: 25px;"><i>For us believing physicists, the distinction between past, present and future is only a stubbornly persistent illusion.</i></p></div>-->
 </div>
 <div><a href=""></a></div>

@@ -1,7 +1,7 @@
 <?php
 class WebDispatch
 {
-    protected $title = 'Scannie';
+    protected $title = 'Research';
     protected $authByIp;
     protected $onload_commands = array();
     protected $scripts = array();
@@ -60,7 +60,7 @@ class WebDispatch
             include(__DIR__.'/CoreNav.php');
         }
 
-        $this->addCssFile("http://{$MY_ROOTDIR}/common/css/commonInterface.css");
+        $this->addCssFile("https://{$MY_ROOTDIR}/common/css/commonInterface.css");
         $this->preflight();
         $this->preprocess();
         echo $this->header();
@@ -96,6 +96,14 @@ class WebDispatch
 
     private function preflight()
     {
+        // force https
+        if (empty($_SERVER['HTTPS']) || $_SERVER['HTTPS'] === "off") {
+            $location = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+            header('HTTP/1.1 301 Moved Permanently');
+            header('Location: ' . $location);
+            exit;
+        }
+
         // re-rout client to loggin page if user not logged in. 
         if ( WebDispatch::is_session_started() === FALSE ) {
             ini_set('session.gc_maxlifetime', 3600);
@@ -110,7 +118,7 @@ class WebDispatch
         }
         $test = session_id();
 
-        if (!isset($_SESSION['ScannieConfig'])) {
+        if (!isset($_SESSION['ResearchConfig'])) {
             foreach (
                 array(
                     'session_id',
@@ -130,7 +138,7 @@ class WebDispatch
                     'auditReportOpt',
                     'auditPrtID'
                 ) as $settingID) {
-                $_SESSION['ScannieConfig']['AuditSettings'][$settingID] = 1;
+                $_SESSION['ResearchConfig']['AuditSettings'][$settingID] = 1;
             }
         }
 
@@ -146,14 +154,14 @@ class WebDispatch
             $userType = $_COOKIE['user_type'];
             if (is_array($auth_types_allowed))  {
                 if (!in_array($userType, $auth_types_allowed)) {
-                    header('Location: http://'.$hostname.'/Scannie/auth/Page_403.php?accesslevel=false');
+                    header('Location: https://'.$hostname.'/Research/auth/Page_403.php?accesslevel=false');
                 }
             }
             if (!in_array($userType, array(1,2))) {
-                header('Location: http://'.$hostname.'/Scannie/auth/Login.php');
+                header('Location: https://'.$hostname.'/Research/auth/Login.php');
             }
             if ($_COOKIE['session_token'] != session_id()) {
-                header('Location: http://'.$hostname.'/Scannie/auth/Login.php?session_expired=true');
+                header('Location: https://'.$hostname.'/Research/auth/Login.php?session_expired=true');
             }
         }
     }
@@ -162,13 +170,13 @@ class WebDispatch
     {
         $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
         if ($this->enable_linea) {
-            $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/cordova-2.2.0.js");
-            $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/ScannerLib-Linea-2.0.0.js");
-            $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/WebHub.js");
-            $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/core.js");
+            $this->addScript("https://{$MY_ROOTDIR}/common/lib/javascript/linea/cordova-2.2.0.js");
+            $this->addScript("https://{$MY_ROOTDIR}/common/lib/javascript/linea/ScannerLib-Linea-2.0.0.js");
+            $this->addScript("https://{$MY_ROOTDIR}/common/lib/javascript/linea/WebHub.js");
+            $this->addScript("https://{$MY_ROOTDIR}/common/lib/javascript/linea/core.js");
         }
         if ($this->ui == true) {
-            $this->addScript("http://{$MY_ROOTDIR}/common/ui/search.js");
+            $this->addScript("https://{$MY_ROOTDIR}/common/ui/search.js");
         }
         $stylesheets = '';
         if (count($this->cssFiles) > 0) {
@@ -195,19 +203,19 @@ HTML;
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <link rel="stylesheet" href="http://{$MY_ROOTDIR}/common/bootstrap4/css/bootstrap.min.css">
-    <link rel="stylesheet" href="http://{$MY_ROOTDIR}/common/jqueryui/jquery-ui.theme.css" type="text/css">
-    <link rel="stylesheet" href="http://{$MY_ROOTDIR}/common/jqueryui/jquery-ui.min.css" type="text/css">
-    <link rel="http://{$MY_ROOTDIR}/common/jqueryui/jquery-ui.structure.min.css" type="text/css">
-    <script src="http://{$MY_ROOTDIR}/common/bootstrap/jquery.min.js"></script>
-    <script src="http://{$MY_ROOTDIR}/common/jqueryui/jquery-ui.min.js"></script>
-    <script src="http://{$MY_ROOTDIR}/common/javascript/popper.min.js"></script>
-    <script src="http://{$MY_ROOTDIR}/common/bootstrap4/js/bootstrap.min.js"></script>
-    <script src="http://{$MY_ROOTDIR}/common/javascript/webDispatch.js"></script>
-    <script src="http://{$MY_ROOTDIR}/common/javascript/scannie.js"></script>
+    <link rel="stylesheet" href="https://{$MY_ROOTDIR}/common/bootstrap4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://{$MY_ROOTDIR}/common/jqueryui/jquery-ui.theme.css" type="text/css">
+    <link rel="stylesheet" href="https://{$MY_ROOTDIR}/common/jqueryui/jquery-ui.min.css" type="text/css">
+    <link rel="https://{$MY_ROOTDIR}/common/jqueryui/jquery-ui.structure.min.css" type="text/css">
+    <script src="https://{$MY_ROOTDIR}/common/bootstrap/jquery.min.js"></script>
+    <script src="https://{$MY_ROOTDIR}/common/jqueryui/jquery-ui.min.js"></script>
+    <script src="https://{$MY_ROOTDIR}/common/javascript/popper.min.js"></script>
+    <script src="https://{$MY_ROOTDIR}/common/bootstrap4/js/bootstrap.min.js"></script>
+    <script src="https://{$MY_ROOTDIR}/common/javascript/webDispatch.js"></script>
+    <script src="https://{$MY_ROOTDIR}/common/javascript/scannie.js"></script>
     <title>{$this->title}</title>
-    <link rel="icon" href="http://{$MY_ROOTDIR}/common/src/icons/scannie_favicon.ico">
-    <link rel="stylesheet" href="http://{$MY_ROOTDIR}/common/css/commonInterface.css?reload=always">
+    <link rel="icon" href="https://{$MY_ROOTDIR}/common/src/icons/scannie_favicon.ico">
+    <link rel="stylesheet" href="https://{$MY_ROOTDIR}/common/css/commonInterface.css?reload=always">
     $stylesheets
     $codemirror
 <style>

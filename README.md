@@ -1,2 +1,2 @@
-# Scannie
-WFC Scan tools for CORE-POS
+# Research
+Tools for collecting research data from writen sources.

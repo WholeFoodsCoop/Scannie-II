@@ -2,9 +2,16 @@
     Global Style
 */
 body {
-    font-family: Arial, Helvetica, sans-serif;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
+    //font-family: Arial, Helvetica, sans-serif;
+    //background-repeat: no-repeat;
+    //background-attachment: fixed;
+    //background-image: url('http://104.168.243.99/ldb/blog/common/src/img/bkg/white-wall-3.png');
+    background-color: white;
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    color: #444444;
+    font-size: 9pt;
+    background-color: #FAFAFA;
+    background-image: url('https://lildoodlecloud.com/Research/common/src/img/white-wall-3.png');
 }
 #nav-search-container {
     position: relative;
@@ -201,7 +208,7 @@ a.nav-link {
     position: absolute;
     top: 55px;
     right: 0px;
-    background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px); 
+    //background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px); 
     z-index: 999;
     width: 50%;
 }
@@ -221,7 +228,10 @@ a.nav-link {
 }
 .bg-custom {
     //background: rgba(0,0,0,0.9);
-    background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px); 
+    //background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px); 
+    //background: repeating-linear-gradient(purple,  rebeccapurple); 
+    background: repeating-linear-gradient(darkviolet, darkorchid);
+    background: repeating-linear-gradient(indigo, darkmagenta);
 }
 .mr-sm-2 {
     background: rgba(255,255,255,0.9);

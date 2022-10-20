@@ -26,7 +26,8 @@ class Login extends PageLayoutA
     {
 
         include(__DIR__.'/../config.php');
-        $dbc = new SQLManager($SCANHOST, 'pdo_mysql', $SCANALTDB, $SCANUSER, $SCANPASS);
+        $dbc = new SQLManager('127.0.0.1', 'pdo_mysql', 'wfcop', 'csather','rtsrep11');
+        //$dbc = new SQLManager($SCANHOST, 'pdo_mysql', $SCANALTDB, $SCANUSER, $SCANPASS);
         $SESSION_ID = session_id();
         $session_expired = FormLib::get('session_expired', false);
 
@@ -35,6 +36,9 @@ class Login extends PageLayoutA
 
             $curUser = $_COOKIE['user_name'];
         }
+
+        //log login attepmt
+        $logLoginP = $dbc->prepare("INSERT INTO research.logins (datetime, username, success) VALUES (NOW(), ?, ?)");
         
         $ret = '';
         $expired = 0;
@@ -91,6 +95,10 @@ class Login extends PageLayoutA
                 $ret .=  "<div align='center' style='margin-top: 25px;'>
                     <div class='alert alert-success login-resp' style='max-width: 90vw;'>logging in <strong>".$curUser."</strong>, please wait.";
                 $ret .=  '</div></div>';
+
+                // log login success
+                $dbc->execute($logLoginP, array($curUser, 1));
+
                 $ret .=  <<<JAVASCRIPT
 <script type="text/javascript">
 window.setTimeout(function(){
@@ -100,6 +108,9 @@ window.setTimeout(function(){
 JAVASCRIPT;
             } else {
                 $ret .=  "<br /><br /><div align='center'><div class='alert alert-danger login-resp' style='max-width: 90vw;'>Username or Password is incorrect</div></div>";
+
+                // log login failure  
+                $dbc->execute($logLoginP, array($curUser, 0));
             }
         }
 
@@ -112,29 +123,37 @@ JAVASCRIPT;
         include(__DIR__.'/../config.php');
         $ret = '';
 
-        if ($ipod = scanLib::isDeviceIpod()) {
-            $width = 'width: 90vw;';
-        } else {
-            $width = '';
-        }
+        //if ($ipod = scanLib::isDeviceIpod()) {
+        //    $width = 'width: 90vw;';
+        //} else {
+        //    $width = '';
+        //}
         $expired_text = ($expired == 1) ? '<div align="center"><div style="margin: 25px; '.$width.'; text-align: center;" class="alert alert-warning">  
                 Your Session has expired.</div></div>' : '';
         $ret .= $expired_text.'
             <div class="login-form" align="center" style="'.$width.'">
                 <form method="post">
-                    <h2 class="login"><a href="http://'.$MY_ROOTDIR.'" title="Back to Home Page">SV2.0 Login</a>
+                    <h2 class="login">πύλη</a>
                     <div class="form-group">
-                        <input type="text" name="username" class="form-control" placeholder="username">
+                        <input type="text" name="username" class="form-control" placeholder="">
                     </div>
                     <div class="form-group">
-                        <input type="password" name="pw" class="form-control"  placeholder="password">
+                        <input type="password" name="pw" class="form-control"  placeholder="">
                     </div>
                     <div class="form-group">
-                        <input type="submit" value="LOG IN" class="btn btn-defult btn-login form-control" >
+                        <input type="submit" value="προχώρα" class="btn btn-defult btn-login " >
                     </div>
                 </form>
 
             </div>
+<style>
+body {
+    display:table-cell;
+    vertical-align:middle;
+    background-image: url(\'https://lildoodlecloud.com/Research/common/src/img/white-wall-3.png\');
+    background-repeat: repeat;
+</style>
+ }
         ';
 
         return $ret;
@@ -152,6 +171,8 @@ html,body {
 body {
     display:table-cell;
     vertical-align:middle;
+    background-image: url('https://lildoodlecloud.com/Research/common/src/img/white-wall-3.png');
+    background-repeat: repeat;
  }
 .alert {
     width: 400px;
@@ -162,7 +183,8 @@ body {
     border-radius: 5px;
     margin:auto;
     box-shadow:0.7vw 0.7vw 0.7vw #272822;
-    background: linear-gradient(rgba(255,255,255,0.9), rgba(200,200,200,0.8));
+    box-shadow:0.7vw 0.7vw 0.7vw rgba(55,55,55,0.4);
+    background: linear-gradient(rgba(255,255,255,0.5), rgba(200,200,200,1));
     //opacity: 0.9;
     padding: 20px;
     color: black;
@@ -182,7 +204,8 @@ h2.login {
 }
 body, html {
     background: black;
-    background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px); 
+    //background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px); 
+    background: repeating-linear-gradient(indigo, darkmagenta);
 }
 .form-control {
     margin-top: 25px;
