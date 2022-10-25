@@ -43,6 +43,7 @@ class Dashboard extends PageLayoutA
 
     public function pageContent()
     {
+        $dealSets = array();
         $SCANALTDB = $this->config->vars['SCANALTDB'];
         $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
         $curEdlpSet = '';
@@ -61,6 +62,12 @@ class Dashboard extends PageLayoutA
         $data = "";
         $d = new DateTime();
         $datetime = $d->format('Y-m-d H:i');
+
+        $dealSetP = $dbc->prepare("select dealSet from CoopDealsItems group by dealSet order by coopDealsItemID DESC limit 2");
+        $dealSetR = $dbc->execute($dealSetP);
+        while ($dealSetW = $dbc->fetchRow($dealSetR)) {
+            $dealSets[] = $dealSetW['dealSet'];
+        }
 
         $tdReview = "";
         $pre = $dbc->prepare("SELECT 
@@ -208,10 +215,12 @@ ORDER BY COUNT(p.upc) DESC");
                 'handler' => self::getZeroVendorItems($dbc),
                 'ranges' => array(1, 10, 999),
             ),
+            /*
             array(
                 'handler' => self::getNewSuperValueItems($dbc),
                 'ranges' => array(1, 10, 999),
             ),
+            */
             array(
                 'handler' => self::getProdMissingEDLP($dbc),
                 'ranges' => array(1, 10, 999),
@@ -237,6 +246,7 @@ ORDER BY COUNT(p.upc) DESC");
         }
 
         $edlpMonths = $this->getEdlpMonths($curEdlpSet);
+        //$dealSetSelector = $this->getDealSetSelector($dealSets);
         
         $this->addScript('http://'.$MY_ROOTDIR.'/common/javascript/tablesorter/js/jquery.tablesorter.min.js');
         $this->addScript('http://'.$MY_ROOTDIR.'/common/javascript/tablesorter/js/jquery.metadata.js');
@@ -252,7 +262,9 @@ ORDER BY COUNT(p.upc) DESC");
                     <h4>Scanning Department Dashboard <span class="smh4"><strong>Page last updated:</strong> $datetime</span></h4>
                 </div>
                 <div class="row">
-                    <div class="col-lg-4">$edlpMonths</div>
+                    <div class="col-lg-4">
+                        $edlpMonths
+                        $dealSetSelector</div>
                     <div class="col-lg-4"></div>
                     <div class="col-lg-4"></div>
                 </div>
@@ -946,6 +958,21 @@ HTML;
         return $html;
     }
 
+    public function getDealSetSelector($dealSets)
+    {
+        $ret = "Coop Deals Sets To Check
+            <div class=\"form-group\">";
+        foreach ($dealSets as $dealSet) {
+            $ret .= "
+                <input id=\"$dealSet\" name=\"dealSetA\" type=\"checkbox\" />
+                <label for=\"$dealSet\">$dealSet</label>";
+        }
+        $ret .= "
+            </div>";
+
+        return $ret;
+    }
+
     public function getProdMissingEDLP($dbc)
     {
         $count = 0;
@@ -964,6 +991,7 @@ HTML;
                 p.default_vendor_id AS vendorID
             FROM products AS p
                 LEFT JOIN woodshed_no_replicate.EdlpItems AS e ON e.upc=p.upc
+                RIGHT JOIN NcgEdlpVendors AS edlp ON p.default_vendor_id=edlp.vendorID 
             WHERE p.normal_price <> e.maxprice
                 AND date = ?
                 AND p.inUse = 1
@@ -984,24 +1012,51 @@ HTML;
 
     public function getProdMissingSale($dbc)
     {
-        // what are we looking for?
-        // a: coop deals items that are missing from batch list
         $count = 0;
-        $desc = "New/Returning Items Missing EDLP Pricing";
-        $cols = array('upc', 'brand', 'description', 'cost', 'edlpcost', 'normal_price', 'maxprice');
+        $desc = "Items Missing From Coop Deals";
+        $cols = array('upc', 'brand', 'description', 'dealSet', 'price',
+            'salePrice', 'ABT', 'promoDiscount', 'cost', 'created');
         $data = array();
-        $prep = $dbc->prepare("SELECT b.brand, b.description, p.upc, 
-            FROM batchList AS bl
-                LEFT JOIN CoopDealsItems AS i ON i.upc=p.upc
-                LEFT JOIN batches AS b ON b.batchID=bl.batchID
-            WHERE b.startDate > NOW()
-                AND b.endDate < NOW()
-                ");
-        //$res = $dbc->execute($prep);
-        //while ($row = $dbc->fetchRow($res)) {
-        //    foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
-        //    $count++;
-        //}
+
+        $dealSets = array();
+        $dateTime = new DateTime();
+        $curYear = $dateTime->format('Y');
+
+        $dealSetP = $dbc->prepare("select dealSet from CoopDealsItems group by dealSet order by coopDealsItemID DESC limit 2");
+        $dealSetR = $dbc->execute($dealSetP);
+        while ($dealSetW = $dbc->fetchRow($dealSetR)) {
+            $dealSets[] = $dealSetW['dealSet'];
+        }
+        //var_dump($dealSets);
+        
+        foreach ($dealSets as $dealSet) {
+            $args = array($dealSet);
+            $prep = $dbc->prepare("
+                SELECT c.*, p.brand, p.description, DATE(p.created) AS created,
+                    c.price AS salePrice,
+                    p.normal_price AS price,
+                    GROUP_CONCAT(DISTINCT abtpr separator ',') AS ABT 
+                FROM CoopDealsItems AS c
+                    RIGHT JOIN products AS p ON p.upc=c.upc
+                WHERE c.dealSet = ? 
+                    AND c.upc NOT IN (
+                        SELECT l.upc
+                        FROM batchList AS l
+                        INNER JOIN batches AS b ON l.batchID=b.batchID
+                        WHERE b.batchName like  '%$dealSet'
+                    )
+                    AND c.upc > 9999
+                    AND p.normal_price > c.price
+                GROUP BY c.upc
+            ");
+            $res = $dbc->execute($prep, $args);
+            while ($row = $dbc->fetchRow($res)) {
+                foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+                $count++;
+            }
+
+        }
+
         if ($count > 0) {
             $data['count'] = $count;
         }
