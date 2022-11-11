@@ -992,10 +992,11 @@ HTML;
             FROM products AS p
                 LEFT JOIN woodshed_no_replicate.EdlpItems AS e ON e.upc=p.upc
                 RIGHT JOIN NcgEdlpVendors AS edlp ON p.default_vendor_id=edlp.vendorID 
-            WHERE p.normal_price <> e.maxprice
+            WHERE p.normal_price > e.maxprice
                 AND date = ?
                 AND p.inUse = 1
                 AND p.normal_price <> 54.95
+                AND p.default_vendor_id <> 401
         ");
         $res = $dbc->execute($prep, $args);
         while ($row = $dbc->fetchRow($res)) {
@@ -1015,7 +1016,7 @@ HTML;
         $count = 0;
         $desc = "Items Missing From Coop Deals";
         $cols = array('upc', 'brand', 'description', 'dealSet', 'price',
-            'salePrice', 'ABT', 'promoDiscount', 'cost', 'created');
+            'salePrice', 'ABT', 'promoDiscount', 'vendorName', 'created');
         $data = array();
 
         $dealSets = array();
@@ -1035,9 +1036,11 @@ HTML;
                 SELECT c.*, p.brand, p.description, DATE(p.created) AS created,
                     c.price AS salePrice,
                     p.normal_price AS price,
-                    GROUP_CONCAT(DISTINCT abtpr separator ',') AS ABT 
+                    GROUP_CONCAT(DISTINCT abtpr separator ',') AS ABT, 
+                    v.vendorName
                 FROM CoopDealsItems AS c
                     RIGHT JOIN products AS p ON p.upc=c.upc
+                    LEFT JOIN vendors AS v ON v.vendorID=p.default_vendor_id
                 WHERE c.dealSet = ? 
                     AND c.upc NOT IN (
                         SELECT l.upc
@@ -1051,8 +1054,11 @@ HTML;
             ");
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
-                foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
-                $count++;
+                // temp(1) - don't show October A anymore. Add any sets to skip here
+                if ($row['dealSet'] != 'October2022' and $row['ABT'] != 'A') {
+                    foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+                    $count++;
+                }
             }
 
         }
