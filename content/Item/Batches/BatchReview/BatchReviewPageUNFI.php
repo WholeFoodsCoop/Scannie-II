@@ -72,18 +72,16 @@ class BatchReviewPageUNFI extends PageLayoutA
                     p.normal_price,
                     p.cost,
                     bl.salePrice AS price,
-                    vd.margin AS unfiMarg,
-                    vd.posDeptID,
-                    vd.name AS vendorDeptName,
-                    vd.deptID as unfiDeptId
+                    vsm.margin AS unfiMarg
                 FROM batchList as bl
                     LEFT JOIN products AS p ON p.upc = bl.upc
                     LEFT JOIN departments AS d ON d.dept_no = p.department
                     LEFT JOIN vendorItems AS v ON v.upc = p.upc AND v.vendorID = p.default_vendor_id
-                    LEFT JOIN vendorDepartments AS vd 
-                        ON vd.vendorID = p.default_vendor_id 
-                            AND vd.deptID = v.vendorDept
+                    LEFT JOIN VendorSpecificMargins AS vsm
+                        ON vsm.vendorID = p.default_vendor_id 
+                            AND vsm.deptID = p.department
                 WHERE bl.batchID = ' . $id . '
+                    AND p.default_vendor_id = 1
                 GROUP BY p.upc
                 ;');
             $result = $dbc->execute($query);
@@ -99,7 +97,6 @@ class BatchReviewPageUNFI extends PageLayoutA
                     <th>NEW Marg.</th>
                     <th>Desired Marg.</th>
                     <th title="Difference between New Margin and Desired Margin.">Diff.</th>
-                    <th>UNFI Category</th>
             ';
             while ($row = $dbc->fetch_row($result)) {
                 $newMargin = ($row['price'] - $row['cost']) / $row['price'];
@@ -134,7 +131,6 @@ class BatchReviewPageUNFI extends PageLayoutA
                     $ret .= '<td>' . $diff . '</td>';
                 }
                 
-                $ret .= '<td>' . $row['unfiDeptId'] . ' - ' . $row['vendorDeptName'] . '</td>';
 
             }
             $ret .= '</table></div>';
