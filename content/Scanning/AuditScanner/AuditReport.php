@@ -63,15 +63,17 @@ class AuditReport extends PageLayoutA
         $vid = FormLib::get('vendCat');
         $username = FormLib::get('username');
         $storeID = FormLib::get('storeID');
+        $full = FormLib::get('loadFullCat');
+        $inUse = ($full == 1) ? '' : ' AND inUse = 1 ';
 
         $args = array($vid);
         $prep = $dbc->prepare("SELECT v.upc
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON v.upc=p.upc AND v.vendorID=p.default_vendor_id
                 RIGHT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
-            WHERE inUse = 1
-            AND p.default_vendor_id = ?
+            WHERE p.default_vendor_id = ?
                 AND m.super_name != 'PRODUCE'
+                $inUse
             GROUP BY p.upc;
         ");
         $res = $dbc->execute($prep, $args);
@@ -1294,6 +1296,8 @@ $reviewForm
     </div>
     <div class="form-group dummy-form">
         <button class="btn btn-default btn-sm" type="submit" id="loadCatBtn">Load Catalog</button>
+            <label for="loadFullCat">Load All</label>
+            <input type="checkbox" name="loadFullCat" id="loadFullCat" value="1" />
     </div>
 </form>
 $nFilter
