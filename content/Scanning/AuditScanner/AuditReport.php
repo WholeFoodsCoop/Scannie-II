@@ -385,10 +385,10 @@ class AuditReport extends PageLayoutA
         $row = $dbc->fetchRow($res);
         $listName = $row['vendorName'] . " REVIEW LIST";
 
-        $args = array($username, $storeID, $listName);
-        $prep = $dbc->prepare("INSERT IGNORE INTO AuditScan (id, date, upc, username, storeID, notes, checked, savedAs) 
-            SELECT id, date, upc, ?, ?, notes, checked, ? 
-            FROM AuditScan where savedAs = 'default' and notes != ''
+        $args = array($username, $storeID, $listName, $username);
+        $prep = $dbc->prepare("INSERT IGNORE INTO AuditScan (date, upc, username, storeID, notes, checked, savedAs) 
+            SELECT date, upc, ?, ?, notes, checked, ? 
+            FROM AuditScan where savedAs = 'default' AND username = ? AND notes != ''
             ");
         $res = $dbc->execute($prep, $args);
 
