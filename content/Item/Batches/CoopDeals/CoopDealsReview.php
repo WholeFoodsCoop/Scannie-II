@@ -43,6 +43,7 @@ class CoopDealsReview extends WebDispatch
 
         $dbc = ScanLib::getConObj('SCANDB');
         $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
+        $storeID = scanLib::getStoreID();
 
         $ret = '';
         $ret .= "
@@ -68,7 +69,7 @@ class CoopDealsReview extends WebDispatch
                         {$this->getGeneric($dbc,$start)}
                     </div>
                     <div class='col-lg-2'>
-                        {$this->getNarrowItems($dbc,$upcs)}
+                        {$this->getNarrowItems($dbc,$upcs,$storeID)}
                     </div>
                 </div><br/>
                 <div class='row'>
@@ -128,17 +129,19 @@ HTML;
         return $upcs;
     }
 
-    private function getNarrowItems($dbc,$upcs) {
+    private function getNarrowItems($dbc,$upcs,$storeID) {
         list($inStr, $args) = $dbc->safeInClause($upcs);
+        $args[] = $storeID;
         $prep = $dbc->prepare("SELECT p.upc 
-            FROM productUser AS p
+            FROM SignProperties AS p
                 LEFT JOIN FloorSectionProductMap AS f ON p.upc=f.upc
                 LEFT JOIN FloorSections AS s ON f.floorSectionID=s.floorSectionID
                 LEFT JOIN products ON p.upc=products.upc
             WHERE p.upc IN ({$inStr}) 
+                AND p.storeID = ?
                 AND (
                     p.narrow = 1
-                        OR ( s.name like '%Bev%' AND products.department IN (37, 69, 165, 188, 189) )
+                        OR ( s.name like '%Bev%' )
                     )
             GROUP BY p.upc");
         $res = $dbc->execute($prep,$args);
@@ -355,7 +358,7 @@ HTML;
         $result = $dbc->execute($query);
 		$ret .= '<table class="table table-default table-sm small table-striped">';
         while ($row = $dbc->fetchRow($result)) {
-            echo $edlp = ($row['price_rule_id'] != 0) ? ' *(EDLP) ' : '';
+            $edlp = ($row['price_rule_id'] != 0) ? ' *(EDLP) ' : '';
             $editL = '<a href="http://'.$HTTP_HOST.'/git/fannie/item/ItemEditorPage.php?searchupc=' . $row['upc'] . '" target="_blank">' . $row['upc'] . '</a> ';
             $batchL = '<a href="http://'.$HTTP_HOST.'/git/fannie/batches/newbatch/EditBatchPage.php?id='
                 . $row['batchID'] .'" target="_blank">' . $row['batchID'] . '</a>';
