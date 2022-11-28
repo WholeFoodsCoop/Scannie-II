@@ -357,7 +357,8 @@ class AuditReport extends PageLayoutA
 
         $dbc = ScanLib::getConObj();
         $args = array($checked, $username, $upc);
-        $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan SET checked = ? WHERE username = ? AND upc = ?");
+        $query = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan SET checked = ? WHERE username = ? AND upc = ? 
+            AND savedAs = 'default'");
         $dbc->execute($query, $args);
         if ($er = $dbc->error())
             $json['error'] = $er;
@@ -637,6 +638,7 @@ class AuditReport extends PageLayoutA
                 END, 4) AS margin,
                 a.notes,
                 a.PRN, 
+                ROUND(p.cost * v.units, 2) AS caseCost,
                 CASE
                     WHEN vd.margin > 0.01 THEN p.cost / (1 - vd.margin) ELSE p.cost / (1 - dm.margin)
                 END AS rsrp,
@@ -755,6 +757,7 @@ class AuditReport extends PageLayoutA
             <td title=\"floorSections\" data-column=\"floorSections\"class=\"floorSections column-filter\"></td>
             <td title=\"comment\" data-column=\"comment\"class=\"comment column-filter\"></td>
             <td title=\"PRN\" data-column=\"PRN\"class=\"PRN column-filter\"></td>
+            <td title=\"caseCost\" data-column=\"caseCost\"class=\"caseCost column-filter\"></td>
             <td title=\"notes\" data-column=\"notes\"class=\"notes column-filter\"></td>
             <td title=\"check\" data-column=\"check\" class=\"check column-filter\"></td>
             <td title=\"trash-icon\" data-column=\"trash-icon\" class=\"trash-icon column-filter\"></td> <!-- you cannot filter this column -->
@@ -795,6 +798,7 @@ class AuditReport extends PageLayoutA
             <th class=\"floorSections\">floor sections</th>
             <th class=\"comment\">comment</th>
             <th class=\"PRN\">PRN</th>
+            <th class=\"caseCost\">caseCost</th>
             <th class=\"notes\">notes</th>
             <th class=\"trash\"></th>
             <th class=\"check\"></th>
@@ -897,6 +901,7 @@ class AuditReport extends PageLayoutA
             $floorSections = $row['floorSections'];
             $reviewComments = $row['comment'];
             $prn = $row['PRN'];
+            $caseCost = $row['caseCost'];
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku\">$sku</td>";
@@ -942,6 +947,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"floorSections\">$floorSections</td>";
             $td .= "<td class=\"comment\">$reviewComments</td>";
             $td .= "<td class=\"PRN\">$prn</td>";
+            $td .= "<td class=\"caseCost\">$caseCost</td>";
             $td .= "<td class=\"notes editable editable-notes\">$notes</td>";
             $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td></td>";
             $td .= "<td class=\"check\"><input type=\"checkbox\" name=\"check\" class=\"row-check\" $checked/></td>";
@@ -1166,7 +1172,7 @@ HTML;
 
         $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
             'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
-            'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN');
+            'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN', 'caseCost');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         $i = count($columns) - 1;
         foreach ($columns as $column) {
@@ -1417,7 +1423,11 @@ var stripeTable = function(){
     return false;
 };
 stripeTable();
-//setInterval('stripeTable()', 1000);
+
+$("#mytable").bind('sortEnd', function(){
+    stripeTable();
+});
+
 $('#clearNotesInputB').click(function() {
     var c = confirm("Are you sure?");
     if (c == true) {
@@ -1490,7 +1500,6 @@ $("#notes").change( function() {
             }
         });
     });
-    stripeTable();
 });
 
 $('.copy-text').focus(function(){
