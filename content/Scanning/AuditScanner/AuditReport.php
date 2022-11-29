@@ -115,7 +115,12 @@ class AuditReport extends PageLayoutA
 
         $args = array($username, $delete);
         $prep = $dbc->prepare("DELETE FROM AuditScan WHERE username = ?
-            AND savedAs = ? OR savedAs = 'default'");
+            AND savedAs = ?");
+        $res = $dbc->execute($prep, $args);
+
+        $args = array($username);
+        $prep = $dbc->prepare("DELETE FROM AuditScan WHERE username = ?
+            AND savedAs = 'default'");
         $res = $dbc->execute($prep, $args);
 
         return header("location: AuditReport.php");
