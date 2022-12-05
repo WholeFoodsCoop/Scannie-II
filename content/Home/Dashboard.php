@@ -1055,7 +1055,7 @@ HTML;
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
                 // temp(1) - don't show October A anymore. Add any sets to skip here
-                if ($row['dealSet'] != 'October2022' and $row['ABT'] != 'A') {
+                if ($row['dealSet'] != 'November2022' && $row['ABT'] != 'A') {
                     foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
                     $count++;
                 }
@@ -1226,7 +1226,9 @@ HTML;
                 AND vendorID NOT IN (SELECT vendorID FROM woodshed_no_replicate.FixedVendorReviewSchedule)
                 AND vendorID NOT IN (SELECT vid FROM woodshed_no_replicate.top25)
                 AND vendorID > 0
-                AND vendorID NOT IN (54, 70, 260, 401)
+                AND vendorID NOT IN (
+                    SELECT upc FROM woodshed_no_replicate.doNotTrack WHERE method = 'getVendorList'
+                )
                 AND m.super_name NOT IN ('PRODUCE', 'BRAND', 'MISC')
                 AND p.numflag & (1<<19) = 0
             GROUP BY v.vendorID
@@ -1413,8 +1415,12 @@ JAVASCRIPT;
     public function cssContent()
     {
 return <<<HTML
+body {
+    background-color: #555D65;
+}
 .card {
-    box-shadow: 5px 5px 5px #cacaca;
+    //box-shadow: 5px 5px 5px #cacaca;
+    box-shadow: 5px 5px 5px black;
     margin: 25px;
 }
 fieldset {
