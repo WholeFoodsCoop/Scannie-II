@@ -111,6 +111,7 @@ class AuditReport extends PageLayoutA
 
         $dbc = ScanLib::getConObj('SCANALTDB');
         $delete = FormLib::get('deleteList');
+        $delete = htmlspecialchars_decode($delete);
         $username = FormLib::get('username');
 
         $args = array($username, $delete);
@@ -757,6 +758,7 @@ class AuditReport extends PageLayoutA
             <td title=\"vendor\" data-column=\"vendor\"class=\"vendor column-filter\"></td>
             <td title=\"last_sold\" data-column=\"last_sold\"class=\"last_sold column-filter\"></td>
             <td title=\"scaleItem\" data-column=\"scaleItem\"class=\"scaleItem column-filter\"></td>
+            <td title=\"scalePLU\" data-column=\"scalePLU\"class=\"scalePLU column-filter\"></td>
             <td title=\"reviewed\" data-column=\"reviewed\"class=\"reviewed column-filter\"></td>
             <td title=\"costChange\" data-column=\"costChange\"class=\"costChange column-filter\"></td>
             <td title=\"floorSections\" data-column=\"floorSections\"class=\"floorSections column-filter\"></td>
@@ -798,6 +800,7 @@ class AuditReport extends PageLayoutA
             <th class=\"vendor\">vendor</th>
             <th class=\"last_sold\">last_sold</th>
             <th class=\"scaleItem\">scale</th>
+            <th class=\"scalePLU\">scalePLU</th>
             <th class=\"reviewed\">reviewed</th>
             <th class=\"costChange\">last cost change</th>
             <th class=\"floorSections\">floor sections</th>
@@ -906,6 +909,7 @@ class AuditReport extends PageLayoutA
             $floorSections = $row['floorSections'];
             $reviewComments = $row['comment'];
             $prn = $row['PRN'];
+            $scalePLU = ($bycount == null) ? '' : substr($upc, 3, 4);
             $caseCost = $row['caseCost'];
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
@@ -946,6 +950,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"vendor\" data-vendorID=\"$vendorID\">$vendor</td>";
             $td .= "<td class=\"last_sold\">$lastSold</td>";
             $td .= "<td class=\"scaleItem\">$bycount</td>";
+            $td .= "<td class=\"scalePLU\">$scalePLU</td>";
             $td .= "<td class=\"reviewed\">$reviewed</td>";
             $oper = ($costChange > 0) ? '+' : '-';
             $td .= "<td class=\"costChange\">$oper$costChange - $costChangeDate</td>";
@@ -1046,6 +1051,7 @@ HTML;
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
         $storeID = (isset($_SESSION['AuditReportStoreID'])) ? $_SESSION['AuditReportStoreID'] : scanLib::getStoreID();
         $loaded = FormLib::get('loaded');
+        $loadedHTMLSpec = htmlspecialchars($loaded);
         $scrollMode = 'on';
         if (isset($_SESSION['scrollMode'])) {
             $scrollMode = ($_SESSION['scrollMode'] == 0) ? 'on' : 'off';
@@ -1177,7 +1183,7 @@ HTML;
 
         $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
             'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
-            'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN', 'caseCost');
+            'scalePLU', 'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN', 'caseCost');
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         $i = count($columns) - 1;
         foreach ($columns as $column) {
@@ -1284,7 +1290,7 @@ $reviewForm
 <form name="deleteListForm" method="post" action="AuditReport.php" style="display: inline-block">
     <input name="username" type="hidden" value="$username" />
     <input name="storeID" type="hidden" value="$storeID" />
-    <input name="deleteList" type="hidden" value="$loaded" />
+    <input name="deleteList" type="hidden" value="$loadedHTMLSpec" />
 </form>
 <form name="save" id="saveList" method="post" action="AuditReport.php" style="display: inline-block">
     <input name="username" type="hidden" value="$username" />
@@ -1306,9 +1312,9 @@ $reviewForm
         </select>
     </div>
     <div class="form-group dummy-form">
+    <label for="loadFullCat" style="font-size: 14px">Load All</label>
+        <input type="checkbox" name="loadFullCat" id="loadFullCat" value="1" />&nbsp;
         <button class="btn btn-default btn-sm" type="submit" id="loadCatBtn">Load Catalog</button>
-            <label for="loadFullCat">Load All</label>
-            <input type="checkbox" name="loadFullCat" id="loadFullCat" value="1" />
     </div>
 </form>
 $nFilter
