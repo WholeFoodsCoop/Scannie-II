@@ -270,7 +270,7 @@ ORDER BY v.sku, r.reviewed
             $addedSugar = $row['addedSugar'];
             $protein = $row['protein'];
             $data[$upc]['Ingredients'] = $ingredients;
-            $data[$upc]['Eff. Date'] = $date->format('Y-m-d') . ' | MT: ' . $movement;
+            $data[$upc]['Eff. Date'] = $date->format('Y-m-d') . ' | ' . $movement;
 
             if (!isset($data[$upc])) {
                 foreach ($formFields as $field) {
