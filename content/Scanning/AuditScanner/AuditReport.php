@@ -11,6 +11,10 @@ if (!class_exists('PriceRounder')) {
 class AuditReport extends PageLayoutA
 {
 
+    public $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
+        'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
+        'scalePLU', 'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN', 'caseCost');
+
     public function preprocess()
     {
         $this->displayFunction = $this->postView();
@@ -37,8 +41,18 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<deleteList>';
         $this->__routes[] = 'post<vendCat>';
         $this->__routes[] = 'post<setStoreID>';
+        $this->__routes[] = 'get<exportExcel>';
 
         return parent::preprocess();
+    }
+
+    public function getExportExcelHandler()
+    {
+
+        echo $this->postView('true');
+
+
+        return false;
     }
 
     public function postSetStoreIDHandler()
@@ -106,7 +120,7 @@ class AuditReport extends PageLayoutA
         return $upcs;
     }
 
-    public function postDeleteListHandler()
+    public function postDeleteListHandler($demo=false)
     {
 
         $dbc = ScanLib::getConObj('SCANALTDB');
@@ -602,7 +616,7 @@ class AuditReport extends PageLayoutA
         return false;
     }
 
-    public function postFetchHandler()
+    public function postFetchHandler($demo=false)
     {
         $dbc = ScanLib::getConObj();
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
@@ -726,6 +740,9 @@ class AuditReport extends PageLayoutA
         }
 
         $td = "";
+        $csv = "UPC, SKU, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UNITS, NETCOST, COST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CAST COST, NOTES\r\n";
+
+            //$prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDesecription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $autoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
         $textarea = "<div style=\"position: relative\">
             <span class=\"status-popup\">Copied!</span>
             <textarea class=\"copy-text\" id=\"list\" name=\"list\" rows=3 cols=10>";
@@ -833,6 +850,7 @@ class AuditReport extends PageLayoutA
             list($recentPurchase, $received) = $this->getRecentPurchase($dbc,$upc);
             $brand = $row['brand'];
             $autoPar = '';
+            $csvAutoPar = '';
             foreach ($pars[$upc] as $storeID => $par) {
                 $woSalesText = '';
                 if ($woSales[$upc][$storeID] < 20) {
@@ -851,6 +869,7 @@ class AuditReport extends PageLayoutA
                     $woSalesText = 'lightblue';
                 }
                 $autoPar .= "<span style=\"border: 1px solid $woSalesText;\"><span style=\"color: $woSalesText\">&#9608;</span> $par</span> ";
+                $csvAutoPar .= "[$storeID] $par ";
             }
             $signBrand = $row['signBrand'];
             $description = $row['description'];
@@ -963,12 +982,25 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"check\"><input type=\"checkbox\" name=\"check\" class=\"row-check\" $checked/></td>";
             $td .= "</tr>";
             $textarea .= "$upc\r\n";
+        
+            $brand = preg_replace("/[^A-Za-z0-9 ]/", '', $brand);
+            $signBrand = preg_replace("/[^A-Za-z0-9 ]/", '', $signBrand);
+            $description = preg_replace("/[^A-Za-z0-9 ]/", '', $description);
+            $signDescription = preg_replace("/[^A-Za-z0-9 ]/", '', $signDescription);
+            $vendor = preg_replace("/[^A-Za-z0-9 ]/", '', $vendor);
+            $floorSections = preg_replace("/[^A-Za-z0-9 ]/", ' & ', $floorSections);
+            $autoPar = str_replace("&#9608;", " | ", $autoPar);
+
+            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDesecription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
+            $prepCsv = str_replace("&nbsp;", "", $prepCsv);
+            $prepCsv = str_replace("\"", "", $prepCsv);
+            $csv .= "$prepCsv" . "\r\n";
         }
         $textarea .= "</textarea></div>";
         $rows = $dbc->numRows($result);
 
         $ret = <<<HTML
-<input type="hidden" id="table-rows" val(ue)="$rows" />
+<input type="hidden" id="table-rows" value="$rows" />
 <div class="table-responsive">
     <table class="table table-bordered table-sm small items" id="mytable">
     <thead>$th</thead>
@@ -981,7 +1013,9 @@ class AuditReport extends PageLayoutA
 </div>
 HTML;
 
-        if (FormLib::get('fetch') == 'true') {
+        if ($demo == true) {
+            return $csv;
+        } elseif (FormLib::get('fetch') == 'true') {
             echo $ret;
             return false;
         } else {
@@ -1045,7 +1079,7 @@ HTML;
         return $select;
     }
 
-    public function postView()
+    public function postView($demo=false)
     {
         $dbc = scanLib::getConObj();
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
@@ -1073,8 +1107,8 @@ HTML;
             $x |= 1 << 13;
             $x |= 1 << 14;
             $x |= 1 << 19;
-            $x |= 1 << 26;
             $x |= 1 << 27;
+            $x |= 1 << 28;
             $_SESSION['columnBitSet'] = $x;
         }
 
@@ -1130,6 +1164,7 @@ HTML;
         $checkPriceBtn = '';
         $tempBtnID = "prevent-default";
         $reviewForm = '';
+        //$exportExcelForm = '';
         if ($_COOKIE['user_type'] == 2) {
             // user is csather
             $tempClass = "btn-secondary";
@@ -1166,6 +1201,43 @@ HTML;
         <input type="hidden" name="username" value="'.$username.'"/>
     </form>
 </div>';
+//        $exportColumns = '<div style=\"float: left; padding: 25px\">';
+//        $colSize = round(count($this->columns) / 3);
+//        $i = 0;
+//        foreach ($this->columns as $col) {
+//            if ($i % $colSize == 0) {
+//                $exportColumns .= "</div><div style=\"float: left; padding: 24px;\">";
+//            }
+//            $exportColumns .= <<<HTML
+//                <div>
+//                    <input type="checkbox" name="export-$col" id="export-$col"/>
+//                    <label for="export-$col">$col</label>
+//                </div>
+//HTML;
+//            $i++;
+//        }
+//        $exportColumns .= "</div>";
+
+
+//        $exportExcelForm = <<<HTML
+//<div id="export-window" style="position: fixed; top: 0px; left: 0px; width: 100vw; height: 100vh; background-color: white; z-index: 999; ">
+//    <div class="row">
+//        <div class="col-lg-2">
+//        </div>
+//        <div class="col-lg-8">
+//            <h4>Select Columns To Export</h4>
+//                <div style="border: 1px solid grey; border-radius: 3px; height: 500px;">$exportColumns</div>
+//                <div class="form-group"><input type="submit" class="btn btn-default" /></div>
+//                <span title="close" style="cursor: pointer;" onClick="$('#export-window').hide();">Go Back</span>
+//            <form action="AuditReport.php" method="post">
+//        </div>
+//        <div class="col-lg-2">
+//            </form>
+//        </div>
+//    </div>
+//</div> 
+//HTML;
+
 
         } else {
             // user is not csather
@@ -1181,9 +1253,7 @@ HTML;
         $noteStr .= "</select>";
         $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
 
-        $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
-            'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
-            'scalePLU', 'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN', 'caseCost');
+        $columns = $this->columns;
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
         $i = count($columns) - 1;
         foreach ($columns as $column) {
@@ -1241,7 +1311,19 @@ HTML;
         $this->addScript('../../../common/javascript/tablesorter/js/jquery.metadata.js');
         $this->addOnloadCommand("$('#mytable').tablesorter();");
 
-        return <<<HTML
+
+        if ($demo == true) {
+            $uniqueid = uniqid();
+            $file="AuditReport_$uniqueid.csv";
+            //header("Content-type: application/vnd.ms-excel");
+            header("Content-type: text/csv");
+            header("Content-Disposition: attachment; filename=$file");
+        }
+
+        if ($demo == true) {
+            echo $this->postFetchHandler($demo);
+        } else {
+            return <<<HTML
 <div class="container-fluid">
 $modal
 <input type="hidden" name="keydown" id="keydown"/>
@@ -1318,8 +1400,11 @@ $reviewForm
     </div>
 </form>
 $nFilter
-$columnCheckboxes
 
+<div style="font-size: 12px; padding: 10px;">
+    <a href="AuditReport.php?exportExcel=1" download>Export Excel</a>
+</div>
+$columnCheckboxes
 <div class="row">
     <div class="col-lg-6">
         <div style="font-size: 12px; padding: 10px;">
@@ -1386,13 +1471,13 @@ $columnCheckboxes
     </div>
 </div>
 
-
 <div id="mytable-container">
     {$this->postFetchHandler()}
 </div>
 
 </div>
 HTML;
+        }
     }
 
     public function formContent()
