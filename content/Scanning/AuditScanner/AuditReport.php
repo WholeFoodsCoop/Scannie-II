@@ -995,6 +995,7 @@ class AuditReport extends PageLayoutA
             $signDescription = preg_replace("/[^A-Za-z0-9 ]/", '', $signDescription);
             $vendor = preg_replace("/[^A-Za-z0-9 ]/", '', $vendor);
             $floorSections = preg_replace("/[^A-Za-z0-9 ]/", ' & ', $floorSections);
+            $flags = preg_replace("/[^A-Za-z0-9 ]/", ' & ', $flags);
             $autoPar = str_replace("&#9608;", " | ", $autoPar);
 
             $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDesecription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
