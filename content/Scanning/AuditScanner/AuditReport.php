@@ -849,7 +849,9 @@ class AuditReport extends PageLayoutA
             $sku = $row['sku'];
             list($recentPurchase, $received) = $this->getRecentPurchase($dbc,$upc);
             $brand = $row['brand'];
-            $autoPar = '';
+            //$autoPar = '';
+            $autoPar = '<div style="height: 12px;"><table class="table table-small small" style="margin-top: -4.5px;
+                background-color: rgba(0,0,0,0); border: 0px solid transparent;">';
             $csvAutoPar = '';
             foreach ($pars[$upc] as $storeID => $par) {
                 $woSalesText = '';
@@ -868,9 +870,13 @@ class AuditReport extends PageLayoutA
                 if ($woSales[$upc][$storeID] == 1 && $woType[$upc][$storeID] == 'last_sold') {
                     $woSalesText = 'lightblue';
                 }
-                $autoPar .= "<span style=\"border: 1px solid $woSalesText;\"><span style=\"color: $woSalesText\">&#9608;</span> $par</span> ";
+                if (strlen($par) == 3)
+                    $par = "0".$par;
+                //$autoPar .= "<span style=\"border: 1px solid $woSalesText;\"><span style=\"color: $woSalesText; \">&#9608;</span> $par</span> ";
+                $autoPar .= "<td style=\"width: 25px\"><span style=\"color: $woSalesText; \">&#9608;</span> $par</td>";
                 $csvAutoPar .= "[$storeID] $par ";
             }
+            $autoPar .= "</table></div>";
             $signBrand = $row['signBrand'];
             $description = $row['description'];
             $signDescription = $row['signDescription'];
