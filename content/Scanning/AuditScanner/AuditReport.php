@@ -48,9 +48,7 @@ class AuditReport extends PageLayoutA
 
     public function getExportExcelHandler()
     {
-
         echo $this->postView('true');
-
 
         return false;
     }
@@ -871,9 +869,10 @@ class AuditReport extends PageLayoutA
                     $woSalesText = 'lightblue';
                 }
                 if (strlen($par) == 3)
-                    $par = "0".$par;
+                    $par = "<span style=\"color: transparent\">_</span>".$par;
                 //$autoPar .= "<span style=\"border: 1px solid $woSalesText;\"><span style=\"color: $woSalesText; \">&#9608;</span> $par</span> ";
-                $autoPar .= "<td style=\"width: 25px\"><span style=\"color: $woSalesText; \">&#9608;</span> $par</td>";
+                //$autoPar .= "<td style=\"width: 25px\"><span style=\"color: $woSalesText; \">&#9608;</span> $par</td>";
+                $autoPar .= "<td style=\"width: 25px; border-left: 5px solid $woSalesText; \"> $par</td>";
                 $csvAutoPar .= "[$storeID] $par ";
             }
             $autoPar .= "</table></div>";
@@ -944,7 +943,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"sign-brand editable editable-brand \" data-table=\"productUser\">$signBrand</td>";
             $td .= "<td class=\"description editable editable-description\" data-table=\"products\" 
                 style=\"text-transform:uppercase;\" maxlength=\"30\">$description</td>";
-            $td .= "<td class=\"sign-description editable editable-description \" data-table=\"productUser\">$signDescription</td>";
+            $td .= "<td class=\"sign-description editable editable-description \" data-table=\"productUser\" spellcheck=\"true\">$signDescription</td>";
             $td .= "<td class=\"size\">$size</td>";
             $td .= "<td class=\"units\">$units</td>";
             $td .= "<td class=\"netCost editable-cost\" data-vid=\"$vendorID\">$netCost</td>";
@@ -990,15 +989,21 @@ class AuditReport extends PageLayoutA
             $textarea .= "$upc\r\n";
         
             $brand = preg_replace("/[^A-Za-z0-9 ]/", '', $brand);
+            //$brand = str_replace(',', '', $brand);
             $signBrand = preg_replace("/[^A-Za-z0-9 ]/", '', $signBrand);
+            //$signBrand = str_replace(',', '', $signBrand);
             $description = preg_replace("/[^A-Za-z0-9 ]/", '', $description);
+            //$description = str_replace(',', '', $description);
             $signDescription = preg_replace("/[^A-Za-z0-9 ]/", '', $signDescription);
+            //$signDescription = str_replace(',', '', $signDescription);
             $vendor = preg_replace("/[^A-Za-z0-9 ]/", '', $vendor);
+            //$vendor = str_replace(',', '', $vendor);
             $floorSections = preg_replace("/[^A-Za-z0-9 ]/", ' & ', $floorSections);
-            $flags = preg_replace("/[^A-Za-z0-9 ]/", ' & ', $flags);
+            $flags = str_replace(",", ' & ', $flags);
+            $brand = str_replace(',', '', $brand);
             $autoPar = str_replace("&#9608;", " | ", $autoPar);
 
-            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDesecription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
+            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
             $prepCsv = str_replace("&nbsp;", "", $prepCsv);
             $prepCsv = str_replace("\"", "", $prepCsv);
             $csv .= "$prepCsv" . "\r\n";
@@ -1719,15 +1724,14 @@ $('.editable-notes').each(function(){
 });
 $('.editable-description').each(function(){
     $(this).attr('contentEditable', true);
-    $(this).attr('spellCheck', false);
+    //$(this).attr('spellCheck', false);
 });
 $('.editable-description.sign-description').each(function(){
     $(this).attr('contentEditable', true);
-    $(this).attr('spellCheck', false);
 });
 $('.editable-brand').each(function(){
     $(this).attr('contentEditable', true);
-    $(this).attr('spellCheck', false);
+    //$(this).attr('spellCheck', false);
 });
 $('.editable-brand.sign-brand').each(function(){
     $(this).attr('contentEditable', true);
@@ -2322,6 +2326,7 @@ $('#storeSelector-storeID').change(function(){
         },
     });
 });
+
 
 
 JAVASCRIPT;
