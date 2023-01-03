@@ -37,7 +37,7 @@ HTML;
         }
 
         return <<<HTML
-<div class="row">
+<div class="row" style="width: 100%">
     <div class="col-lg-10" id="col-1">
         <span id="filter-options"></span>
         <div id="response"></div>
