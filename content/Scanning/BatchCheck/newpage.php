@@ -245,7 +245,7 @@ HTML;
                     LEFT JOIN StoreBatchMap AS sbm ON b.batchID=sbm.batchID AND p.store_id=sbm.storeID
                     LEFT JOIN woodshed_no_replicate.batchCheckQueues AS q ON bl.upc=q.upc
                         AND q.storeID=p.store_id AND q.session=?
-                WHERE bl.batchID IN (SELECT b.batchID FROM batches AS b WHERE NOW() BETWEEN startDate AND endDate)
+                WHERE bl.batchID IN (SELECT b.batchID FROM batches AS b WHERE NOW() BETWEEN startDate AND endDate AND discountType > 0)
                     AND p.store_id = ?
                     AND p.inUse = 1
                     AND sbm.storeID = ?

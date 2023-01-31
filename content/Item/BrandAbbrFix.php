@@ -134,10 +134,10 @@ class BrandAbbrFix extends PageLayoutA
                 </div>
                 <input type="hidden" class="btn btn-defaul" name="insert" value="1" />
             </form>
+            <ul>
+                <li><a href="BrandFixer.php">Brand Fixer</a></li>
+            </ul>
         </div>
-        <ul>
-            <li><a href="BrandFixer.php">Brand Fixer</a></li>
-        </ul>
     </div>
     <div class="col-lg-6" style="padding: 25px">
         <table class="table table-bordered table-sm small"><thead></thead><tbody>{$this->getTrueBrandList()}</table>

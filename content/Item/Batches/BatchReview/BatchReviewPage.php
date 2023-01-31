@@ -119,7 +119,7 @@ class BatchReviewPage extends PageLayoutA
                 $ret .= '<td>' . $row['pdept'] . ' - ' . $row['dept_name'] . '</td>';
                 $ret .= '<td>' . $row['cost'] . '</td>';
                 $ret .= '<td>' . $row['normal_price'] . '</td>';
-                $ret .= '<td><span class="text-warning">' . $row['price'] . '</span></td>';
+                $ret .= '<td><span style="color: grey"><u>' . $row['price'] . '</u></span></td>';
                 $ret .= '<td>' . $newMargin . '</td>';
                 $ret .= '<td>' . $row['margin'] . '</td>';
                 

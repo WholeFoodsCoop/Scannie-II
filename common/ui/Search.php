@@ -37,7 +37,7 @@ class Search
                 //'Coop Deals Add' => '/../../../../git/IS4C/fannie/item/CoopDealsLookupPage.php?upc='.$input,
                 'Track Change' => '/../Scannie/content/Item/TrackItemChange.php?upc='.$input,
                 'Edit Batch Page' => '/../../../../git/IS4C/fannie/batches/newbatch/EditBatchPage.php?id='.$input,
-                "Trnx Lookup" => "/../../../../git/fannie/admin/LookupReceipt/RenderReceiptPage.php?date=$today&receipt=$input",
+                'Trnx Lookup' => "/../../../../git/fannie/admin/LookupReceipt/RenderReceiptPage.php?date=$today&receipt=$input",
                 //'Item Batch History' => 'http://'.$FANNIEROOT_DIR.'/reports/ItemBatches/ItemBatchesReport.php?upc='.$input,
                 //'Batch Review' => 'http://'.$SCANROOT_DIR.'/item/Batches/BatchReview/BatchReviewPage.php?id='.$input,
                 //'Unfi_DB_Check' => 'https://customers.unfi.com/Pages/ProductSearch.aspx?SearchTerm='.$input

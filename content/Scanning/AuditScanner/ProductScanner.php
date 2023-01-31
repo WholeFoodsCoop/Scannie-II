@@ -816,6 +816,9 @@ HTML;
     public function cssContent()
     {
         return <<<HTML
+.btn-danger:active {
+    background-color: teal;
+}
 #in-use-warning {
     position: absolute;
     top: 50px;

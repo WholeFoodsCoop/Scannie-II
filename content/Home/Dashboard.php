@@ -1015,7 +1015,7 @@ HTML;
     {
         $count = 0;
         $desc = "Items Missing From Coop Deals";
-        $cols = array('upc', 'brand', 'description', 'dealSet', 'price',
+        $cols = array('upc', 'brand', 'description', 'dept', 'dealSet', 'price',
             'salePrice', 'ABT', 'promoDiscount', 'vendorName', 'created');
         $data = array();
 
@@ -1037,10 +1037,12 @@ HTML;
                     c.price AS salePrice,
                     p.normal_price AS price,
                     GROUP_CONCAT(DISTINCT abtpr separator ',') AS ABT, 
-                    v.vendorName
+                    v.vendorName,
+                    SUBSTR(m.super_name, 1, 4) AS dept
                 FROM CoopDealsItems AS c
                     RIGHT JOIN products AS p ON p.upc=c.upc
                     LEFT JOIN vendors AS v ON v.vendorID=p.default_vendor_id
+                    LEFT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
                 WHERE c.dealSet = ? 
                     AND c.upc NOT IN (
                         SELECT l.upc
@@ -1051,11 +1053,12 @@ HTML;
                     AND c.upc > 9999
                     AND p.normal_price > c.price
                 GROUP BY c.upc
+                ORDER BY m.super_name
             ");
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
                 // temp(1) - don't show October A anymore. Add any sets to skip here
-                if ($row['dealSet'] != 'November2022' && $row['ABT'] != 'A') {
+                if ($row['dealSet'] != 'January2023' && $row['ABT'] != 'A') {
                     foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
                     $count++;
                 }
@@ -1318,6 +1321,7 @@ HTML;
                 AND default_vendor_id = 0
                 AND p.inUse = 1
                 AND p.numflag & (1 << 19) = 0
+                AND p.description NOT LIKE '%BOGO%'
                 AND upc NOT IN (
                     SELECT upc FROM {$this->ALTDB}.doNotTrack 
                     WHERE method = 'getProdMissingVendor'   

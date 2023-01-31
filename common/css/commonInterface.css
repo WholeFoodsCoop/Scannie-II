@@ -346,7 +346,6 @@ div.insideLeftFoot, div.insideRightFoot {
     width: 500px;
     height: 350px;
     border: 1px solid transparent;
-    background: -moz-linear-gradient(bottom right,#8c81d6,#b7b4cc);
     border-radius: 5px;
 }
 .insideTest {

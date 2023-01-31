@@ -132,19 +132,21 @@ HTML;
     private function getNarrowItems($dbc,$upcs,$storeID) {
         list($inStr, $args) = $dbc->safeInClause($upcs);
         $args[] = $storeID;
-        $prep = $dbc->prepare("SELECT p.upc 
+        $prep = $dbc->prepare("SELECT p.upc
             FROM SignProperties AS p
                 LEFT JOIN FloorSectionProductMap AS f ON p.upc=f.upc
                 LEFT JOIN FloorSections AS s ON f.floorSectionID=s.floorSectionID
                 LEFT JOIN products ON p.upc=products.upc
+                LEFT JOIN SignProperties AS sp ON sp.upc=p.upc AND sp.storeID=p.storeID
             WHERE p.upc IN ({$inStr}) 
                 AND p.storeID = ?
                 AND (
-                    p.narrow = 1
+                    sp.narrow = 1
                         OR ( s.name like '%Bev%' )
                     )
             GROUP BY p.upc");
         $res = $dbc->execute($prep,$args);
+        echo $dbc->error();
         echo $dbc->error();
         $td = "";
         $rUpcs = array();
