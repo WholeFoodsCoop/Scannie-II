@@ -42,6 +42,8 @@ class UnfiBreakdowns extends WebDispatch
             WHERE b.batchID >= ?
                 AND b.batchID <= ?
                 AND m.superID <> 1
+# DON'T INCLUDE NCG BOGO ITEMS
+                AND bl.salePrice <> p.normal_price
             GROUP BY bl.upc
             ORDER BY bl.batchID
         ");
