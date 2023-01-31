@@ -53,7 +53,8 @@ class NotYetExistSrpAdjustment extends PageLayoutA
             }
 
             $args = array($vendorID);
-            $prep = $dbc->prepare("SELECT upc, brand, description, cost, srp FROM vendorItems WHERE vendorID = ?");
+            $prep = $dbc->prepare("SELECT upc, brand, description, cost, srp FROM vendorItems WHERE vendorID = ?
+                AND ABS(cost - srp) < 1");
             $res = $dbc->execute($prep, $args);
 
             $dbc->startTransaction();
@@ -63,7 +64,7 @@ class NotYetExistSrpAdjustment extends PageLayoutA
                 $description = $row['description'];
                 $cost = $row['cost'];
                 $srp = $row['srp'];
-                $newSrp = round($cost / (1 - 0.43), 2);
+                $newSrp = $cost / (1 - 0.43);
                 $newSrp = $round->round($newSrp);
                 if (!array_key_exists($upc, $prodList)) {
                     if ($srp < $newSrp) {
