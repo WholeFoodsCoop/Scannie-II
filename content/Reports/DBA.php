@@ -10,6 +10,7 @@ class DBA extends PageLayoutA
 
     protected $must_authenticate = true;
     protected $auth_types = array(2);
+    protected $title = "DBA Report";
 
     public function preprocess()
     {
@@ -58,6 +59,11 @@ HTML;
             <label>Watch:</label>
             <input type="number" value=0 min=0 max=1 name="watch_n" id="watch_n" class="form-control" />
             <span id="watch_v" style="position: absolute; top: 40px; left: 10px; background: white; color: red;">OFF</span>
+        </div>
+        <div class="form-group" style="position: relative">
+            <ul>
+                <li>Go to <a href="QuickQueryEditor.php">Quick Query Editor</a></li>
+            <ul>
         </div>
         <h4>Saved Queries</h4>
         <input type="text" id="saved-queries-filter" class="form-control form-control-sm small">
@@ -389,6 +395,16 @@ textarea.form-control {
     display: inline-block;
     height: 25px;
 }
+HTML;
+    }
+
+    public function helpContent()
+    {
+        return <<<HTML
+<h4>{$this->title}</h4>
+<p>Write a custom query in the textarea (vim command based), or search/click 
+    <b>Saved Queries</b> to execute previously defined queries.</p>
+<p><b>Quick Queries</b> can be defined by following the <b>Quick Query Editor</b> link.
 HTML;
     }
 

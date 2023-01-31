@@ -10,14 +10,41 @@ class QuickQueryEditor extends PageLayoutA
 
     protected $must_authenticate = true;
     protected $auth_types = array(2);
+    protected $title = "Quick Query Editor";
 
     public function preprocess()
     {
         $this->displayFunction = $this->pageContent();
         $this->__routes[] = "post<name>";
         $this->__routes[] = "post<query>";
+        $this->__routes[] = "post<createNew>";
 
         return parent::preprocess();
+    }
+
+    public function postCreateNewView()
+    {
+        $dbc = scanLib::getConObj('SCANALTDB'); 
+        $name = FormLib::get('newQueryName');
+        $text = FormLib::get('newQueryText');
+        $id = FormLib::get('userID');
+       
+        $args = array($name, $text, $id);
+        $prep = $dbc->prepare("INSERT INTO quickQueries (name, query, user) VALUES (?, ?, ?)"); 
+        $res = $dbc->execute($prep, $args);
+        $saved = ($er = $dbc->error()) ? "<div class=\"alert alert-success\">$er</div>" : "<div class=\"alert alert-success\" align=\"center\">Saved!</div>";
+
+        $html = "<div>$saved</div>".$this->pageContent();
+        return <<<HTML
+<div class="row" style="width: 100%; padding-top: 24px;">
+    <div class="col-lg-2"></div>
+    <div class="col-lg-8">
+        $saved
+    </div>
+    <div class="col-lg-2"></div>
+</div>
+{$this->pageContent()}
+HTML;
     }
 
     public function postNameHandler()
@@ -67,11 +94,34 @@ class QuickQueryEditor extends PageLayoutA
                 nl2br($query)
             );
         }
+        $USER_ID = $_COOKIE['user_id'];
 
         return <<<HTML
 <div class="row" style="width: 100%; padding-top: 24px;">
     <div class="col-lg-2"></div>
     <div class="col-lg-8">
+        <div class="form-group">
+            <ul>
+                <li>Go to <a href="DBA.php">DBA Report<a></li>
+            </ul>
+        </div>
+        <form name="newQuery" method="post" action="QuickQueryEditor.php" style="border: 1px solid #F3F3F3; padding: 25px">
+            <h4>Define New</h4>
+            <input type="hidden" name="createNew" value="1" />
+            <input type="hidden" name="userID" value="$USER_ID" />
+            <div class="form-group">
+                <label for="newQueryName">New Query Name</label>
+                <input class="form-control" name="newQueryName" id="newQueryName" type="text" />
+            </div>
+            <div class="form-group">
+                <label for="newQueryText">New Query Body</label>
+                <textarea class="form-control" name="newQueryText" id="newQueryText" rows=10></textarea>
+            </div>
+            <div class="form-group">
+                <input class="btn btn-default" type="submit" />
+            </div>
+        </form>
+        <h4>Edit Existing</h4>
         <table class="table table-bordered"><thead></thead><tbody>$td</tbody></table>
     </div>
     <div class="col-lg-2"></div>
@@ -140,6 +190,17 @@ JAVASCRIPT;
     public function cssContent()
     {
         return <<<HTML
+label {
+    font-weight: bold;
+}
+HTML;
+    }
+
+    public function helpContent()
+    {
+        return <<<HTML
+<h4>{$this->title}</h4>
+<p>Edit any field to alter an existing query.</p>
 HTML;
     }
 
