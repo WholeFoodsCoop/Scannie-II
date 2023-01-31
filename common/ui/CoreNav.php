@@ -19,6 +19,10 @@ Class coreNav
     public function navBar()
     {
         include(__DIR__.'/../../config.php');
+        include(__DIR__.'/NavData.php');
+        // $navData = array containing navbar data
+        //var_dump($navData);
+
         $helptoggle = <<<JAVASCRIPT
 var hidden = $('#help-contents').is(':visible');
 if (hidden == false) {
@@ -28,6 +32,42 @@ if (hidden == false) {
     $('#help-contents').hide();
 }
 JAVASCRIPT;
+    
+        $type = null;
+        $type = $_COOKIE['user_type'];
+        $navRet = '';
+
+        if ($type == 2) {
+            $navRet .= "<li class=\"nav-item dropdown\">
+                <a class=\"nav-link \" role=\"button\" data-toggle=\"\" aria-haspopup=\"true\" aria-expanded=\"false\">
+                    <span style=\"color: plum; border: 1px solid plum; padding: 4px; background-color: rgba(255,55,0,0.2); font-size: 12px; opacity: 0.9;
+                        border-radius: 3px\">ADMIN MODE</span>
+                </a>
+            </li>";
+        }
+
+        foreach ($navData as $header => $data) {
+            $navRet .= "<li class=\"nav-item dropdown\">";
+            $navRet .= "<a class=\"nav-link dropdown-toggle\" role=\"button\" data-toggle=\"dropdown\" aria-haspopup=\"true\" aria-expanded=\"false\"
+                        onclick=\"dropdownMenuClick('$header');\">$header</a>";
+            $navRet .= "<div class=\"dropdown-menu\" aria-labelledby=\"navbarDropdown\" id=\"$header\">";
+            foreach ($data as $i => $row) {
+                if ($type >= $row['user_type'] && $row['user_type'] > 0) {
+                    // only show user_type == 2 pages if user_type > 1
+                    if ($row['type'] == 'link') {
+                        $navRet .= "<a class=\"dropdown-item\" href=\"http://{$MY_ROOTDIR}/content/{$row['url']}\">{$row['text']}</a>";
+                    } elseif ($row['type'] == 'heading') {
+                        $navRet .= "<div class=\"nav-item nav-label\"><span class=\"nav-label\">{$row['text']}</span></div>";
+                    } elseif ($row['type'] == 'help') {
+                        $navRet .= "<a class=\"dropdown-item\" onclick=\"{$helptoggle}\" ><strong>Help!</strong></a>";
+                    }
+                }
+            }
+            $navRet .= "</div>";
+            $navRet .= "</li>";
+        }
+        //var_dump($navRet);
+        
 
         $DIR = __DIR__;
         $user = null;
@@ -98,89 +138,7 @@ HTML;
           <a class="dropdown-item" href="http://{$FANNIE_ROOTDIR}/../IS4C/pos/is4c-nf/">POS on Key</a>
         </div>
       </li>
-      <!--
-      <li class="nav-item">
-        <a class="nav-link" >Link</a>
-      </li>
-      -->
-      $admin
-      <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-            onclick="dropdownMenuClick('productsMenuOpts');">
-            Products 
-        </a>
-        <div class="dropdown-menu" aria-labelledby="navbarDropdown" id="productsMenuOpts">
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/ProdUserChangeReport.php">Edits by User</a>
-          <!--<a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/FloorSectionMapper.php">Floor Section Mapper</a>-->
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/LastSoldDates.php?paste_list=1">Last Sold</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/LocalFlagReport.php">Local Flag Discrep</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/PendingAction.php">Pending Action</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/SignAlias.php">Sign Alias</a>
-          <!--<a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/CheckUnfiWhs.php">UNFI Warehouse</a>-->
-        </div>
-      </li>
-      <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-            onclick="dropdownMenuClick('reportsMenuOpts');">
-            Reports 
-        </a>
-        <div class="dropdown-menu" aria-labelledby="navbarDropdown" id="reportsMenuOpts">
-          <div class="nav-item nav-label" align=""><span class="nav-label">Cashless</span></div>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Tables/CashlessCheckPage.php">Cashless Transactions</a>
-          <div class="nav-item nav-label" align=""><span class="nav-label">Tables</span></div>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Tables/CoopDealsFile.php">Coop Deals File Report</a>
-          <div class="nav-item nav-label" align=""><span class="nav-label">Reports</span></div>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/Batches/BatchReview/BatchReviewPage.php">Batch Review Report</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/BatchHistory.php">Batch Activity Report (All)</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/TransCommentView.php">CM Transaction Review</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/DeliReusePluReport.php">Deli, Find PLUs to Reuse</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/PriceRuleTypeReport.php">Price Rule Report</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/Batches/CoopDeals/CoopDealsReview.php">Q.A. & Breakdowns</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Reports/VendorReviewSchedule.php">Vendor Review Schedule</a>
-        </div>
-      </li>
-      <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-            onclick="dropdownMenuClick('scanningMenuOpts');">
-            Scanning
-        </a>
-        <div class="dropdown-menu" aria-labelledby="navbarDropdown" id="scanningMenuOpts">
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Home/Dashboard.php">Scan Dept. <strong>Dashboard</strong></a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/BatchCheck/newpage.php"><strong style="color: green">Batch Check</strong></a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/AuditScanner/ProductScanner.php"><strong style="color: #4286f4">Audit</strong> Scanner</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/AuditScanner/AuditReport.php"><strong style="color: #4286f4">Audit</strong> Report</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/AuditScanner/BasicsScan.php"><strong style="color: purple">Basics</strong> Scan</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/ScannerSettings.php">Scanner Settings</a>
-          <!--
-          <div class="dropdown-divider"></div>
-          <a class="dropdown-item" ></a>
-          -->
-        </div>
-      </li>
-      <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-            onclick="dropdownMenuClick('miscMenuOpts');">
-            Misc
-        </a>
-        <div class="dropdown-menu" aria-labelledby="navbarDropdown" id="miscMenuOpts">
-          <div class="nav-item nav-label" align=""><span class="nav-label">Misc. Pages</span></div>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Finance/FindPurchaseOrders.php">Find Purchase Orders</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Tables/OAMUsageReport.php">OAM Usage Report</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Testing/PrintMultipleReceipts.php">Print Multiple Receipts</a>
-          <div class="nav-item nav-label" align=""><span class="nav-label">Misc. Utils.</span></div>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Item/Popups.php">Popups</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Links/Links.php">Useful Links</a>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Scanning/AuditScanner/KanteenScanner.php">Klean Kanteen Scanner</a>
-          <div class="nav-item nav-label" align=""><span class="nav-label">Misc. Tasks</span></div>
-          <a class="dropdown-item" href="http://{$MY_ROOTDIR}/content/Testing/InUseDateTask.php">InUseDate Task</a>
-          <div class="nav-item nav-label" align=""><span class="nav-label">Help</span></div>
-          <a class="dropdown-item" onclick="{$helptoggle}" ><strong>Help!</strong></a>
-        </div>
-      <!--
-      <li class="nav-item">
-        <a class="nav-link disabled" >Disabled</a>
-      </li>
-      -->
+      $navRet
     </ul>
     <div id="nav-search-container">
     <div style="float: left; display: inline-block; color: white; margin-right: 24px; 
