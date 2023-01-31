@@ -11,7 +11,7 @@ if (!class_exists('PriceRounder')) {
 class AuditReport extends PageLayoutA
 {
 
-    public $columns = array('check', 'upc', 'sku', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
+    public $columns = array('check', 'upc', 'sku', 'alias', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
         'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
         'scalePLU', 'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN', 'caseCost');
 
@@ -630,6 +630,8 @@ class AuditReport extends PageLayoutA
                 p.store_id,
                 p.upc,
                 v.sku,
+                va.sku AS alias,
+                va.isPrimary,
                 p.brand,
                 u.brand AS signBrand,
                 p.description AS description,
@@ -664,7 +666,7 @@ class AuditReport extends PageLayoutA
                 p.last_sold,
                 pr.reviewed,
                 CASE
-                    WHEN p.size <> 0 THEN p.size ELSE v.size
+                    WHEN p.size <> 0 THEN CONCAT(p.size, ' ', p.unitofmeasure) ELSE CONCAT(v.size, ' ', p.unitofmeasure)
                 END AS size,
                 v.units,
                 c.previousCost,
@@ -696,6 +698,7 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN subdepts ON subdepts.subdept_no=p.subdept AND subdepts.dept_ID=p.department
                 LEFT JOIN prodFlagsListView AS pf ON pf.upc=p.upc AND pf.storeID=p.store_id
                 LEFT JOIN FloorSectionsListView AS fslv ON fslv.upc=p.upc AND fslv.storeID=p.store_id
+                LEFT JOIN VendorAliases AS va ON va.vendorID=p.default_vendor_id AND va.upc=p.upc
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
                 AND p.store_id = ?
@@ -738,7 +741,7 @@ class AuditReport extends PageLayoutA
         }
 
         $td = "";
-        $csv = "UPC, SKU, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UNITS, NETCOST, COST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CAST COST, NOTES\r\n";
+        $csv = "UPC, SKU, ALIAS, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UNITS, NETCOST, COST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CAST COST, NOTES\r\n";
 
             //$prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDesecription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $autoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
         $textarea = "<div style=\"position: relative\">
@@ -750,6 +753,7 @@ class AuditReport extends PageLayoutA
         <tr id=\"filter-tr\">
             <td title=\"upc\" data-column=\"upc\"class=\"upc column-filter\"upc</td>
             <td title=\"sku\" data-column=\"sku\"class=\"sku column-filter\"></td>
+            <td title=\"alias\" data-column=\"alias\"class=\"alias column-filter\"></td>
             <td title=\"band\" data-column=\"brand\"class=\"brand column-filter\"></td>
             <td title=\"sign-brand\" data-column=\"sign-brand\"class=\"sign-brand column-filter\"></td>
             <td title=\"description\" data-column=\"description\"class=\"description column-filter\"></td>
@@ -792,6 +796,7 @@ class AuditReport extends PageLayoutA
         <tr>
             <th class=\"upc\">upc</th>
             <th class=\"sku\">sku</th>
+            <th class=\"alias\">alias</th>
             <th class=\"brand\">brand</th>
             <th class=\"sign-brand \">sign-brand</th>
             <th class=\"description\">description</th>
@@ -805,8 +810,8 @@ class AuditReport extends PageLayoutA
             <th class=\"sale\">sale</th>
             <th class=\"autoPar\">autoPar(*7)</th>
             <th class=\"margin_target_diff\">margin, target, diff</th>
+            <th class=\"rsrp\">raw srp</th>
             <th class=\"srp\">srp</th>
-            <th class=\"rsrp\">round srp</th>
             <th class=\"prid\">prid</th>
             <th class=\"dept\">dept</th>
             <th class=\"subdept\">subdept</th>
@@ -845,6 +850,11 @@ class AuditReport extends PageLayoutA
             $uLink = '<a class="upc" href="../../../../git/fannie/item/ItemEditorPage.php?searchupc='.$upc.
                 '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
             $sku = $row['sku'];
+            $alias = $row['alias'];
+            $isPrimary = $row['isPrimary'];
+            if ($isPrimary == 1) {
+                $alias = "<span style=\"background-color: #CBF6FF\">$alias [P]</span>";
+            }
             list($recentPurchase, $received) = $this->getRecentPurchase($dbc,$upc);
             $brand = $row['brand'];
             //$autoPar = '';
@@ -938,6 +948,7 @@ class AuditReport extends PageLayoutA
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku\">$sku</td>";
+            $td .= "<td class=\"alias\">$alias</td>";
             $td .= "<td class=\"brand editable editable-brand\" data-table=\"products\"
                 style=\"text-transform:uppercase;\">$brand</td>";
             $td .= "<td class=\"sign-brand editable editable-brand \" data-table=\"productUser\">$signBrand</td>";
@@ -1003,7 +1014,7 @@ class AuditReport extends PageLayoutA
             $brand = str_replace(',', '', $brand);
             $autoPar = str_replace("&#9608;", " | ", $autoPar);
 
-            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
+            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
             $prepCsv = str_replace("&nbsp;", "", $prepCsv);
             $prepCsv = str_replace("\"", "", $prepCsv);
             $csv .= "$prepCsv" . "\r\n";
@@ -1110,17 +1121,17 @@ HTML;
             $x |= 1 << 0;
             $x |= 1 << 1;
             $x |= 1 << 2;
-            $x |= 1 << 3;
-            $x |= 1 << 5;
-            $x |= 1 << 7;
+            $x |= 1 << 4;
+            $x |= 1 << 6;
             $x |= 1 << 8;
             $x |= 1 << 9;
-            $x |= 1 << 12;
+            $x |= 1 << 10;
             $x |= 1 << 13;
             $x |= 1 << 14;
-            $x |= 1 << 19;
-            $x |= 1 << 27;
+            $x |= 1 << 15;
+            $x |= 1 << 20;
             $x |= 1 << 28;
+            $x |= 1 << 29;
             $_SESSION['columnBitSet'] = $x;
         }
 
@@ -1263,7 +1274,7 @@ HTML;
             $noteStr .= "<option value=\"".$k."\">".$option."</option>";
         }
         $noteStr .= "</select>";
-        $nFilter = "<div style=\"font-size: 12px; padding: 10px;\"><b>Note Filter</b>:$noteStr</div>";
+        $nFilter = "<div style=\"font-size: 12px;\"><b>Note Filter</b>:$noteStr</div>";
 
         $columns = $this->columns;
         $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
@@ -1411,17 +1422,32 @@ $reviewForm
         <button class="btn btn-default btn-sm" type="submit" id="loadCatBtn">Load Catalog</button>
     </div>
 </form>
-$nFilter
-
-<div style="font-size: 12px; padding: 10px;">
-    <a href="AuditReport.php?exportExcel=1" download>Export Excel</a>
+<div class="row">
+    <div class="col-lg-2">
+        <div style="font-size: 12px;">
+            <li><a href="AuditReport.php?exportExcel=1" download>Export to Excel (CSV)</a></li>
+        </div>
+    </div>
+    <div class="col-lg-2">
+        <div style="font-size: 12px;">
+            <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label>
+            <input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="" checked>
+        </div>
+    </div>
+    <div class="col-lg-2">
+    </div>
+    <div class="col-lg-2">
+    </div>
+    <div class="col-lg-2">
+    </div>
+    <div class="col-lg-2">
+        $nFilter
+    </div>
 </div>
+
 $columnCheckboxes
 <div class="row">
     <div class="col-lg-6">
-        <div style="font-size: 12px; padding: 10px;">
-            <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label><input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="" checked>
-        </div>
         <div id="countDisplay" style="font-size: 12px; padding: 10px; display: none;">
             <span id="checkedCount"></span> <b>/
             <span id="itemCount"></span></b> ->
