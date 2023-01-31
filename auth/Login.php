@@ -43,6 +43,8 @@ class Login extends PageLayoutA
             setcookie('user_type', '', time() - 3600, '/');
             unset($_COOKIE['user_name']);
             setcookie('user_name', '', time() - 3600, '/');
+            unset($_COOKIE['user_id']);
+            setcookie('user_id', '', time() - 3600, '/');
             unset($_COOKIE['session_token']);
             setcookie('session_token', '', time() - 3600, '/');
             $expired = 1;
@@ -63,7 +65,8 @@ class Login extends PageLayoutA
             ");
             $result = $dbc->execute($query,$curUser);
             $hash = $dbc->fetchRow($result);
-            if ( hash_equals($hash[0], crypt($_POST['pw'], $hash[0])) ) {
+            //if ( hash_equals($hash[0], crypt($_POST['pw'], $hash[0])) ) {
+            if (password_verify($_POST['pw'], $hash[0]) == true) {
                 $queryB = $dbc->prepare("SELECT name, type, id FROM ScannieAuth WHERE name = ? ;");
                 $resultB = $dbc->execute($queryB,$curUser);
                 while ($row = $dbc->fetchRow($resultB)) {
@@ -78,6 +81,11 @@ class Login extends PageLayoutA
                         $cookie_value = $row['name'];
                         setcookie($cookie_name, $cookie_value, time() + (86400 * 30), '/'); // 86400 = 1 day
                     }
+                    if (!isset($_COOKIE['user_id'])) {
+                        $cookie_name = 'user_id';
+                        $cookie_value = $row['id'];
+                        setcookie($cookie_name, $cookie_value, time() + (86400 * 30), '/'); // 86400 = 1 day
+                    }
                     if (!isset($_COOKIE['session_token'])) {
                         $cookie_name = 'session_token';
                         $cookie_value = session_id(); 
@@ -86,7 +94,7 @@ class Login extends PageLayoutA
                 }
                 if ($dbc->error()) $ret .=  $dbc->error();
                 $argsC = array(session_id(), $user_id);
-                $queryC = $dbc->prepare("UPDATE ScannieAuth SET session_token = ? WHERE id = ?");
+                $queryC = $dbc->prepare("UPDATE ScannieAuth SET session_token = ?, last = NOW() WHERE id = ?");
                 $resC = $dbc->execute($queryC, $argsC);
                 $ret .=  "<div align='center' style='margin-top: 25px;'>
                     <div class='alert alert-success login-resp' style='max-width: 90vw;'>logging in <strong>".$curUser."</strong>, please wait.";
