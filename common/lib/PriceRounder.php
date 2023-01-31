@@ -26,7 +26,7 @@
   API class to define rounding rules
   used when setting prices
 */
-class PriceRounder 
+class PriceRounder
 {
     /**
       The round function takes a numeric price and returns
@@ -35,9 +35,6 @@ class PriceRounder
       @param $extra_parameters [array] optional extra arguments
         if pricing rules are extremely complex
       @return [decimal] rounded price
-
-      This function will always round so the return price
-      ends in a 9.
     */
     public function round($price, $extra_parameters=array())
     {
@@ -46,20 +43,16 @@ class PriceRounder
 
         // acceptible price endings by $endingCaps
         $endings = array(
-            0 => array(0.29, 0.39, 0.49, 0.69, 0.79, 0.89, 0.99),
-            1 => array(0.19, 0.39, 0.49, 0.69, 0.89, 0.99),
-            2 => array(0.39, 0.69, 0.99),
-            3 => array(0.69, 0.99),
-            4 => array(0.99),
+            0 => array(0.19, 0.29, 0.39, 0.49, 0.59,  0.69, 0.79, 0.89, 0.99),
+            1 => array(0.39, 0.69, 0.99),
+            2 => array(0.99)
         );
-        $endingCaps = array(0.99, 2.99, 5.99, 9.99, 9999.00);
+        $endingCaps = array(6.99, 14.99, 9999.00);
         // special round defines when to round down by $endingCaps
         $specialRound = array(
             0 => 0,
             1 => 0.16,
-            2 => 0.16,
-            3 => 0.30,
-            4 => 0.29
+            2 => 0.30
         );
 
         $end = substr($price, -2);
