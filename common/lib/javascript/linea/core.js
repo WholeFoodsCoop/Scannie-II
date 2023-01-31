@@ -21,8 +21,15 @@
   the field specified by the selctor and then either the callback is
   triggered, if present, or the closest form is submitted
 */
-function lineaBarcode(upc, selector, callback) {
-    upc = upc.substring(0,upc.length-1);
+function lineaBarcode(upc, type, selector, callback) {
+    if (typeof upc === 'undefined') {
+        return;
+    }
+    if (type == 'Code 128') {
+        // do not remove last digit
+    } else {
+        upc = upc.substring(0,upc.length-1);
+    }
     if ($(selector).length > 0){
         $(selector).val(upc);
         if (typeof callback === 'function') {
@@ -30,11 +37,6 @@ function lineaBarcode(upc, selector, callback) {
         } else {
             $(selector).closest('form').submit();
         }
-        //let main_form_exists = document.getElementById('my-form');
-        //if (main_form_exists != null) {
-        //    document.forms['main_form'].submit();
-        //}
-        //alert(main_form_exists);
     }
 }
 
@@ -46,7 +48,7 @@ function lineaBarcode(upc, selector, callback) {
 */
 var IPC_PARAMS = { selector: false, callback: false };
 function ipcWrapper(upc, typeID, typeStr) {
-    lineaBarcode(upc, IPC_PARAMS.selector, IPC_PARAMS.callback);
+    lineaBarcode(upc, type, IPC_PARAMS.selector, IPC_PARAMS.callback);
 }
 
 /**
@@ -88,14 +90,23 @@ function enableLinea(selector, callback) {
     if (typeof WebBarcode != 'undefined') {
         WebBarcode.onBarcodeScan(function(ev) {
             var data = ev.value;
-            lineaBarcode(data, selector, callback);
+            var type = ev.type;
+            lineaBarcode(data, type, selector, callback);
+            //showAnythingOnScren(ev.type)
         });
     }
+
+    document.addEventListener("BarcodeScanned", function (ev) {
+        var data = ev.value;
+        lineaBarcode(data, type, selector, callback);
+    }, false);
 
     // for webhub
     IPC_PARAMS.selector = selector;
     IPC_PARAMS.callback = callback;
-    WebHub.Settings.set({ barcodeFunction: "ipcWrapper" });
+    if (typeof WebHub != 'undefined') {
+        WebHub.Settings.set({ barcodeFunction: "ipcWrapper" });
+    }
 
     function lineaSilent() {
         if (typeof cordova.exec != 'function') {
@@ -115,7 +126,7 @@ function enableLinea(selector, callback) {
     Object.defineProperty(socketm, "value", {
         get: function() { return this._value; },
         set: function(v) {
-            lineaBarcode(v, selector, callback);
+            lineaBarcode(v, type, selector, callback);
         }
     });
     document.body.appendChild(socketm);
@@ -143,3 +154,8 @@ function lineaVibrate() {
     }
 }
 
+function showAnythingOnScren(object)
+{
+    //object = JSON.stringify(object);
+    $('body').prepend('IGNORE ME: ' + object); 
+}
