@@ -338,6 +338,19 @@ class scanLib
         return $upc;
     }
 
+    public function specialBrandStrFix($inStr)
+    {
+        $outStr = $inStr;
+        // ucwords must be called before special case is checked, make sure special case strings are in ucwords format
+        $specialCase = array('Mn', 'Wi', 'Tvp', 'Tsp', 'Bbq', 'Wfc', 'R.w.', 'Ncg', 'J.r.');
+        foreach ($specialCase as $search) {
+            if (strpos(strtolower($inStr), strtolower($search)) !== false) {
+                $outStr = str_replace($search, strtoupper($search), $inStr) ;
+            }
+        }
+
+        return $outStr;
+    }
 
 }
 
