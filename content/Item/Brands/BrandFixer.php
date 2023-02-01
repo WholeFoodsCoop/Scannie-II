@@ -52,6 +52,10 @@ class BrandFixer extends PageLayoutA
             SET p.brand = t.goodName WHERE p.upc IN ($upcStr)");
         $res = $dbc->execute($prep, $args);
 
+        $prep = $dbc->prepare("UPDATE products p LEFT JOIN vendorItems AS v ON v.upc=p.upc
+            SET v.brand = p.brand WHERE p.upc IN ($upcStr)");
+        $res = $dbc->execute($prep, $args);
+
         return false;
 
     }
