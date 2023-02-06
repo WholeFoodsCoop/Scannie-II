@@ -40,6 +40,7 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<loadList>';
         $this->__routes[] = 'post<deleteList>';
         $this->__routes[] = 'post<vendCat>';
+        $this->__routes[] = 'post<brandList>';
         $this->__routes[] = 'post<setStoreID>';
         $this->__routes[] = 'get<exportExcel>';
 
@@ -67,6 +68,26 @@ class AuditReport extends PageLayoutA
         $_SESSION['scrollMode'] = $scrollMode;
 
         return true;
+    }
+
+    public function postBrandListHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $brand = FormLib::get('brandList');
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+
+        $args = array($brand);
+        $prep = $dbc->prepare("SELECT upc FROM products WHERE TRIM(brand) = TRIM(?)");
+        $res = $dbc->execute($prep, $args);
+        $items = array();
+        while ($row = $dbc->fetchRow($res)) {
+            $items[] = $row['upc'];
+        }
+
+        $this->loadVendorCatalogHandler($items, $username, $storeID);
+
+        return header("location: AuditReport.php?upc=$items[0]");
     }
 
     public function postVendCatHandler()
@@ -1174,6 +1195,20 @@ HTML;
              $vselect .= "<option value='$vid'>$vname</option>";
          }
 
+        $bselect = '<option value="">Select A Brand</option>';
+        $prep = $dbc->prepare("
+            SELECT brand FROM products AS p
+                INNER JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
+            WHERE m.super_name NOT IN ('PRODUCE')
+                AND p.last_sold > NOW() - INTERVAL 30 DAY
+            GROUP BY brand
+        ");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            $brand = trim($row['brand']);
+            $bselect .= "<option value='$brand'>$brand</option>";
+         }
+
 
         $prep = $dbc->prepare("SELECT * FROM woodshed_no_replicate.temp");
         $res = $dbc->execute($prep);
@@ -1410,20 +1445,38 @@ $reviewForm
         <button class="btn btn-default btn-sm" type="submit">Save</button>
     </div>
 </form>
-<form name="loadVendCat" id="loadVendCat" method="post" action="AuditReport.php" style="display: inline-block">
-    <input name="username" type="hidden" value="$username" />
-    <input name="storeID" type="hidden" value="$storeID" />
-    <div class="form-group dummy-form">
-        <select name="vendCat" class="form-control form-control-sm" placeholder="Select a Vendor Catalog">
-            $vselect
-        </select>
-    </div>
-    <div class="form-group dummy-form">
-    <label for="loadFullCat" style="font-size: 14px">Load All</label>
-        <input type="checkbox" name="loadFullCat" id="loadFullCat" value="1" />&nbsp;
-        <button class="btn btn-default btn-sm" type="submit" id="loadCatBtn">Load Catalog</button>
-    </div>
-</form>
+
+<div class="gui-group">
+    <form name="loadVendCat" id="loadVendCat" method="post" action="AuditReport.php" style="display: inline-block">
+        <input name="username" type="hidden" value="$username" />
+        <input name="storeID" type="hidden" value="$storeID" />
+        <div class="form-group dummy-form">
+            <select name="vendCat" class="form-control form-control-sm" placeholder="Select a Vendor Catalog">
+                $vselect
+            </select>
+        </div>
+        <div class="form-group dummy-form">
+        <label for="loadFullCat" style="font-size: 14px">Load All</label>
+            <input type="checkbox" name="loadFullCat" id="loadFullCat" value="1" />&nbsp;
+            <button class="btn btn-default btn-sm" type="submit" id="loadCatBtn">Load</button>
+        </div>
+    </form>
+</div>
+
+<div class="gui-group">
+    <form name="loadBrandList" id="loadBrandList" method="post" action="AuditReport.php" style="display: inline-block">
+        <input name="username" type="hidden" value="$username" />
+        <input name="storeID" type="hidden" value="$storeID" />
+        <div class="form-group dummy-form">
+            <select name="brandList" class="form-control form-control-sm" placeholder="Select a Brand">
+                $bselect
+            </select>
+        </div>
+        <div class="form-group dummy-form">
+            <button class="btn btn-default btn-sm" type="submit" id="loadBrandBtn">Load</button>
+        </div>
+    </form>
+</div>
 <div class="row">
     <div class="col-lg-2">
         <div style="font-size: 12px;">
@@ -1785,8 +1838,10 @@ $('.editable-brand').focusout(function(){
             success: function(response)
             {
                 if (response.saved == 'true') {
+                    $('#ajax-response').show();
                     $('#ajax-response').text("Save Error").css('background-color', '#FF6347').fadeOut(1500);
                 } else {
+                    $('#ajax-response').show();
                     $('#ajax-response').text("Save Success").css('background-color', '#AFE1AF').fadeOut(1500);
                 }
             },
@@ -1811,8 +1866,10 @@ $('.editable-description').focusout(function(){
             success: function(response)
             {
                 if (response.saved == 'true') {
+                    $('#ajax-response').show();
                     $('#ajax-response').text("Save Error").css('background-color', '#FF6347').fadeOut(1500);
                 } else {
+                    $('#ajax-response').show();
                     $('#ajax-response').text("Save Success").css('background-color', '#AFE1AF').fadeOut(1500);
                 }
             },
@@ -2272,6 +2329,10 @@ $('#loadCatBtn').on('click', function(){
     c = confirm("Are you sure you would like to load this catalog? This will replace the current list.");
     return c;
 });
+$('#loadBrandBtn').on('click', function(){
+    c = confirm("Are you sure you would like to load all from this brand? This will replace the current list.");
+    return c;
+});
 
 //var scrollMode = 0;
 $(window).scroll(function () {
@@ -2367,6 +2428,12 @@ JAVASCRIPT;
     public function cssContent()
     {
         return <<<HTML
+div.gui-group {
+    background-color: #F2F2F2;
+    display: inline-block;
+    height: 42px;
+    border-radius: 3px;
+}
 span.margin-container {
     width: 38px;
     display: inline-block;
