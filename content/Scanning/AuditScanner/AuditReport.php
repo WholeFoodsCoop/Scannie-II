@@ -945,16 +945,17 @@ class AuditReport extends PageLayoutA
             $prn = $row['PRN'];
             $scalePLU = ($bycount == null) ? '' : substr($upc, 3, 4);
             $caseCost = $row['caseCost'];
+            $ubid = uniqid();
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku\">$sku</td>";
             $td .= "<td class=\"alias\">$alias</td>";
             $td .= "<td class=\"brand editable editable-brand\" data-table=\"products\"
-                style=\"text-transform:uppercase;\">$brand</td>";
-            $td .= "<td class=\"sign-brand editable editable-brand \" data-table=\"productUser\">$signBrand</td>";
+                style=\"text-transform:uppercase;\" id=\"b$ubid\">$brand</td>";
+            $td .= "<td class=\"sign-brand editable editable-brand \" data-table=\"productUser\" id=\"sb$ubid\">$signBrand</td>";
             $td .= "<td class=\"description editable editable-description\" data-table=\"products\" 
-                style=\"text-transform:uppercase;\" maxlength=\"30\">$description</td>";
-            $td .= "<td class=\"sign-description editable editable-description \" data-table=\"productUser\" spellcheck=\"true\">$signDescription</td>";
+                style=\"text-transform:uppercase;\" maxlength=\"30\" id=\"d$ubid\">$description</td>";
+            $td .= "<td class=\"sign-description editable editable-description \" data-table=\"productUser\" spellcheck=\"true\" id=\"sd$ubid\">$signDescription</td>";
             $td .= "<td class=\"size\">$size</td>";
             $td .= "<td class=\"units\">$units</td>";
             $td .= "<td class=\"netCost editable-cost\" data-vid=\"$vendorID\">$netCost</td>";
@@ -1376,6 +1377,7 @@ $reviewForm
 <div class="form-group dummy-form" style="float: right;">
     {$this->StoreSelector('storeID')}
 </div>
+<div style="font-family: consolas; float: right; margin: 5px; padding: 5px" id="ajax-response"></div>
 <div></div>
 <form name="load" id="loadList" method="post" action="AuditReport.php" style="display: inline-block">
     <input name="username" type="hidden" value="$username" />
@@ -1771,6 +1773,8 @@ $('.editable-brand').focusout(function(){
     var table = $(this).attr('data-table');
     var upc = $(this).parent().find('td.upc').attr('data-upc');
     var brand = $(this).text();
+    var elemID = $(this).attr('id');
+    console.log(elemID);
     brand = encodeURIComponent(brand);
     if (brand != lastBrand) {
         $.ajax({
@@ -1780,9 +1784,10 @@ $('.editable-brand').focusout(function(){
             url: 'AuditReport.php',
             success: function(response)
             {
-                console.log(response);
-                if (response.saved != true) {
-                    // alert user of error
+                if (response.saved == 'true') {
+                    $('#ajax-response').text("Save Error").css('background-color', '#FF6347').fadeOut(1500);
+                } else {
+                    $('#ajax-response').text("Save Success").css('background-color', '#AFE1AF').fadeOut(1500);
                 }
             },
         });
@@ -1796,6 +1801,7 @@ $('.editable-description').focusout(function(){
     var table = $(this).attr('data-table');
     var upc = $(this).parent().find('td.upc').attr('data-upc');
     var description = encodeURIComponent($(this).text());
+    var elemID = $(this).attr('id');
     if (description != lastDescription) {
         $.ajax({
             type: 'post',
@@ -1804,11 +1810,11 @@ $('.editable-description').focusout(function(){
             url: 'AuditReport.php',
             success: function(response)
             {
-                console.log(response);
-                if (response.saved != true) {
-                    // alert user of error
+                if (response.saved == 'true') {
+                    $('#ajax-response').text("Save Error").css('background-color', '#FF6347').fadeOut(1500);
+                } else {
+                    $('#ajax-response').text("Save Success").css('background-color', '#AFE1AF').fadeOut(1500);
                 }
-                var test = $(this).parent();
             },
         });
     }
