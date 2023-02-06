@@ -1183,7 +1183,7 @@ HTML;
         }
         $datalist .= "</datalist>";
 
-        $vselect = '<option value="">Select A Vendor Catalog To Load</option>';
+        $vselect = '<option value="">Load Vendor Catalog</option>';
         $curVendor = FormLib::get('vendor');
         $prep = $dbc->prepare("SELECT vendorName, vendorID FROM vendors 
             WHERE vendorID NOT IN (-2,-1,1,2)
@@ -1195,7 +1195,7 @@ HTML;
              $vselect .= "<option value='$vid'>$vname</option>";
          }
 
-        $bselect = '<option value="">Select A Brand</option>';
+        $bselect = '<option value="">Load All By Brand</option>';
         $prep = $dbc->prepare("
             SELECT brand FROM products AS p
                 INNER JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
@@ -1414,37 +1414,44 @@ $reviewForm
 </div>
 <div style="font-family: consolas; float: right; margin: 5px; padding: 5px" id="ajax-response"></div>
 <div></div>
-<form name="load" id="loadList" method="post" action="AuditReport.php" style="display: inline-block">
-    <input name="username" type="hidden" value="$username" />
-    <input name="storeID" type="hidden" value="$storeID" />
-    <div class="form-group dummy-form">
-        <select name="loadList" class="form-control form-control-sm">
-            <option val=0>Saved Lists</option>
-            $savedLists
-        </select>
-    </div>
-    <div class="form-group dummy-form">
-        <button class="btn btn-default btn-sm" type="submit">Load</button>
-    </div> |
-    $deleteList
-    $datalist
-</form>
+
+<div class="gui-group">
+    <form name="load" id="loadList" method="post" action="AuditReport.php" style="display: inline-block">
+        <input name="username" type="hidden" value="$username" />
+        <input name="storeID" type="hidden" value="$storeID" />
+        <div class="form-group dummy-form">
+            <select name="loadList" class="form-control form-control-sm">
+                <option val=0>Saved Lists</option>
+                $savedLists
+            </select>
+        </div>
+        <div class="form-group dummy-form">
+            <button class="btn btn-default btn-sm" type="submit">Load</button>
+        </div>
+        $deleteList
+        $datalist
+    </form>
+</div>
+
 <form name="deleteListForm" method="post" action="AuditReport.php" style="display: inline-block">
     <input name="username" type="hidden" value="$username" />
     <input name="storeID" type="hidden" value="$storeID" />
     <input name="deleteList" type="hidden" value="$loadedHTMLSpec" />
 </form>
-<form name="save" id="saveList" method="post" action="AuditReport.php" style="display: inline-block">
-    <input name="username" type="hidden" value="$username" />
-    <input name="storeID" type="hidden" value="$storeID" />
-    $list
-    <div class="form-group dummy-form">
-        <input name="saveAs" class="form-control form-control-sm" list="savedLists" placeholder="Save List As" autocomplete="off"/>
-    </div>
-    <div class="form-group dummy-form">
-        <button class="btn btn-default btn-sm" type="submit">Save</button>
-    </div>
-</form>
+
+<div class="gui-group">
+    <form name="save" id="saveList" method="post" action="AuditReport.php" style="display: inline-block">
+        <input name="username" type="hidden" value="$username" />
+        <input name="storeID" type="hidden" value="$storeID" />
+        $list
+        <div class="form-group dummy-form">
+            <input name="saveAs" class="form-control form-control-sm" list="savedLists" placeholder="Save List As" autocomplete="off"/>
+        </div>
+        <div class="form-group dummy-form">
+            <button class="btn btn-default btn-sm" type="submit">Save</button>
+        </div>
+    </form>
+</div>
 
 <div class="gui-group">
     <form name="loadVendCat" id="loadVendCat" method="post" action="AuditReport.php" style="display: inline-block">
@@ -2433,6 +2440,7 @@ div.gui-group {
     display: inline-block;
     height: 42px;
     border-radius: 3px;
+    margin: 5px;
 }
 span.margin-container {
     width: 38px;
