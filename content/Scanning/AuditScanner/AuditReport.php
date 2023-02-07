@@ -2535,7 +2535,21 @@ HTML;
     {
         return <<<HTML
 <ul>
+
+    <li>Head Buttons (Top Grey & Teal Buttons)</li>
+    <ul>
+        <li><strong>Clear Queue</strong> Removes all items from the table.</li>
+        <li><strong>Add Items</strong> Opens a module to paste a list of UPCs to load (or remove) to (or from) list.</li>
+        <li><strong>Scanner (Teal Button)</strong> Navigates user to the Scanner module (leaves this page).</li>
+        <li><strong>[Admin Only] Save Review List</strong> Will save a list (to Saved Lists) of all current items that
+            have <b>notes</b> entered, along with those notes.</li>
+        <li><strong>[Admin Only] Open Review</strong> Takes a snapshot of the costs of items loaded. Once initiated, 
+            the button will change to <strong>Close Review</strong> which will process the changes in cost and record 
+            them in the operational database cost change table (productCostChanges).
+            <b>Only one user can use the Review function at a time</b></li>
+    </ul>
     <li>Definition of Columns</li>
+    <p>Each checkbox in the <strong>Show/Hide Columns</strong> correlates with a column to show or hide in the Audit Report table.</p>
     <ul>
         <li><strong>Check</strong> Show checkboxes for each row.</li>
         <li><strong>UPC</strong> Numerical barcode for each item.</li>
@@ -2573,8 +2587,38 @@ HTML;
         <li><strong>Notes*</strong> Notes can be entered for each product from the Audit Scanner, or from this page.</li>
         <li><strong>Reviewed</strong> Shows the last time each product was reviewed, in respect to Fannie Product Review.</li>
         <li><strong>Cost Change</strong> Most recent cost change, taken only from when the <i>Review</i> button option is used.</li>
-        <li><strong>*<strong> Columns with an asterisk in this list are editable fields.</li>
+        <li><strong>*</strong> Columns with an asterisk in this list are editable fields.</li>
     </ul>
+    <li>Forms & Functions (Grey Boxes)</li>
+    <ul>
+        <li><strong>Saved Lists</strong> Load a previously saved list of items. If a list is already loaded, there will also 
+            be an option to remove this list from Saved Lists.</li>
+        <li><strong>Save List As</strong> Save the current list of items.</li>
+        <li><strong>Load Vendor Catalog</strong> Loads an entire vendor catalog. By default, only items in use (by at least one store)
+            will load. If the <b>Load All</b> checkbox is checked, the entire catalog will be loaded including out-of-use items.</li>
+        <li><strong>Load All By Brand</strong> Loads all items with the selected brand name, regardless of in-use status.</li>
+    </ul>
+    <li>Button Filters</li>
+        <ul>
+            <li><strong>View Unchecked</strong> Will show only column in table that are not checked. ("checked" refers to the status
+                of the checkboxes at the end of each row).</li>
+            <li><strong>View Checked</strong> Shows only checked rows.</li>
+            <li><strong>View All</strong> Shows all rows, regardless of checkboxes.</li>
+            <li><strong>Invert View</strong> inverts shown & hidden rows.</li>
+            <li><strong>[Admin Only] VNC</strong> compares values entered in <b>notes</b> column and <b>netCost</b>.
+                Every row with a match will be highlighted.</li>
+            <li><strong>[Admin Only] Hide VNC</strong> Hides VNC highlighted rows.</li>
+        </ul>
+    <li>Calculators</li>
+    <ul>
+        <li><strong>Average Calculator</strong> Paste a list of numbers here (one number per line) to get the average  
+            and standard deviation. There must be no blank lines for this calculator to function.</li>
+        <li><strong>Simple Input Calculator</strong> Enter data as <number> <function> <number> and hit enter to calculate.
+            Pressing the <b>CL</b> button will clear shown calculations.  eg (enter as) 1.23 * 4.56 <enter></li>
+    </ul>
+    <li>Column Filters</li>
+    <p>Underneath the column header row is a row of blank cells. Enter search criteria in these cells to filter the corresponding
+        column by the string entered.</p>
 </ul>
 HTML;
     }
