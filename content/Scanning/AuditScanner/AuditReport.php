@@ -87,7 +87,7 @@ class AuditReport extends PageLayoutA
 
         $this->loadVendorCatalogHandler($items, $username, $storeID);
 
-        return header("location: AuditReport.php?upc=$items[0]");
+        return header("location: AuditReport.php");
     }
 
     public function postVendCatHandler()
@@ -1206,7 +1206,7 @@ HTML;
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
             $brand = trim($row['brand']);
-            $bselect .= "<option value='$brand'>$brand</option>";
+            $bselect .= "<option value=\"$brand\">$brand</option>";
          }
 
 
