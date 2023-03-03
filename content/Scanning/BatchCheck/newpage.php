@@ -309,14 +309,26 @@ HTML;
         list($in_str, $args) = $dbc->safeInClause($this->upcs);
         $args[] = $storeID;
         $prep = $dbc->prepare("
-            SELECT v.upc, v.sections AS name 
+            SELECT v.upc, v.sections AS name, s.subsection,
+                GROUP_CONCAT(fs.name, ' [', s.subSection, ']' ORDER BY s.subSection ASC SEPARATOR ',') AS completeSections 
             FROM FloorSectionsListView AS v
+                LEFT JOIN FloorSectionProductMap AS m
+                    ON m.upc=v.upc
+                LEFT JOIN FloorSubSections AS s
+                    ON s.floorSectionID=m.floorSectionID
+                        AND s.upc=v.upc
+                INNER JOIN FloorSections AS fs
+                    ON fs.floorSectionID=m.floorSectionID
             WHERE v.upc IN ($in_str)
-                AND v.storeID = ?");
+                AND v.storeID = ?
+            GROUP BY v.upc
+        ");
         $res = $dbc->execute($prep, $args);
         while ($row = $dbc->fetchRow($res)) {
             $upc = $row['upc'];
-            $section = $row['name'];
+            $fSections = $row['name'];
+            $cSections = $row['completeSections'];
+            $section = ($cSections != NULL) ? $cSections : $fSections;
             foreach ($cols as $col) {
                 $data[$upc]['floorsection'] = $section;
             }
