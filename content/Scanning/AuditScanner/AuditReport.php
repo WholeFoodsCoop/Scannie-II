@@ -13,7 +13,7 @@ class AuditReport extends PageLayoutA
 
     public $columns = array('check', 'upc', 'sku', 'alias', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
         'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
-        'scalePLU', 'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN', 'caseCost');
+        'scalePLU', 'mnote', 'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN', 'caseCost');
 
     public function preprocess()
     {
@@ -805,6 +805,7 @@ class AuditReport extends PageLayoutA
             <td title=\"comment\" data-column=\"comment\"class=\"comment column-filter\"></td>
             <td title=\"PRN\" data-column=\"PRN\"class=\"PRN column-filter\"></td>
             <td title=\"caseCost\" data-column=\"caseCost\"class=\"caseCost column-filter\"></td>
+            <td title=\"mnote\" data-column=\"mnote\"class=\"mnote column-filter\"></td>
             <td title=\"notes\" data-column=\"notes\"class=\"notes column-filter\"></td>
             <td title=\"check\" data-column=\"check\" class=\"check column-filter\"></td>
             <td title=\"trash-icon\" data-column=\"trash-icon\" class=\"trash-icon column-filter\"></td> <!-- you cannot filter this column -->
@@ -848,6 +849,7 @@ class AuditReport extends PageLayoutA
             <th class=\"comment\">comment</th>
             <th class=\"PRN\">PRN</th>
             <th class=\"caseCost\">caseCost</th>
+            <th class=\"mnote\">mnote</th>
             <th class=\"notes\">notes</th>
             <th class=\"trash\"></th>
             <th class=\"check\"></th>
@@ -951,6 +953,7 @@ class AuditReport extends PageLayoutA
             $flags = $row['flags'];
             $vendor = $row['vendor'];
             $notes = $row['notes'];
+            $mnote = ($notes != '') ? "<button class=\"btn-mnote\"><b><</b></button>" : null;
             $vendorID = $row['vendorID'];
             $checked = $row['checked'];
             $checked = ($checked == 1) ? 'checked' : '';
@@ -1015,6 +1018,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"comment\">$reviewComments</td>";
             $td .= "<td class=\"PRN\">$prn</td>";
             $td .= "<td class=\"caseCost\">$caseCost</td>";
+            $td .= "<td class=\"mnote\">$mnote</td>";
             $td .= "<td class=\"notes editable editable-notes\">$notes</td>";
             $td .= "<td><span class=\"scanicon scanicon-trash scanicon-sm \"></span></td></td>";
             $td .= "<td class=\"check\"><input type=\"checkbox\" name=\"check\" class=\"row-check\" $checked/></td>";
@@ -1036,7 +1040,7 @@ class AuditReport extends PageLayoutA
             $brand = str_replace(',', '', $brand);
             $autoPar = str_replace("&#9608;", " | ", $autoPar);
 
-            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
+            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$mnote\", \"$notes");
             $prepCsv = str_replace("&nbsp;", "", $prepCsv);
             $prepCsv = str_replace("\"", "", $prepCsv);
             $csv .= "$prepCsv" . "\r\n";
@@ -1152,8 +1156,8 @@ HTML;
             $x |= 1 << 14;
             $x |= 1 << 15;
             $x |= 1 << 20;
-            $x |= 1 << 28;
             $x |= 1 << 29;
+            $x |= 1 << 30;
             $_SESSION['columnBitSet'] = $x;
         }
 
@@ -2427,8 +2431,19 @@ $('#storeSelector-storeID').change(function(){
     });
 });
 
+$('.btn-mnote').click(function(){
+    let newval = $(this).closest('td').next().text();
+    let newvalElm = $(this).closest('td').next();
+    let oldval = $(this).parent().parent().find('td.netCost').text();
+    let oldvalElm = $(this).parent().parent().find('td.netCost');
 
-
+    oldvalElm.focus();
+    oldvalElm.text(newval);
+    oldvalElm.focusout();
+    newvalElm.focus();
+    newvalElm.text('');
+    newvalElm.focusout();
+});
 JAVASCRIPT;
     }
 
