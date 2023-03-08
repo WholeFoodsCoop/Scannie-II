@@ -683,6 +683,7 @@ class AuditReport extends PageLayoutA
                 CASE
                     WHEN vd.margin > 0.01 THEN p.cost / (1 - vd.margin) ELSE p.cost / (1 - dm.margin)
                 END AS rsrp,
+                v.srp AS vsrp,
                 a.checked,
                 p.last_sold,
                 pr.reviewed,
@@ -762,7 +763,7 @@ class AuditReport extends PageLayoutA
         }
 
         $td = "";
-        $csv = "UPC, SKU, ALIAS, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UNITS, NETCOST, COST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CAST COST, NOTES\r\n";
+        $csv = "UPC, SKU, ALIAS, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UNITS, NETCOST, COST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CASE COST, NOTES\r\n";
 
             //$prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDesecription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $autoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
         $textarea = "<div style=\"position: relative\">
@@ -944,6 +945,8 @@ class AuditReport extends PageLayoutA
                     //echo $margin; // this is incorrect
                 }
             }
+            //override srp with value in products
+            $srp = $row['vsrp'];
             $prid = $row['priceRuleType'];
             $dept = $row['dept'];
             $subdept = $row['subdept'];
