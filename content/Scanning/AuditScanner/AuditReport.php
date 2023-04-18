@@ -1134,6 +1134,7 @@ HTML;
     public function postView($demo=false)
     {
         $dbc = scanLib::getConObj();
+        $FANNIE_ROOTDIR = $this->config->vars['FANNIE_ROOTDIR'];
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
         $storeID = (isset($_SESSION['AuditReportStoreID'])) ? $_SESSION['AuditReportStoreID'] : scanLib::getStoreID();
         $loaded = FormLib::get('loaded');
@@ -1232,7 +1233,7 @@ HTML;
         $reviewForm = '';
         //$exportExcelForm = '';
         if ($_COOKIE['user_type'] == 2) {
-            // user is csather
+            // user is admin 
             $tempClass = "btn-secondary";
             $vncBtn = '
         <div class="form-group dummy-form">
@@ -1328,6 +1329,24 @@ HTML;
         }
         $columnCheckboxes .= "</div>";
 
+        $adminModal = '';
+        if ($_COOKIE['user_type'] == 2) {
+            $adminModal = "
+                            <div align=\"center\">
+                                <h4 style=\"text-align: left;\">Sync Items To SMS</h4>
+                                <form method=\"post\" class=\"\" action=\"http://$FANNIE_ROOTDIR/modules/plugins2.0/SMS/scan/SmsProdSyncList.php\" name=\"SmsSync\">
+                                    <div class=\"form-group\">
+                                        <textarea class=\"form-control\" name=\"SyncUpcs\" id=\"SyncUpcs\" rows=\"10\"></textarea>
+                                    </div>
+                                    <div class=\"form-group\">
+                                        <button type=\"submit\" class=\"btn btn-default btn-xs\">Sync</button>
+                                    </div>
+                                </form>
+                            </div>";
+        }
+        // we don't need SMS sync in 2 places right now
+        $adminModal = '';
+
         $modal = "
             <div id=\"upcs_modal\" class=\"modal\">
                 <div class=\"modal-dialog\" role=\"document\">
@@ -1355,6 +1374,10 @@ HTML;
                                     <input type=\"hidden\" name=\"storeID\" value=\"$storeID\" />
                                     <input type=\"hidden\" name=\"username\" value=\"$username\" />
                                 </form>
+                            </div>
+                            <div  style=\"background: repeating-linear-gradient( -45deg, white 0px, white 5px, lightgrey 6px, lightgrey 11px, white 12px);
+                                padding: 10px; border-radius: 5px; \">
+                                $adminModal
                             </div>
                           </div>
                         </div>
@@ -1836,14 +1859,17 @@ var lastBrand = null;
 $('.editable-brand').click(function(){
     lastBrand = $(this).text();
 });
+$('.editable-brand').focus(function(){
+    lastBrand = $(this).text();
+});
 $('.editable-brand').focusout(function(){
     var table = $(this).attr('data-table');
     var upc = $(this).parent().find('td.upc').attr('data-upc');
     var brand = $(this).text();
     var elemID = $(this).attr('id');
     console.log(elemID);
-    brand = encodeURIComponent(brand);
     if (brand != lastBrand) {
+        brand = encodeURIComponent(brand);
         $.ajax({
             type: 'post',
             data: 'setBrand=true&upc='+upc+'&brand='+brand+'&table='+table,
@@ -1866,12 +1892,17 @@ var lastDescription = null;
 $('.editable-description').click(function(){
     lastDescription = $(this).text();
 });
+$('.editable-description').focus(function(){
+    lastDescription = $(this).text();
+});
 $('.editable-description').focusout(function(){
     var table = $(this).attr('data-table');
     var upc = $(this).parent().find('td.upc').attr('data-upc');
-    var description = encodeURIComponent($(this).text());
+    var description = $(this).text();
     var elemID = $(this).attr('id');
     if (description != lastDescription) {
+        console.log(lastDescription+','+description);
+        description = encodeURIComponent($(this).text());
         $.ajax({
             type: 'post',
             data: 'setDescription=true&upc='+upc+'&description='+description+'&table='+table,
