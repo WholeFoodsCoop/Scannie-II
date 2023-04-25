@@ -1330,22 +1330,6 @@ HTML;
         $columnCheckboxes .= "</div>";
 
         $adminModal = '';
-        if ($_COOKIE['user_type'] == 2) {
-            $adminModal = "
-                            <div align=\"center\">
-                                <h4 style=\"text-align: left;\">Sync Items To SMS</h4>
-                                <form method=\"post\" class=\"\" action=\"http://$FANNIE_ROOTDIR/modules/plugins2.0/SMS/scan/SmsProdSyncList.php\" name=\"SmsSync\">
-                                    <div class=\"form-group\">
-                                        <textarea class=\"form-control\" name=\"SyncUpcs\" id=\"SyncUpcs\" rows=\"10\"></textarea>
-                                    </div>
-                                    <div class=\"form-group\">
-                                        <button type=\"submit\" class=\"btn btn-default btn-xs\">Sync</button>
-                                    </div>
-                                </form>
-                            </div>";
-        }
-        // we don't need SMS sync in 2 places right now
-        $adminModal = '';
 
         $modal = "
             <div id=\"upcs_modal\" class=\"modal\">
@@ -1374,10 +1358,6 @@ HTML;
                                     <input type=\"hidden\" name=\"storeID\" value=\"$storeID\" />
                                     <input type=\"hidden\" name=\"username\" value=\"$username\" />
                                 </form>
-                            </div>
-                            <div  style=\"background: repeating-linear-gradient( -45deg, white 0px, white 5px, lightgrey 6px, lightgrey 11px, white 12px);
-                                padding: 10px; border-radius: 5px; \">
-                                $adminModal
                             </div>
                           </div>
                         </div>
@@ -1624,7 +1604,12 @@ HTML;
         $columnBitSet = $_SESSION['columnBitSet'];
         $scrollMode = (isset($_SESSION['scrollMode'])) ? $_SESSION['scrollMode'] : 0;
 
+        $FANNIE_URL = 'git/fannie/';
+        $HOST = $_SERVER['HTTP_HOST'];
+        $syncUrl = "'" . $HOST . '/' . $FANNIE_URL . '/modules/plugins2.0/SMS/scan/SmsProdSyncList.php' . "'";
+
         return <<<JAVASCRIPT
+var syncUrl = $syncUrl;
 var startup = 1;
 var columnSet = $config;
 var tableRows = $('#table-rows').val();
@@ -1793,6 +1778,7 @@ $('.editable-cost').focusout(function(){
                     console.log(checkbox.attr('name'));
                     //checkbox.prop('checked', true);
                     checkbox.trigger('click');
+                    syncItem(upc);
                 } else {
                     /*
                         failure
@@ -1884,6 +1870,7 @@ $('.editable-brand').focusout(function(){
                     $('#ajax-response').show();
                     $('#ajax-response').text("Save Success").css('background-color', '#AFE1AF').fadeOut(1500);
                 }
+                syncItem(upc);
             },
         });
     }
@@ -1917,6 +1904,7 @@ $('.editable-description').focusout(function(){
                     $('#ajax-response').show();
                     $('#ajax-response').text("Save Success").css('background-color', '#AFE1AF').fadeOut(1500);
                 }
+                syncItem(upc);
             },
         });
     }
@@ -2478,6 +2466,22 @@ $('.btn-mnote').click(function(){
     newvalElm.text('');
     newvalElm.focusout();
 });
+
+// Sync to New POS
+var syncItem = function (upc) 
+{
+    $.ajax({
+        url: 'http://'+syncUrl,
+        type: 'post',
+        data: 'SyncUpcs='+upc,
+        success: function(resp) {
+            console.log('success');
+        },
+        complete: function()
+        {
+        }
+    });
+}
 JAVASCRIPT;
     }
 
