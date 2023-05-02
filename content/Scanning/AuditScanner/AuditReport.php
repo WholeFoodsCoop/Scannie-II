@@ -11,7 +11,7 @@ if (!class_exists('PriceRounder')) {
 class AuditReport extends PageLayoutA
 {
 
-    public $columns = array('check', 'upc', 'sku', 'alias', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
+    public $columns = array('check', 'upc', 'sku', 'alias', 'likeCode', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
         'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
         'scalePLU', 'mnote', 'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN', 'caseCost');
 
@@ -652,6 +652,7 @@ class AuditReport extends PageLayoutA
                 p.upc,
                 v.sku,
                 va.sku AS alias,
+                lc.likeCode,
                 va.isPrimary,
                 p.brand,
                 u.brand AS signBrand,
@@ -721,6 +722,7 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN prodFlagsListView AS pf ON pf.upc=p.upc AND pf.storeID=p.store_id
                 LEFT JOIN FloorSectionsListView AS fslv ON fslv.upc=p.upc AND fslv.storeID=p.store_id
                 LEFT JOIN VendorAliases AS va ON va.vendorID=p.default_vendor_id AND va.upc=p.upc
+                LEFT JOIN likeCodeView AS lc ON lc.upc=p.upc
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
                 AND p.store_id = ?
@@ -776,6 +778,7 @@ class AuditReport extends PageLayoutA
             <td title=\"upc\" data-column=\"upc\"class=\"upc column-filter\"upc</td>
             <td title=\"sku\" data-column=\"sku\"class=\"sku column-filter\"></td>
             <td title=\"alias\" data-column=\"alias\"class=\"alias column-filter\"></td>
+            <td title=\"likeCode\" data-column=\"likeCode\"class=\"likeCode column-filter\"></td>
             <td title=\"band\" data-column=\"brand\"class=\"brand column-filter\"></td>
             <td title=\"sign-brand\" data-column=\"sign-brand\"class=\"sign-brand column-filter\"></td>
             <td title=\"description\" data-column=\"description\"class=\"description column-filter\"></td>
@@ -820,6 +823,7 @@ class AuditReport extends PageLayoutA
             <th class=\"upc\">upc</th>
             <th class=\"sku\">sku</th>
             <th class=\"alias\">alias</th>
+            <th class=\"likeCode\">likeCode</th>
             <th class=\"brand\">brand</th>
             <th class=\"sign-brand \">sign-brand</th>
             <th class=\"description\">description</th>
@@ -875,6 +879,7 @@ class AuditReport extends PageLayoutA
                 '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
             $sku = $row['sku'];
             $alias = $row['alias'];
+            $likeCode = $row['likeCode'];
             $isPrimary = $row['isPrimary'];
             if ($isPrimary == 1) {
                 $alias = "<span style=\"background-color: #CBF6FF\">$alias [P]</span>";
@@ -977,6 +982,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku\">$sku</td>";
             $td .= "<td class=\"alias\">$alias</td>";
+            $td .= "<td class=\"likeCode\">$likeCode</td>";
             $td .= "<td class=\"brand editable editable-brand\" data-table=\"products\"
                 style=\"text-transform:uppercase;\" id=\"b$ubid\">$brand</td>";
             $td .= "<td class=\"sign-brand editable editable-brand \" data-table=\"productUser\" id=\"sb$ubid\">$signBrand</td>";
@@ -1043,7 +1049,7 @@ class AuditReport extends PageLayoutA
             $brand = str_replace(',', '', $brand);
             $autoPar = str_replace("&#9608;", " | ", $autoPar);
 
-            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$mnote\", \"$notes");
+            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$mnote\", \"$notes");
             $prepCsv = str_replace("&nbsp;", "", $prepCsv);
             $prepCsv = str_replace("\"", "", $prepCsv);
             $csv .= "$prepCsv" . "\r\n";
@@ -1151,17 +1157,17 @@ HTML;
             $x |= 1 << 0;
             $x |= 1 << 1;
             $x |= 1 << 2;
-            $x |= 1 << 4;
-            $x |= 1 << 6;
-            $x |= 1 << 8;
+            $x |= 1 << 5;
+            $x |= 1 << 7;
             $x |= 1 << 9;
             $x |= 1 << 10;
-            $x |= 1 << 13;
+            $x |= 1 << 11;
             $x |= 1 << 14;
             $x |= 1 << 15;
-            $x |= 1 << 20;
-            $x |= 1 << 29;
+            $x |= 1 << 16;
+            $x |= 1 << 21;
             $x |= 1 << 30;
+            $x |= 1 << 31;
             $_SESSION['columnBitSet'] = $x;
         }
 
@@ -1870,7 +1876,9 @@ $('.editable-brand').focusout(function(){
                     $('#ajax-response').show();
                     $('#ajax-response').text("Save Success").css('background-color', '#AFE1AF').fadeOut(1500);
                 }
-                syncItem(upc);
+                if (table == 'productUser') {
+                    syncItem(upc);
+                }
             },
         });
     }
@@ -1904,7 +1912,9 @@ $('.editable-description').focusout(function(){
                     $('#ajax-response').show();
                     $('#ajax-response').text("Save Success").css('background-color', '#AFE1AF').fadeOut(1500);
                 }
-                syncItem(upc);
+                if (table == 'products') {
+                    syncItem(upc);
+                }
             },
         });
     }
