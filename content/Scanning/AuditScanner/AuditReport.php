@@ -1546,6 +1546,10 @@ $columnCheckboxes
             </div>
             $checkPriceBtn
             $vncBtn
+            <select id="extHideFx" class="form-control form-control-sm">
+                <option value=null>More Filtering Methods</option>
+                <option value="hideNoPar">Hide Rows With 0 AutoPar for both stores</option>
+            </select>
         </div>
     </div>
     <div class="col-lg-3" >
@@ -2492,6 +2496,25 @@ var syncItem = function (upc)
         }
     });
 }
+
+$('#extHideFx').change(function(){
+    let chosen = $(this).find(':selected').val();
+    console.log(chosen);
+    switch (chosen) {
+        case 'hideNoPar':
+            $('tr').each(function(){
+                v = $(this).find('td.autoPar').text();
+                x = v.substring(2,5);
+                y = v.substring(7,10);
+                if (x == '0.0' && y == '0.0') {
+                    $(this).hide();
+                }
+            });
+            break;
+        default:
+            break;
+    }
+});
 JAVASCRIPT;
     }
 
