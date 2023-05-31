@@ -216,6 +216,13 @@ HTML;
     <input type="hidden" id="curQueue" value="$queue"/>
     <span id="hide-old-btn" class="inactive btn btn-default btn-sm" onclick="hideOld(); return false;">Hide <i>Old</i></span>
 </form>
+<div style="border-radius: 2.5px; background-color: #F0F0F0; padding: 5px; margin: 5px;">
+    <div>SHIFT + CLICK table cell to select column</div>
+    <label>Column Selected: </label>
+    <span id="column-filter-selected" style=" padding: 2.5px; border: 1px solid grey; border-radius: 5px;">None</span>
+    <label for="column-filter-input">String To Filter By: </label>
+    <span id="column-filter-input" style=" padding: 2.5px; border: 1px solid grey; border-radius: 5px;" contentEditable=true>Enter String To Filter</span>
+</div>
 HTML;
     }
 
@@ -319,6 +326,7 @@ HTML;
                         AND s.upc=v.upc
                 INNER JOIN FloorSections AS fs
                     ON fs.floorSectionID=m.floorSectionID
+                        AND fs.storeID=v.storeID
             WHERE v.upc IN ($in_str)
                 AND v.storeID = ?
             GROUP BY v.upc
@@ -519,13 +527,13 @@ HTML;
                         display: inline-block; height: 5px; width: 5px;'>&nbsp</span>" : '';
                 }
                 $td .= sprintf("
-                    <tr data-lastsold=\"%s\">
+                    <tr data-lastsold=\"%s\" class=\"mytable\">
                     <td width='110px;'>%s</td>
-                    <td>%s</td>
-                    <td data-note='%s' title='%s'>%s</td>
-                    <td data-extra=\"%s\" title=\"%s\">%s %s</td>
-                    <td>%s</td>
-                    <td class=\"queue-list\">%s</td>
+                    <td data-sc=\"brand\" class=\"filter-brand\">%s</td>
+                    <td data-note='%s' title='%s' data-sc=\"description\" class=\"filter-description\">%s</td>
+                    <td data-extra=\"%s\" title=\"%s\" data-sc=\"deal\" class=\"filter-deal\">%s %s</td>
+                    <td data-sc=\"location\" class=\"filter-location\">%s</td>
+                    <td data-sc=\"queue\" class=\"queue-list filter-queue\">%s</td>
                     <td><button id='queue%s' value='1' class='queue-btn btn btn-info btn-sm'>Good</button></td>
                     <td><button id='queue%s' value='2' class='queue-btn btn btn-warning btn-sm'>Miss</button></td>
                     <td><button id='queue%s' value='99' class='queue-btn btn btn-secondary btn-sm'>DNC</button></td>
@@ -588,6 +596,24 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
+var stripeTable = function(){
+    $('tr.mytable').each(function(){
+        $(this).removeClass('stripe');
+    });
+    $('tr.mytable').each(function(i = 0){
+        if ($(this).is(':visible')) {;
+            if (i % 2 == 0) {
+                $(this).addClass('stripe');
+            } else {
+                $(this).removeClass('stripe');
+            }
+        i++;
+        }
+    });
+
+    return false;
+};
+stripeTable();
 //var stripeRows = function()
 //{
 //    var i = 0;
@@ -721,12 +747,70 @@ HTML;
 //    stripeRows();
 //}); 
 
+
+$('body').append('<input type="hidden" id="keydown" />');
+
+$(document).keydown(function(e){
+    var key = e.keyCode;
+    $('#keydown').val(key);
+});
+$(document).keyup(function(e){
+    var key = e.keyCode;
+    $('#keydown').val(0);
+});
+$(document).mousedown(function(e){
+    if (e.which == 1 && $('#keydown').val() == 16) {
+        e.preventDefault();
+        //console.log('shift click');
+        var target = $(e.target);
+        let attr = target.attr('data-sc');
+        if (typeof attr != 'undefined' && attr !== false) {
+            let text = target.attr('data-sc');
+            //console.log(text);
+            $('#column-filter-selected').text(text);
+        }
+        $('#keydown').val(0);
+    } else if (e.which == 1) {
+        //console.log('left click');
+    }
+});
+
+$('#column-filter-input').keyup(function(){
+    $('tr').each(function(){
+        $(this).show();
+    });
+    var text = $(this).text().toUpperCase();
+    var column = $('#column-filter-selected').text();
+    $('td.filter-'+column).each(function(){
+        var contents = $(this).text();
+        contents = contents.toUpperCase();
+        if (contents.includes(text)) {
+            $(this).closest('tr').show();
+        } else {
+            $(this).closest('tr').hide();
+        }
+    });
+});
+
+$('#column-filter-input').focusout(function(){
+    let text = $(this).text();
+    if (text.length == 0) {
+        $(this).text('Enter String To Filter');
+    }
+});
+$('#column-filter-input').click(function(){
+    $(this).select();
+});
+
 JAVASCRIPT;
     }
 
     public function cssContent()
     {
         return <<<HTML
+.stripe {
+    background-color: #FFFACD;
+}
 .queue-btn {
     width: 50px;
 }
