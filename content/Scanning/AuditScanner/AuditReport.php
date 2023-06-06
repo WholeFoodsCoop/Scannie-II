@@ -765,7 +765,7 @@ class AuditReport extends PageLayoutA
         }
 
         $td = "";
-        $csv = "UPC, SKU, ALIAS, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UNITS, NETCOST, COST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CASE COST, NOTES\r\n";
+        $csv = "UPC, SKU, ALIAS, LIKECODE, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UNITS, NETCOST, COST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CASE COST, NOTES\r\n";
 
             //$prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDesecription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $autoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
         $textarea = "<div style=\"position: relative\">
