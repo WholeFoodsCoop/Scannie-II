@@ -127,10 +127,10 @@ class TrackItemChange extends PageLayoutA
                     if ($col == 'modified') {
                         $date = substr($v, 0, 10);
                         $time = substr($v, 10);
-                        $v = "$date<span style=\"color: grey;\">$time</span>";
+                        $v = "<span class=\"date\">$date</span><span style=\"color: grey;\">$time</span>";
                     }
                     if ($col != 'storeID') {
-                        $td .= "<td>$v</td>";
+                        $td .= "<td class=\"$col\">$v</td>";
                     }
                 }
                 $td .= "</tr>";
@@ -155,10 +155,10 @@ class TrackItemChange extends PageLayoutA
                     if ($col == 'modified') {
                         $date = substr($v, 0, 10);
                         $time = substr($v, 10);
-                        $v = "$date<span style=\"color: grey;\">$time</span>";
+                        $v = "<span class=\"date\">$date</span><span style=\"color: grey;\">$time</span>";
                     }
                     if ($col != 'storeID') {
-                        $td .= "<td style=\"$bold\">$v</td>";
+                        $td .= "<td style=\"$bold\" class=\"$col\">$v</td>";
                     }
                 }
                 $td .= "</tr>";
@@ -170,8 +170,12 @@ class TrackItemChange extends PageLayoutA
         foreach ($columns as $col) {
             $th .= "<th>$col</th>";
         }
+        $this->addScript('http://key/git/fannie/src/javascript/jquery.js');
+        $this->addScript('http://key/git/fannie/src/javascript/Chart.min.js');
 
         return <<<HTML
+
+
 <div class="container-fluid" style="padding-top: 15px;">
     <h5>Track Product Changes</h5>
     <div class="row">
@@ -182,15 +186,24 @@ class TrackItemChange extends PageLayoutA
                 &nbsp;
                     <button type="submit" class="btn btn-default btn-sm">Submit</button>
             </form>
-        </div>
-        <div class="col-lg-4">
             <div><strong>Brand</strong>: $brand </div>
             <div><strong>Description</strong>: $description </div>
-        </div>
-        <div class="col-lg-4">
             <div><strong>Created</strong>: $created</div>
             <div><strong>Last Sold</strong>: $lastSold</div>
         </div>
+        <div class="col-lg-4">
+        </div>
+        <div class="col-lg-4">
+            <div id="myChartContainer">
+                <canvas id="myChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-4"></div>
+        <div class="col-lg-4">
+        </div>
+        <div class="col-lg-4"></div>
     </div>
 
     <label style="background: #d8ffd4;" class="form-control">Vendor Items</label>
@@ -228,6 +241,82 @@ $('#table-changes tr').each(function(){
     if (storeID == 2)
         $(this).css('background-color', '#fff1c2');
 });
+
+var tmpcost = '';
+var tmp = null;
+tmpcost = $('#table-changes').closest('table').find(' tbody tr:first').find('td.cost').text();
+var costs = [];
+var dates = []; 
+var prices = [];
+var chartCosts = [];
+var chartPrices = [];
+var chartLabels = [];
+$('#table-changes tr').each(function(){
+    let cost = $(this).find('td.cost').text();
+    let price = $(this).find('td.price').text();
+    let date = $(this).find('span.date').text();
+    if (cost == '') {
+        // do nothing
+    } else {
+        // console.log(cost+', '+date);
+        costs.push(cost);
+        dates.push(date);
+        prices.push(price);
+    }
+});
+costs.reverse();
+dates.reverse();
+prices.reverse();
+$.each(costs, function(k,v){
+    date = dates[k];
+    price = prices[k];
+    if (tmp != v && v != 0) {
+        console.log(v + ', ' + date);
+        chartCosts.push(v);
+        chartPrices.push(price);
+        chartLabels.push(date);
+    }
+    tmp = v;
+});
+
+ctx = document.getElementById('myChart');
+var setChart = function()
+{
+    var data = [];
+    var datasets = {};
+    var labels = dates;
+
+    ctx = document.getElementById('myChart');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [
+                {
+                    label: 'cost',
+                    data: chartCosts,
+                    borderWidth: 1,
+                    borderColor: '#36A2EB',
+                },
+                {
+                    label: 'price',
+                    data: chartPrices,
+                    borderWidth: 1,
+                    borderColor: 'darkgreen',
+                }
+            ]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+setChart();
 JAVASCRIPT;
     }
 
