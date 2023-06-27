@@ -1428,7 +1428,6 @@ $reviewForm
 <div class="form-group dummy-form" style="float: right;">
     {$this->StoreSelector('storeID')}
 </div>
-<div style="font-family: consolas; float: right; margin: 5px; padding: 5px" id="ajax-response"></div>
 <div></div>
 
 <div class="gui-group">
@@ -1549,6 +1548,8 @@ $columnCheckboxes
             <select id="extHideFx" class="form-control form-control-sm">
                 <option value=null>More Filtering Methods</option>
                 <option value="hideNoPar">Hide Rows With 0 AutoPar for both stores</option>
+                <option value="hideHillNoPar">Hide Rows With 0 AutoPar for Hillside</option>
+                <option value="hideDenNoPar">Hide Rows With 0 AutoPar for Denfeld</option>
             </select>
         </div>
     </div>
@@ -1779,24 +1780,18 @@ $('.editable-cost').focusout(function(){
                     /*
                         success!
                     */
-                    element.css('background-color', 'lightgreen');
-                    setTimeout(function(){
-                        element.css('background-color', 'transparent');
-                    }, 1000);
                     // check the associated checkbox 
                     let checkbox = element.parent().find('input[type=checkbox]');
                     console.log(checkbox.attr('name'));
                     //checkbox.prop('checked', true);
                     checkbox.trigger('click');
+                    ajaxRespPopOnElm(element);
                     syncItem(upc);
                 } else {
                     /*
                         failure
                     */
-                    element.css('background-color', 'tomato');
-                    setTimeout(function(){
-                        element.css('background-color', 'transparent');
-                    }, 1000);
+                    ajaxRespPopOnElm(element, 1);
                 }
             },
         });
@@ -1811,6 +1806,7 @@ $('.editable-notes').click(function(){
     lastNotes = $(this).text();
 });
 $('.editable-notes').focusout(function(){
+    var element = $(this);
     var notes= $(this).text();
     var upc = $(this).parent().find('.upc').attr('data-upc');
     if (lastNotes != notes) {
@@ -1823,8 +1819,9 @@ $('.editable-notes').focusout(function(){
             {
                 console.log(response);
                 if (response.saved != true) {
-                    // alert user of error
+                    ajaxRespPopOnElm(element, 1);
                 } else {
+                    ajaxRespPopOnElm(element);
                 }
             },
         });
@@ -1863,6 +1860,7 @@ $('.editable-brand').focusout(function(){
     var upc = $(this).parent().find('td.upc').attr('data-upc');
     var brand = $(this).text();
     var elemID = $(this).attr('id');
+    var element = $(this);
     console.log(elemID);
     if (brand != lastBrand) {
         brand = encodeURIComponent(brand);
@@ -1874,11 +1872,9 @@ $('.editable-brand').focusout(function(){
             success: function(response)
             {
                 if (response.saved == 'true') {
-                    $('#ajax-response').show();
-                    $('#ajax-response').text("Save Error").css('background-color', '#FF6347').fadeOut(1500);
+                    ajaxRespPopOnElm(element, 1);
                 } else {
-                    $('#ajax-response').show();
-                    $('#ajax-response').text("Save Success").css('background-color', '#AFE1AF').fadeOut(1500);
+                    ajaxRespPopOnElm(element);
                 }
                 if (table == 'productUser') {
                     syncItem(upc);
@@ -1899,6 +1895,7 @@ $('.editable-description').focusout(function(){
     var upc = $(this).parent().find('td.upc').attr('data-upc');
     var description = $(this).text();
     var elemID = $(this).attr('id');
+    var element = $(this);
     if (description != lastDescription) {
         console.log(lastDescription+','+description);
         description = encodeURIComponent($(this).text());
@@ -1910,11 +1907,9 @@ $('.editable-description').focusout(function(){
             success: function(response)
             {
                 if (response.saved == 'true') {
-                    $('#ajax-response').show();
-                    $('#ajax-response').text("Save Error").css('background-color', '#FF6347').fadeOut(1500);
+                    ajaxRespPopOnElm(element, 1);
                 } else {
-                    $('#ajax-response').show();
-                    $('#ajax-response').text("Save Success").css('background-color', '#AFE1AF').fadeOut(1500);
+                    ajaxRespPopOnElm(element);
                 }
                 if (table == 'products') {
                     syncItem(upc);
@@ -2511,10 +2506,59 @@ $('#extHideFx').change(function(){
                 }
             });
             break;
+        case 'hideHillNoPar':
+            $('tr').each(function(){
+                v = $(this).find('td.autoPar').text();
+                x = v.substring(2,5);
+                if (x == '0.0') {
+                    $(this).hide();
+                }
+            });
+            break;
+        case 'hideDenNoPar':
+            $('tr').each(function(){
+                v = $(this).find('td.autoPar').text();
+                y = v.substring(7,10);
+                if (y == '0.0') {
+                    $(this).hide();
+                }
+            });
+            break;
         default:
             break;
     }
 });
+
+var ajaxRespPopOnElm = function(el=false, error=0) {
+    var pos = [];
+
+    if  (el == false) {
+        let target = $(this);
+    }
+    let target = $(el);
+
+    let response = (error == 0) ? 'Saved' : 'Error';
+    let responseColor = (error == 0) ? 'purple' : 'tomato';
+    let inputBorder = target.css('border');
+    target.css('border', '5px solid '+responseColor);
+
+    let offset = target.offset();
+    $.each(offset, function (k,v) {
+        pos[k] = parseFloat(v);
+    });
+    pos['top'] -= 15;
+    pos['left'] -= 30;
+
+    let zztmpdiv = "<div id='zztmp-div' style='position: fixed; top: "+pos['top']+"; left: "+pos['left']+"; color: black; background-color: white; padding: 5px; border-radius: 5px; border: 1px solid grey;'>"+response+"</div>";
+    $('body').append(zztmpdiv);
+
+    setTimeout(function(){
+        target.css('border', inputBorder);
+        $('#zztmp-div').empty();
+        $('#zztmp-div').remove();
+    }, 1000);
+}
+
 JAVASCRIPT;
     }
 
