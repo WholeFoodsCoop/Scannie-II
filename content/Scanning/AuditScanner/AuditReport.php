@@ -11,7 +11,7 @@ if (!class_exists('PriceRounder')) {
 class AuditReport extends PageLayoutA
 {
 
-    public $columns = array('check', 'upc', 'sku', 'alias', 'likeCode', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'recentPurchase',
+    public $columns = array('check', 'upc', 'sku', 'alias', 'likeCode', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'vcost', 'recentPurchase',
         'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
         'scalePLU', 'mnote', 'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN', 'caseCost');
 
@@ -32,6 +32,7 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<setDescription>';
         $this->__routes[] = 'post<setDept>';
         $this->__routes[] = 'post<setCost>';
+        $this->__routes[] = 'post<setVendorCost>';
         $this->__routes[] = 'post<setNotes>';
         $this->__routes[] = 'post<checked>';
         $this->__routes[] = 'post<review>';
@@ -97,18 +98,26 @@ class AuditReport extends PageLayoutA
         $username = FormLib::get('username');
         $storeID = FormLib::get('storeID');
         $full = FormLib::get('loadFullCat');
+        $loadVendorItems = FormLib::get('loadFullCatV');
         $inUse = ($full == 1) ? '' : ' AND inUse = 1 ';
+        $_SESSION['currentVendor'] = $vid;
 
         $args = array($vid);
-        $prep = $dbc->prepare("SELECT v.upc
-            FROM products AS p
-                LEFT JOIN vendorItems AS v ON v.upc=p.upc AND v.vendorID=p.default_vendor_id
-                RIGHT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
-            WHERE p.default_vendor_id = ?
-                AND m.super_name != 'PRODUCE'
-                $inUse
-            GROUP BY p.upc;
-        ");
+        if ($loadVendorItems == 1) {
+            // load all from vendor items regardless of default vendor
+            $prep = $dbc->prepare("SELECT upc FROM vendorItems WHERE vendorID = ? GROUP BY upc");
+        } else {
+            // load only items with default vendor set to selected vid
+            $prep = $dbc->prepare("SELECT v.upc
+                FROM products AS p
+                    LEFT JOIN vendorItems AS v ON v.upc=p.upc AND v.vendorID=p.default_vendor_id
+                    RIGHT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
+                WHERE p.default_vendor_id = ?
+                    AND m.super_name != 'PRODUCE'
+                    $inUse
+                GROUP BY p.upc;
+            ");
+        }
         $res = $dbc->execute($prep, $args);
         $items = array();
         while ($row = $dbc->fetchRow($res)) {
@@ -134,7 +143,7 @@ class AuditReport extends PageLayoutA
             //echo $row['upc'];
         }
         //var_dump($dbc);
-        echo $dbc->error();
+        //echo $dbc->error();
 
         return $upcs;
     }
@@ -469,6 +478,33 @@ class AuditReport extends PageLayoutA
         return false;
     }
 
+    public function postSetVendorCostHandler()
+    {
+        $upc = FormLib::get('upc');
+        $cost = FormLib::get('cost');
+        $vendorID = FormLib::get('vendorID');
+        $json = array();
+
+        $dbc = ScanLib::getConObj();
+        $args = array($cost, $upc, $vendorID);
+        $prep = $dbc->prepare("UPDATE vendorItems SET cost = ? WHERE upc = ? AND vendorID = ?");
+        $res = $dbc->execute($prep, $args);
+
+        $args = array($upc, $vendorID);
+        $prep = $dbc->prepare("SELECT cost FROM vendorItems WHERE upc = ? AND vendorID = ? GROUP BY upc");
+        $res = $dbc->execute($prep, $args);
+        $row = $dbc->fetchRow($res);
+
+        $json['saved'] = '';
+        if ($row['cost'] == $cost) {
+            $json['saved'] = true;
+        }
+        $json['test'] = 'success';
+        echo json_encode($json);
+
+        return false;
+    }
+
     public function postSetDeptHandler()
     {
         $upc = FormLib::get('upc');
@@ -642,6 +678,33 @@ class AuditReport extends PageLayoutA
         $storeID = (isset($_SESSION['AuditReportStoreID'])) ? $_SESSION['AuditReportStoreID'] : scanLib::getStoreID();
         $rounder = new PriceRounder();
 
+        $costMode = 0; 
+        if (isset($_SESSION['costMode'])) {
+            $costMode = $_SESSION['costMode'];
+        }
+
+        $vendorCosts = array();
+        if ($costMode == 0) {
+            // cost mode = Products Table
+        }
+        if ($costMode == 1) {
+            // cost mode = Vendor Items Table
+            $args = array($username, $_SESSION['currentVendor']);
+            $prep = $dbc->prepare("SELECT v.upc, v.cost
+                FROM vendorItems AS v
+                RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON a.upc=v.upc
+            WHERE v.upc != '0000000000000'
+                AND a.username = ?
+                AND a.savedAS = 'default'
+                AND v.vendorID = ?
+            ");
+            $res = $dbc->execute($prep, $args);
+            while ($row = $dbc->fetchRow($res)) {
+                $vendorCosts[$row['upc']] = $row['cost'];
+                //echo $row['upc'];
+            }
+        }
+
         $upcs = array();
 
         $args = array($username, $storeID);
@@ -659,6 +722,7 @@ class AuditReport extends PageLayoutA
                 p.description AS description,
                 u.description AS signDescription,
                 p.cost,
+                'n/a' AS vcost,
                 p.auto_par,
                 CASE
                     WHEN e.shippingMarkup > 0 THEN p.cost + (p.cost * e.shippingMarkup) ELSE p.cost
@@ -765,7 +829,7 @@ class AuditReport extends PageLayoutA
         }
 
         $td = "";
-        $csv = "UPC, SKU, ALIAS, LIKECODE, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UNITS, NETCOST, COST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CASE COST, NOTES\r\n";
+        $csv = "UPC, SKU, ALIAS, LIKECODE, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UNITS, NETCOST, COST, VCOST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CASE COST, NOTES\r\n";
 
             //$prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDesecription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $autoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
         $textarea = "<div style=\"position: relative\">
@@ -787,6 +851,7 @@ class AuditReport extends PageLayoutA
             <td title=\"units\" data-column=\"units\"class=\"units column-filter\"></td>
             <td title=\"netCost\" data-column=\"netCost\"class=\"netCost column-filter\"></td>
             <td title=\"cost\" data-column=\"cost\"class=\"cost column-filter\"></td>
+            <td title=\"vcost\" data-column=\"vcost\"class=\"vcost column-filter\"></td>
             <td title=\"recentPurchases\" data-column=\"recentPurchase\"class=\"recentPurchase column-filter\"></td>
             <td title=\"price\" data-column=\"price\"class=\"price column-filter\"></td>
             <td title=\"sale\" data-column=\"sale\"class=\"sale column-filter\"></td>
@@ -832,6 +897,7 @@ class AuditReport extends PageLayoutA
             <th class=\"units\">units</th>
             <th class=\"netCost\">netCost</th>
             <th class=\"cost\">cost</th>
+            <th class=\"vcost\">vcost</th>
             <th class=\"recentPurchase\">PO-unit</th>
             <th class=\"price\">price</th>
             <th class=\"sale\">sale</th>
@@ -920,6 +986,9 @@ class AuditReport extends PageLayoutA
             $signDescription = $row['signDescription'];
             $netCost = $row['cost'];
             $cost = $row['cost'];
+            $vcost = $row['vcost'];
+            if (isset($vendorCosts[$upc]))
+                $vcost = $vendorCosts[$upc];
             $ogCost = null;
             $adjcost = $row['adjcost'];
             $price = $row['price'];
@@ -993,6 +1062,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"units\">$units</td>";
             $td .= "<td class=\"netCost editable-cost\" data-vid=\"$vendorID\">$netCost</td>";
             $td .= "<td class=\"cost\" $ogCost>$cost</td>";
+            $td .= "<td class=\"vcost editable-vcost\" data-current-vid=\"{$_SESSION['currentVendor']}\">$vcost</td>";
             $td .= "<td class=\"recentPurchase\" title=\"$received\">$recentPurchase</td>";
             //$td .= "<td class=\"\" title=\"\">$received</td>";
             $td .= "<td class=\"price\" $badPrice>$price</td>";
@@ -1049,7 +1119,7 @@ class AuditReport extends PageLayoutA
             $brand = str_replace(',', '', $brand);
             $autoPar = str_replace("&#9608;", " | ", $autoPar);
 
-            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$mnote\", \"$notes");
+            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$mnote\", \"$notes");
             $prepCsv = str_replace("&nbsp;", "", $prepCsv);
             $prepCsv = str_replace("\"", "", $prepCsv);
             $csv .= "$prepCsv" . "\r\n";
@@ -1146,6 +1216,18 @@ HTML;
         $loaded = FormLib::get('loaded');
         $loadedHTMLSpec = htmlspecialchars($loaded);
         $scrollMode = 'on';
+
+        $costMode = FormLib::get('costModeSwitch', false);
+        if ($costMode === false) {
+            if (isset($_SESSION['costMode'])) {
+                $costMode = $_SESSION['costMode'];
+            } else { $costMode = 0;
+                $_SESSION['costMode'] = $costMode;
+            }
+        } else {
+            $_SESSION['costMode'] = $costMode;
+        }
+
         if (isset($_SESSION['scrollMode'])) {
             $scrollMode = ($_SESSION['scrollMode'] == 0) ? 'on' : 'off';
         }
@@ -1162,12 +1244,12 @@ HTML;
             $x |= 1 << 9;
             $x |= 1 << 10;
             $x |= 1 << 11;
-            $x |= 1 << 14;
             $x |= 1 << 15;
             $x |= 1 << 16;
-            $x |= 1 << 21;
-            $x |= 1 << 30;
+            $x |= 1 << 17;
+            $x |= 1 << 22;
             $x |= 1 << 31;
+            $x |= 1 << 32;
             $_SESSION['columnBitSet'] = $x;
         }
 
@@ -1197,7 +1279,7 @@ HTML;
         }
         $datalist .= "</datalist>";
 
-        $vselect = '<option value="">Load Vendor Catalog</option>';
+        $vselect = '<option value="">Load by Vendor</option>';
         $curVendor = FormLib::get('vendor');
         $prep = $dbc->prepare("SELECT vendorName, vendorID FROM vendors 
             WHERE vendorID NOT IN (-2,-1,1,2)
@@ -1209,7 +1291,7 @@ HTML;
              $vselect .= "<option value='$vid'>$vname</option>";
          }
 
-        $bselect = '<option value="">Load All By Brand</option>';
+        $bselect = '<option value="">Load All by Brand</option>';
         $prep = $dbc->prepare("
             SELECT brand FROM products AS p
                 INNER JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
@@ -1274,6 +1356,31 @@ HTML;
         <input type="hidden" name="username" value="'.$username.'"/>
     </form>
 </div>';
+
+            $costModeHeader = array(0=>'Products', 1=>'Vendor Items');
+            $costModeOpts = '';
+            foreach ($costModeHeader as $v => $name) {
+                $sel = ($v == $costMode) ? ' selected ' : '';
+                $costModeOpts .= "<option value=\"$v\" $sel>$name Table</option>";
+            }
+
+            $costModeSwitch = '
+<label for="costModeSwitch">Cost Mode: </label>
+<div class="form-group dummy-form">
+    <form method="post" name="costModeForm" action="AuditReport.php">
+        <select name="costModeSwitch" id="costModeSwitch">
+            <option value="null"></option>
+            '.$costModeOpts.'
+        </select>
+    </form>
+</div>
+| Current Vendor: 
+'.$_SESSION['currentVendor'];
+
+            // don't show cost mode swith for other users at this time
+            if ($_COOKIE['user_type'] != 2) {
+                $costModeSwitch = '';
+            }
 //        $exportColumns = '<div style=\"float: left; padding: 25px\">';
 //        $colSize = round(count($this->columns) / 3);
 //        $i = 0;
@@ -1425,6 +1532,7 @@ $reviewForm
 <div class="form-group dummy-form">
     <a class="btn btn-info btn-sm page-control" href="ProductScanner.php ">Scanner</a>
 </div>
+$costModeSwitch
 <div class="form-group dummy-form" style="float: right;">
     {$this->StoreSelector('storeID')}
 </div>
@@ -1478,8 +1586,13 @@ $reviewForm
             </select>
         </div>
         <div class="form-group dummy-form">
-        <label for="loadFullCat" style="font-size: 14px">Load All</label>
+
+        <label for="loadFullCat" style="font-size: 14px" title="Check to include items that are out-of-use">Opt A*</label>
             <input type="checkbox" name="loadFullCat" id="loadFullCat" value="1" />&nbsp;
+
+        <label for="loadFullCat" style="font-size: 14px" title="Check to include all items that exist in the vendor catalog, regardless of default vendor settings">Opt B*</label>
+            <input type="checkbox" name="loadFullCatV" id="loadFullCatV" value="1" />&nbsp;
+
             <button class="btn btn-default btn-sm" type="submit" id="loadCatBtn">Load</button>
         </div>
     </form>
@@ -1800,6 +1913,58 @@ $('.editable-cost').focusout(function(){
     $(this).css('font-weight', 'normal');
 });
 
+
+var lastVCost = null;
+$('.editable-vcost').click(function(){
+    if ($(this).text() == 'n/a') {
+        return false;
+    }
+    lastVCost = $(this).text();
+    $(this).attr('contentEditable', 'true');
+    $(this).css('font-weight', 'bold');
+});
+$('.editable-vcost').focusout(function(){
+    var cost = $(this).text();
+    var upc = $(this).parent().find('.upc').attr('data-upc');
+    var vendorID = $(this).attr('data-current-vid'); 
+    var element = $(this);
+    if (lastVCost != cost) {
+        $.ajax({
+            type: 'post',
+            data: 'setVendorCost=true&upc='+upc+'&cost='+cost+'&vendorID='+vendorID,
+            dataType: 'json',
+            url: 'AuditReport.php',
+            success: function(response)
+            {
+                //console.log(response);
+                if (response.saved == true) {
+                    /*
+                        success!
+                    */
+                    // check the associated checkbox 
+                    let checkbox = element.parent().find('input[type=checkbox]');
+                    console.log(checkbox.attr('name'));
+                    //checkbox.prop('checked', true);
+                    checkbox.trigger('click');
+                    ajaxRespPopOnElm(element);
+                    // syncing won't do anything at this time for a vendor cost change only
+                    //syncItem(upc);
+                } else {
+                    /*
+                        failure
+                    */
+                    ajaxRespPopOnElm(element, 1);
+                }
+            },
+            error: function(response) {
+                console.log('error');
+                console.log(response);
+            },
+        });
+    }
+    $(this).attr('contentEditable', 'false');
+    $(this).css('font-weight', 'normal');
+});
 
 var lastNotes = null
 $('.editable-notes').click(function(){
@@ -2538,18 +2703,20 @@ var ajaxRespPopOnElm = function(el=false, error=0) {
     let target = $(el);
 
     let response = (error == 0) ? 'Saved' : 'Error';
-    let responseColor = (error == 0) ? 'purple' : 'tomato';
+    let responseColor = (error == 0) ? '' : '';
     let inputBorder = target.css('border');
-    target.css('border', '5px solid '+responseColor);
+    target.css('border', '0px solid transparent');
 
     let offset = target.offset();
     $.each(offset, function (k,v) {
         pos[k] = parseFloat(v);
     });
-    pos['top'] -= 15;
-    pos['left'] -= 30;
+    pos['top'] -= 30;
+    pos['left'] -= 55;
 
-    let zztmpdiv = "<div id='zztmp-div' style='position: fixed; top: "+pos['top']+"; left: "+pos['left']+"; color: black; background-color: white; padding: 5px; border-radius: 5px; border: 1px solid grey;'>"+response+"</div>";
+    
+
+    let zztmpdiv = "<div id='zztmp-div' style='position: absolute; top: "+pos['top']+"; left: "+pos['left']+"; color: black; background-color: white; padding: 5px; border-radius: 5px;border-bottom-right-radius: 0px; border: 1px solid grey;'>"+response+"</div>";
     $('body').append(zztmpdiv);
 
     setTimeout(function(){
@@ -2558,6 +2725,10 @@ var ajaxRespPopOnElm = function(el=false, error=0) {
         $('#zztmp-div').remove();
     }, 1000);
 }
+
+$('#costModeSwitch').change(function(){
+    document.forms['costModeForm'].submit();
+});
 
 JAVASCRIPT;
     }
@@ -2724,7 +2895,11 @@ HTML;
         <li><strong>Saved Lists</strong> Load a previously saved list of items. If a list is already loaded, there will also 
             be an option to remove this list from Saved Lists.</li>
         <li><strong>Save List As</strong> Save the current list of items.</li>
-        <li><strong>Load Vendor Catalog</strong> Loads an entire vendor catalog. By default, only items in use (by at least one store)
+        <li><strong>Load by Vendor</strong> Loads an entire vendor catalog. By default, only loads items that are in use (at at least one store), and only items where the selected vendor is the default (ordering) vendor for those items.
+            <ul>
+                <li>Opt A: if this option is checked, both in-use and not-in-use items will load.</li>
+                <li>Opt B: check this option to pull up a list of items with records from this vendor, regardless of the current default (ordering) vendor.</li>
+            </ul>
             will load. If the <b>Load All</b> checkbox is checked, the entire catalog will be loaded including out-of-use items.</li>
         <li><strong>Load All By Brand</strong> Loads all items with the selected brand name, regardless of in-use status.</li>
     </ul>
