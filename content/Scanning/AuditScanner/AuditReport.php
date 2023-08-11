@@ -11,7 +11,7 @@ if (!class_exists('PriceRounder')) {
 class AuditReport extends PageLayoutA
 {
 
-    public $columns = array('check', 'upc', 'sku', 'alias', 'likeCode', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'units', 'netcost', 'cost', 'vcost', 'recentPurchase',
+    public $columns = array('check', 'upc', 'sku', 'alias', 'likeCode', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'uom', 'units', 'netcost', 'cost', 'vcost', 'recentPurchase',
         'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
         'scalePLU', 'mnote', 'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN', 'caseCost');
 
@@ -29,6 +29,8 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<rowCount>';
         $this->__routes[] = 'post<setSku>';
         $this->__routes[] = 'post<setBrand>';
+        $this->__routes[] = 'post<setSize>';
+        $this->__routes[] = 'post<setUom>';
         $this->__routes[] = 'post<setDescription>';
         $this->__routes[] = 'post<setDept>';
         $this->__routes[] = 'post<setCost>';
@@ -495,6 +497,10 @@ class AuditReport extends PageLayoutA
         $res = $dbc->execute($prep, $args);
         $row = $dbc->fetchRow($res);
 
+        $logA = array($upc, $cost, $vendorID);
+        $logP = $dbc->prepare("INSERT INTO woodshed_no_replicate.VendorItemsCosts (upc, cost, vendorID, modified) VALUES (?, ?, ?, NOW())");
+        $logR = $dbc->execute($logP, $logA);
+
         $json['saved'] = '';
         if ($row['cost'] == $cost) {
             $json['saved'] = true;
@@ -545,6 +551,36 @@ class AuditReport extends PageLayoutA
         $dbc = ScanLib::getConObj();
         $mod = new DataModel($dbc);
         $json['saved'] = $mod->setBrand($upc, $brand, $table);
+        echo json_encode($json);
+
+        return false;
+    }
+
+    public function postSetSizeHandler()
+    {
+        $upc = FormLib::get('upc');
+        $size = FormLib::get('size');
+        $table = FormLib::get('table');
+        $json = array();
+
+        $dbc = ScanLib::getConObj();
+        $mod = new DataModel($dbc);
+        $json['saved'] = $mod->setSize($upc, $size, $table);
+        echo json_encode($json);
+
+        return false;
+    }
+
+    public function postSetUomHandler()
+    {
+        $upc = FormLib::get('upc');
+        $uom = FormLib::get('uom');
+        $table = FormLib::get('table');
+        $json = array();
+
+        $dbc = ScanLib::getConObj();
+        $mod = new DataModel($dbc);
+        $json['saved'] = $mod->setUom($upc, $uom, $table);
         echo json_encode($json);
 
         return false;
@@ -690,7 +726,7 @@ class AuditReport extends PageLayoutA
         if ($costMode == 1) {
             // cost mode = Vendor Items Table
             $args = array($username, $_SESSION['currentVendor']);
-            $prep = $dbc->prepare("SELECT v.upc, v.cost
+            $prep = $dbc->prepare("SELECT v.upc, v.cost, v.sku
                 FROM vendorItems AS v
                 RIGHT JOIN woodshed_no_replicate.AuditScan AS a ON a.upc=v.upc
             WHERE v.upc != '0000000000000'
@@ -700,14 +736,22 @@ class AuditReport extends PageLayoutA
             ");
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
-                $vendorCosts[$row['upc']] = $row['cost'];
+                $vendorCosts[$row['upc']]['cost'] = $row['cost'];
+                $vendorCosts[$row['upc']]['sku'] = $row['sku'];
                 //echo $row['upc'];
             }
         }
+        $andReviewVendorID = ($costMode == 1) ? ' AND pr.vendorID = ? ' : '';
 
         $upcs = array();
 
-        $args = array($username, $storeID);
+        //$args = array($username, $storeID);
+        $args = array();
+        if ($costMode == 1) {
+            $args[] = $_SESSION['currentVendor'];
+        }
+        $args[] = $username;
+        $args[] = $storeID;
         $prep = $dbc->prepare("
             SELECT
                 pf.flags,
@@ -752,9 +796,8 @@ class AuditReport extends PageLayoutA
                 a.checked,
                 p.last_sold,
                 pr.reviewed,
-                CASE
-                    WHEN p.size <> 0 THEN CONCAT(p.size, ' ', p.unitofmeasure) ELSE CONCAT(v.size, ' ', p.unitofmeasure)
-                END AS size,
+                p.size,
+                p.unitofmeasure AS uom,
                 v.units,
                 c.previousCost,
                 c.newCost,
@@ -781,6 +824,7 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN vendorDepartments AS vd
                     ON vd.vendorID = p.default_vendor_id AND vd.posDeptID = p.department
                 LEFT JOIN prodReview AS pr ON p.upc=pr.upc
+                    $andReviewVendorID
                 LEFT JOIN productCostChanges AS c ON p.upc=c.upc
                 LEFT JOIN subdepts ON subdepts.subdept_no=p.subdept AND subdepts.dept_ID=p.department
                 LEFT JOIN prodFlagsListView AS pf ON pf.upc=p.upc AND pf.storeID=p.store_id
@@ -829,7 +873,7 @@ class AuditReport extends PageLayoutA
         }
 
         $td = "";
-        $csv = "UPC, SKU, ALIAS, LIKECODE, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UNITS, NETCOST, COST, VCOST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CASE COST, NOTES\r\n";
+        $csv = "UPC, SKU, ALIAS, LIKECODE, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UOM, UNITS, NETCOST, COST, VCOST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CASE COST, NOTES\r\n";
 
             //$prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDesecription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $autoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
         $textarea = "<div style=\"position: relative\">
@@ -848,6 +892,7 @@ class AuditReport extends PageLayoutA
             <td title=\"description\" data-column=\"description\"class=\"description column-filter\"></td>
             <td title=\"sign-description\" data-column=\"sign-description\"class=\"sign-description column-filter\"></td>
             <td title=\"size\" data-column=\"size\"class=\"size column-filter\"></td>
+            <td title=\"uom\" data-column=\"uom\"class=\"uom column-filter\"></td>
             <td title=\"units\" data-column=\"units\"class=\"units column-filter\"></td>
             <td title=\"netCost\" data-column=\"netCost\"class=\"netCost column-filter\"></td>
             <td title=\"cost\" data-column=\"cost\"class=\"cost column-filter\"></td>
@@ -894,6 +939,7 @@ class AuditReport extends PageLayoutA
             <th class=\"description\">description</th>
             <th class=\"sign-description \">sign-description</th>
             <th class=\"size\">size</th>
+            <th class=\"uom\">uom</th>
             <th class=\"units\">units</th>
             <th class=\"netCost\">netCost</th>
             <th class=\"cost\">cost</th>
@@ -944,6 +990,12 @@ class AuditReport extends PageLayoutA
             $uLink = '<a class="upc" href="../../../../git/fannie/item/ItemEditorPage.php?searchupc='.$upc.
                 '&ntype=UPC&searchBtn=" target="_blank">'.$upc.'</a>';
             $sku = $row['sku'];
+            if ($costMode == 1) {
+                if (isset($vendorCosts[$upc])) {
+                    $sku = '';
+                    $sku = $vendorCosts[$upc]['sku'];
+                }
+            }
             $alias = $row['alias'];
             $likeCode = $row['likeCode'];
             $isPrimary = $row['isPrimary'];
@@ -988,7 +1040,7 @@ class AuditReport extends PageLayoutA
             $cost = $row['cost'];
             $vcost = $row['vcost'];
             if (isset($vendorCosts[$upc]))
-                $vcost = $vendorCosts[$upc];
+                $vcost = $vendorCosts[$upc]['cost'];
             $ogCost = null;
             $adjcost = $row['adjcost'];
             $price = $row['price'];
@@ -1038,6 +1090,7 @@ class AuditReport extends PageLayoutA
             $deptOpts = $this->getDeptOptions($dbc, $row['dept_no']);
             $reviewed = $row['reviewed'];
             $size = $row['size'];
+            $uom = $row['uom'];
             $units = $row['units'];
             $costChangeDate = $row['costChangeDate'];
             $costChange = $row['costChange'];
@@ -1058,7 +1111,8 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"description editable editable-description\" data-table=\"products\" 
                 style=\"text-transform:uppercase;\" maxlength=\"30\" id=\"d$ubid\">$description</td>";
             $td .= "<td class=\"sign-description editable editable-description \" data-table=\"productUser\" spellcheck=\"true\" id=\"sd$ubid\">$signDescription</td>";
-            $td .= "<td class=\"size\">$size</td>";
+            $td .= "<td class=\"size editable editable-size\">$size</td>";
+            $td .= "<td class=\"uom editable editable-uom\">$uom</td>";
             $td .= "<td class=\"units\">$units</td>";
             $td .= "<td class=\"netCost editable-cost\" data-vid=\"$vendorID\">$netCost</td>";
             $td .= "<td class=\"cost\" $ogCost>$cost</td>";
@@ -1119,7 +1173,7 @@ class AuditReport extends PageLayoutA
             $brand = str_replace(',', '', $brand);
             $autoPar = str_replace("&#9608;", " | ", $autoPar);
 
-            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$mnote\", \"$notes");
+            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $uom, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$mnote\", \"$notes");
             $prepCsv = str_replace("&nbsp;", "", $prepCsv);
             $prepCsv = str_replace("\"", "", $prepCsv);
             $csv .= "$prepCsv" . "\r\n";
@@ -1242,14 +1296,14 @@ HTML;
             $x |= 1 << 5;
             $x |= 1 << 7;
             $x |= 1 << 9;
-            $x |= 1 << 10;
             $x |= 1 << 11;
-            $x |= 1 << 15;
+            $x |= 1 << 12;
             $x |= 1 << 16;
             $x |= 1 << 17;
-            $x |= 1 << 22;
-            $x |= 1 << 31;
+            $x |= 1 << 18;
+            $x |= 1 << 23;
             $x |= 1 << 32;
+            $x |= 1 << 33;
             $_SESSION['columnBitSet'] = $x;
         }
 
@@ -1279,6 +1333,7 @@ HTML;
         }
         $datalist .= "</datalist>";
 
+        $this->vendors = array();
         $vselect = '<option value="">Load by Vendor</option>';
         $curVendor = FormLib::get('vendor');
         $prep = $dbc->prepare("SELECT vendorName, vendorID FROM vendors 
@@ -1289,6 +1344,7 @@ HTML;
              $vid = $row['vendorID'];
              $vname = $row['vendorName'];
              $vselect .= "<option value='$vid'>$vname</option>";
+             $this->vendor[$vid] = $vname;
          }
 
         $bselect = '<option value="">Load All by Brand</option>';
@@ -1365,7 +1421,7 @@ HTML;
             }
 
             $costModeSwitch = '
-<label for="costModeSwitch">Cost Mode: </label>
+<label for="costModeSwitch" title="\$costMode"><b>Table</b>: </label>
 <div class="form-group dummy-form">
     <form method="post" name="costModeForm" action="AuditReport.php">
         <select name="costModeSwitch" id="costModeSwitch">
@@ -1590,7 +1646,7 @@ $costModeSwitch
         <label for="loadFullCat" style="font-size: 14px" title="Check to include items that are out-of-use">Opt A*</label>
             <input type="checkbox" name="loadFullCat" id="loadFullCat" value="1" />&nbsp;
 
-        <label for="loadFullCat" style="font-size: 14px" title="Check to include all items that exist in the vendor catalog, regardless of default vendor settings">Opt B*</label>
+        <label for="loadFullCatV" style="font-size: 14px" title="Check to include all items that exist in the vendor catalog, regardless of default vendor settings">Opt B*</label>
             <input type="checkbox" name="loadFullCatV" id="loadFullCatV" value="1" />&nbsp;
 
             <button class="btn btn-default btn-sm" type="submit" id="loadCatBtn">Load</button>
@@ -1663,6 +1719,7 @@ $columnCheckboxes
                 <option value="hideNoPar">Hide Rows With 0 AutoPar for both stores</option>
                 <option value="hideHillNoPar">Hide Rows With 0 AutoPar for Hillside</option>
                 <option value="hideDenNoPar">Hide Rows With 0 AutoPar for Denfeld</option>
+                <option value="hideNOF">Hide Rows With 'NOF' entered as notes</option>
             </select>
         </div>
     </div>
@@ -1993,6 +2050,85 @@ $('.editable-notes').focusout(function(){
     }
 
 });
+
+var lastSize = null;
+var lastUom = null;
+$('.editable-size').each(function(){
+    $(this).attr('contentEditable', true);
+    $(this).attr('spellCheck', false);
+});
+$('.editable-size').click(function(){
+    lastSize = $(this).text();
+});
+$('.editable-size').focus(function(){
+    lastSize = $(this).text();
+});
+$('.editable-size').focusout(function(){
+    var table = "products";
+    var upc = $(this).parent().find('td.upc').attr('data-upc');
+    var elemID = $(this).attr('id');
+    var element = $(this);
+    var size = $(this).text();
+    if (size != lastSize) {
+        size = encodeURIComponent(size);
+        $.ajax({
+            type: 'post',
+            data: 'setSize=true&upc='+upc+'&size='+size+'&table='+table,
+            dataType: 'json',
+            url: 'AuditReport.php',
+            success: function(response)
+            {
+                if (response.saved == 'true') {
+                    ajaxRespPopOnElm(element, 1);
+                } else {
+                    ajaxRespPopOnElm(element);
+                }
+                if (table == 'productUser') {
+                    syncItem(upc);
+                }
+            },
+        });
+    }
+});
+
+$('.editable-uom').each(function(){
+    $(this).attr('contentEditable', true);
+    $(this).attr('spellCheck', false);
+});
+$('.editable-uom').click(function(){
+    lastUom = $(this).text();
+});
+$('.editable-uom').focus(function(){
+    lastUom = $(this).text();
+});
+$('.editable-uom').focusout(function(){
+    var table = "products";
+    var upc = $(this).parent().find('td.upc').attr('data-upc');
+    var elemID = $(this).attr('id');
+    var element = $(this);
+    var uom = $(this).text();
+    if (uom != lastUom) {
+        uom = encodeURIComponent(uom);
+        $.ajax({
+            type: 'post',
+            data: 'setUom=true&upc='+upc+'&uom='+uom+'&table='+table,
+            dataType: 'json',
+            url: 'AuditReport.php',
+            success: function(response)
+            {
+                if (response.saved == 'true') {
+                    ajaxRespPopOnElm(element, 1);
+                } else {
+                    ajaxRespPopOnElm(element);
+                }
+                if (table == 'productUser') {
+                    syncItem(upc);
+                }
+            },
+        });
+    }
+});
+
 
 $('.editable-notes').each(function(){
     $(this).attr('contentEditable', true);
@@ -2686,6 +2822,14 @@ $('#extHideFx').change(function(){
                 y = v.substring(7,10);
                 if (y == '0.0') {
                     $(this).hide();
+                }
+            });
+            break;
+        case 'hideNOF':
+            $('.notes').each(function(){
+                let text = $(this).text();
+                if (text == 'NOF' || text == 'n/a' || text == 'NA') {
+                    $(this).closest('tr').hide();
                 }
             });
             break;

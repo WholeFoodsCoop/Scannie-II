@@ -86,6 +86,54 @@ class DataModel
         return true;
     }
 
+    public function setSize($upc, $size, $table='products')
+    {
+        $tableName = null;
+        if ($table == 'products') {
+            $tableName = 'products';
+            $size = strtoupper($size);
+        } elseif ($table == 'productUser') {
+            $tableName = 'productUser';
+        }
+        if ($tableName == null) {
+            return false;
+        } else {
+            $args = array($size, $upc);
+            $query = "UPDATE $tableName SET size = ? WHERE upc = ?";
+            $prep = $this->connection->prepare($query);
+            $res = $this->connection->execute($prep, $args);
+            if ($er = $this->connection->error()) {
+                return $er;
+            }
+        }
+
+        return true;
+    }
+
+    public function setUom($upc, $uom, $table='products')
+    {
+        $tableName = null;
+        if ($table == 'products') {
+            $tableName = 'products';
+            $uom = strtoupper($uom);
+        } elseif ($table == 'productUser') {
+            $tableName = 'productUser';
+        }
+        if ($tableName == null) {
+            return false;
+        } else {
+            $args = array($uom, $upc);
+            $query = "UPDATE $tableName SET unitofmeasure = ? WHERE upc = ?";
+            $prep = $this->connection->prepare($query);
+            $res = $this->connection->execute($prep, $args);
+            if ($er = $this->connection->error()) {
+                return $er;
+            }
+        }
+
+        return true;
+    }
+
     public function setDescription($upc, $description, $table='products')
     {
         $tableName = null;
