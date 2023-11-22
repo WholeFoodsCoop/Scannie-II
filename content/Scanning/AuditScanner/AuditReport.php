@@ -46,8 +46,28 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<brandList>';
         $this->__routes[] = 'post<setStoreID>';
         $this->__routes[] = 'get<exportExcel>';
+        $this->__routes[] = 'post<setPRN>';
 
         return parent::preprocess();
+    }
+
+    public function postSetPRNHandler()
+    {
+        $username = FormLib::get('username');
+        $dbc = ScanLib::getConObj('SCANALTDB');
+
+        $getvendorP = $dbc->prepare("select v.vendorName FROM AuditScan a inner join is4c_op.products p on p.upc=a.upc INNER JOIN is4c_op.vendors v ON v.vendorID=p.default_vendor_id WHERE a.username='csather' AND a.savedAs='default' GROUP BY p.default_vendor_id ORDER BY count(p.default_vendor_id) DESC LIMIT 1;");
+        $vendorName = $dbc->getValue($getvendorP);
+        $vendorName = str_replace("'", "", $vendorName);
+        $reviewList = $vendorName . " REVIEW LIST";
+
+        $args = array($username, $username, $reviewList);
+        $prep = $dbc->prepare("UPDATE AuditScan a INNER JOIN AuditScan b ON b.upc=a.upc SET a.PRN=b.notes WHERE a.username=? AND a.savedAs='default' AND b.username=? AND b.savedAs=?;"); 
+        $dbc->execute($prep, $args);
+
+        echo $dbc->error();
+
+        return false; 
     }
 
     public function getExportExcelHandler()
@@ -434,7 +454,8 @@ class AuditReport extends PageLayoutA
             LIMIT 1");
         $res = $dbc->execute($prep, $args);
         $row = $dbc->fetchRow($res);
-        $listName = $row['vendorName'] . " REVIEW LIST";
+        $listName = str_replace("'", "", $row['vendorName']);
+        $listName = $listName . " REVIEW LIST";
 
         $args = array($username, $storeID, $listName, $username);
         $prep = $dbc->prepare("INSERT IGNORE INTO AuditScan (date, upc, username, storeID, notes, checked, savedAs) 
@@ -442,6 +463,21 @@ class AuditReport extends PageLayoutA
             FROM AuditScan where savedAs = 'default' AND username = ? AND notes != ''
             ");
         $res = $dbc->execute($prep, $args);
+
+        $notes = array();
+        $args = array($username, $storeID);
+        $prep = $dbc->prepare("SELECT upc, notes FROM AuditScan WHERE username=? AND savedAs='default'
+            AND storeID=? AND notes != ''");
+        $res = $dbc->execute($prep, $args);
+        while ($r = $dbc->fetchRow($res)) {
+            $notes[$r['upc']] = $r['notes'];
+        }
+        
+        foreach ($notes as $upc => $text) {
+            $args = array($text, $username, $listName, $upc);
+            $prep = $dbc->prepare("UPDATE AuditScan SET notes = ? WHERE username = ? AND savedAs = ? AND storeID = ? AND upc = ?");
+            $dbc->execute($prep, $args);
+        }
 
         $json['saved'] = 1;
         echo json_encode($json);
@@ -1333,6 +1369,11 @@ HTML;
         }
         $datalist .= "</datalist>";
 
+        $this->addScript('http://'.$FANNIE_ROOTDIR . '/src/javascript/chosen/chosen.jquery.min.js');
+        $this->addCssFile('http://'.$FANNIE_ROOTDIR. '/src/javascript/chosen/bootstrap-chosen.css');
+        //$this->add_onload_command('$(\'.chosen-select:visible\').chosen();');
+        //$this->add_onload_command('$(\'#store-tabs a\').on(\'shown.bs.tab\', function(){$(\'.chosen-select:visible\').chosen();});');
+
         $this->vendors = array();
         $vselect = '<option value="">Load by Vendor</option>';
         $curVendor = FormLib::get('vendor');
@@ -1637,7 +1678,7 @@ $costModeSwitch
         <input name="username" type="hidden" value="$username" />
         <input name="storeID" type="hidden" value="$storeID" />
         <div class="form-group dummy-form">
-            <select name="vendCat" class="form-control form-control-sm" placeholder="Select a Vendor Catalog">
+            <select name="vendCat" class="form-control form-control-sm chosen-select" placeholder="Select a Vendor Catalog">
                 $vselect
             </select>
         </div>
@@ -1659,7 +1700,7 @@ $costModeSwitch
         <input name="username" type="hidden" value="$username" />
         <input name="storeID" type="hidden" value="$storeID" />
         <div class="form-group dummy-form">
-            <select name="brandList" class="form-control form-control-sm" placeholder="Select a Brand">
+            <select name="brandList" class="form-control form-control-sm chosen-select" placeholder="Select a Brand">
                 $bselect
             </select>
         </div>
@@ -1720,6 +1761,7 @@ $columnCheckboxes
                 <option value="hideHillNoPar">Hide Rows With 0 AutoPar for Hillside</option>
                 <option value="hideDenNoPar">Hide Rows With 0 AutoPar for Denfeld</option>
                 <option value="hideNOF">Hide Rows With 'NOF' entered as notes</option>
+                <option value="pullReviewListToPrn">[ IT ] Pull Review List to PRN</option>
             </select>
         </div>
     </div>
@@ -1797,6 +1839,7 @@ var tableRows = $('#table-rows').val();
 var storeID = $('#storeID').val();
 var username = $('#username').val();
 var scrollMode = $scrollMode;
+var columnFilterLast = null;
 var stripeTable = function(){
     $('tr.prod-row').each(function(){
         $(this).removeClass('stripe');
@@ -1819,6 +1862,7 @@ stripeTable();
 $("#mytable").bind('sortEnd', function(){
     stripeTable();
 });
+
 
 $('#clearNotesInputB').click(function() {
     var c = confirm("Are you sure?");
@@ -2005,7 +2049,6 @@ $('.editable-vcost').focusout(function(){
                     checkbox.trigger('click');
                     ajaxRespPopOnElm(element);
                     // syncing won't do anything at this time for a vendor cost change only
-                    //syncItem(upc);
                 } else {
                     /*
                         failure
@@ -2024,7 +2067,7 @@ $('.editable-vcost').focusout(function(){
 });
 
 var lastNotes = null
-$('.editable-notes').click(function(){
+$('.editable-notes').on('focus', function(){
     lastNotes = $(this).text();
 });
 $('.editable-notes').focusout(function(){
@@ -2400,6 +2443,7 @@ $('.column-filter').each(function(){
 });
 $('.column-filter').focusin(function(){
     $(this).select();
+    columnFilterLast = $(this);
 });
 $('.column-filter').focusout(function(){
     $(this).text('');
@@ -2833,6 +2877,18 @@ $('#extHideFx').change(function(){
                 }
             });
             break;
+        case 'pullReviewListToPrn':
+            $.ajax({
+                type: 'post',
+                data: 'setPRN=true&username='+username,
+                url: 'AuditReport.php',
+                success: function(response) {
+                    location.reload();
+                },
+                error: function(response) {
+                },
+            });
+            break;
         default:
             break;
     }
@@ -2872,6 +2928,18 @@ var ajaxRespPopOnElm = function(el=false, error=0) {
 
 $('#costModeSwitch').change(function(){
     document.forms['costModeForm'].submit();
+});
+
+/*
+    Press ` to set focus to last column-filter
+*/
+$('html').keypress(function(e){
+    let keyCode = e.keyCode;
+    console.log(keyCode);
+    if (keyCode == 96) {
+        e.preventDefault();
+        $(columnFilterLast).focus();
+    }
 });
 
 JAVASCRIPT;
