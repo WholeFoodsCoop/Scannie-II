@@ -778,6 +778,7 @@ class AuditReport extends PageLayoutA
             }
         }
         $andReviewVendorID = ($costMode == 1) ? ' AND pr.vendorID = ? ' : '';
+        $vendorAliasJoinOn = ($costMode == 1) ? ' va.vendorID='.$_SESSION['currentVendor'] : ' va.vendorID=p.default_vendor_id ';
 
         $upcs = array();
 
@@ -865,7 +866,7 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN subdepts ON subdepts.subdept_no=p.subdept AND subdepts.dept_ID=p.department
                 LEFT JOIN prodFlagsListView AS pf ON pf.upc=p.upc AND pf.storeID=p.store_id
                 LEFT JOIN FloorSectionsListView AS fslv ON fslv.upc=p.upc AND fslv.storeID=p.store_id
-                LEFT JOIN VendorAliases AS va ON va.vendorID=p.default_vendor_id AND va.upc=p.upc
+                LEFT JOIN VendorAliases AS va ON $vendorAliasJoinOn AND va.upc=p.upc
                 LEFT JOIN likeCodeView AS lc ON lc.upc=p.upc
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
@@ -1431,6 +1432,9 @@ HTML;
             <button class="btn btn-default btn-sm small" id="check-prices">Check Prices</button>
             </div> -->
                 ';
+
+            /* Manually Set Vendor */
+            //$_SESSION['currentVendor'] = 358;
 
             // choose verbiage for review button
             if ($countTemp > 0) {
