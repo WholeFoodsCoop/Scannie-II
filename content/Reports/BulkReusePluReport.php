@@ -5,7 +5,7 @@ if (!class_exists('PageLayoutA')) {
 if (!class_exists('SQLManager')) {
     include_once(__DIR__.'/../../common/sqlconnect/SQLManager.php');
 }
-class DeliReusePluReport extends PageLayoutA
+class BulkReusePluReport extends PageLayoutA
 {
 
     public function preprocess()
@@ -26,10 +26,9 @@ class DeliReusePluReport extends PageLayoutA
             DATE(created) AS created
             FROM products AS p
                 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
-            WHERE upc > 20001000000
-                AND upc < 29999000000
-                AND upc LIKE '%00000'
-                AND m.super_name = 'DELI'
+            WHERE upc > 99
+                AND upc < 1000
+                AND m.super_name = 'BULK'
         ");
         $res = $dbc->execute($prep);
         $table = "";
@@ -52,6 +51,18 @@ class DeliReusePluReport extends PageLayoutA
             $date2 = $row['last_sold_array'][1];
 
             $data[$upc]['last_sold'] = ($date1 > $date2) ? $row['last_sold_array'][0] : $row['last_sold_array'][1];
+            //if ($upc == '0000000000281'){
+            //    //var_dump($row);
+            //    echo "<div>";
+            //    echo "date1: $date1";
+            //    echo "</div>";
+            //    echo "<div>";
+            //    echo "date2: $date2";
+            //    echo "</div>";
+            //    echo "<div>";
+            //    echo "last_sold:" . $data[$upc]['last_sold'];
+            //    echo "</div>";
+            //}
         }
 
         function date_compare($a, $b)
@@ -86,7 +97,7 @@ class DeliReusePluReport extends PageLayoutA
             <h4 align=center style="padding: 25px"><i></i>CORE-POS Scale PLUs That May Be Reused</h4>
             <div class="table-responsive">
                 <table class="table table-condensed table-bordered table-striped table-sm small" id="main-table">
-                    <thead><th>upc</th><th>brand</th><th>description</th><th>Last Sold A</th><th>Last Sold B</th></th><th>created</th></thead>
+                    <thead><th>upc</th><th>brand</th><th>description</th><th>last sold A</th><th>last sold B</th><th>created</th></thead>
                     <tbody>$table</tbody>
                 </table>
             </div>
