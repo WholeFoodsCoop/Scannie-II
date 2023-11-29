@@ -101,7 +101,7 @@ ORDER BY r.reviewed;");
 
         $tdDetailed = "";
         $pre = $dbc->prepare("SELECT 
-vendorName AS VendorName,
+v.vendorName AS VendorName,
 COUNT(DISTINCT p.upc) AS ProductCount,
 SUM(CASE WHEN r.reviewed > DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS Thirty,
 SUM(CASE WHEN r.reviewed BETWEEN DATE_SUB(NOW(), INTERVAL 60 DAY) AND DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) AS Sixty,
@@ -114,7 +114,7 @@ LEFT JOIN vendors AS v ON p.default_vendor_id=v.vendorID
 WHERE last_sold > DATE_SUB(NOW(), INTERVAL 30 DAY)
 AND m.super_name NOT IN ('BRAND', 'MISC', 'PRODUCE')
 AND p.created < DATE_SUB(NOW(), INTERVAL 30 DAY)
-GROUP BY vendorID
+GROUP BY v.vendorID
 ORDER BY COUNT(p.upc) DESC");
         $res = $dbc->execute($pre);
         while ($row = $dbc->fetchRow($res)) {
@@ -145,10 +145,12 @@ ORDER BY COUNT(p.upc) DESC");
                 'handler' => self::getProdMissingVendor($dbc), 
                 'ranges' => array(10, 20, 999),
             ),
+            /*
             array(
                 'handler' => self::getMissingMovementTags($dbc), 
                 'ranges' => array(99, 999, 9999),
             ),
+            */
             array(
                 'handler' => self::getVendorList($dbc), 
                 'ranges' => array(0, 1, 99),
@@ -329,6 +331,8 @@ ORDER BY COUNT(p.upc) DESC");
                             this.preventDefault;
                         "
                         >Sale Price Discrepancies</a>
+                        <div>
+                        </div>
                     </li>
                     <li>Do Not Track 
                         <a href="#doNotTrack" onclick="
@@ -590,6 +594,10 @@ HTML;
             AND batchType = 4
             AND batchID > 13768
             AND owner != 'PRODUCE' 
+            AND batchID NOT IN (
+                SELECT upc FROM woodshed_no_replicate.doNotTrack
+                    WHERE method='limboPcBatch' 
+            )
             ;");
         $r = $dbc->execute($p);
         $cols = array('batchID', 'batchName', 'owner');
@@ -641,18 +649,6 @@ HTML;
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
         }
 
-        $p = $dbc->prepare("SELECT upc, brand, description, numflag 
-            FROM products AS p 
-                LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
-            WHERE brand LIKE '%organic%' 
-                AND brand NOT LIKE '%organicville%'
-                AND superID <> 6 
-                AND NOT numflag & (1<<16) <> 0;");
-        $r = $dbc->execute($p);
-        while ($row = $dbc->fetchRow($r)) {
-            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
-        }
-
         $p = $dbc->prepare("SELECT p.upc, p.brand, p.description, p.numflag 
             FROM products AS p 
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -686,7 +682,7 @@ HTML;
                 LEFT JOIN prodFlagsListView AS v ON p.upc=v.upc
             WHERE UPPER(p.brand) NOT LIKE '%ORGANIC%' 
                 AND UPPER(u.description) NOT LIKE '%ORGANIC%'
-                AND superID NOT IN (6,3)
+                AND superID NOT IN (6,3,1)
                 AND p.inUse = 1
                 AND numflag & (1<<16) <> 0;");
         $r = $dbc->execute($p);
@@ -887,6 +883,7 @@ HTML;
                 AND brand != '' 
                 AND default_vendor_id > 0
                 AND brand != 'BULK'
+                AND department <> 110
             GROUP BY brand, local");
         $res = $dbc->execute($prep);
         $brands = array();
@@ -1058,7 +1055,7 @@ HTML;
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
                 // temp(1) - don't show October A anymore. Add any sets to skip here
-                if ($row['dealSet'] != 'January2023' && $row['ABT'] != 'A') {
+                if ($row['dealSet'] != 'November2023' && $row['ABT'] != 'A') {
                     foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
                     $count++;
                 }
@@ -1234,6 +1231,8 @@ HTML;
                 )
                 AND m.super_name NOT IN ('PRODUCE', 'BRAND', 'MISC')
                 AND p.numflag & (1<<19) = 0
+                AND p.department <> 240
+                AND vendorID NOT IN (156)
             GROUP BY v.vendorID
         ");
         $r = $dbc->execute($p);
@@ -1280,7 +1279,7 @@ HTML;
         $desc = "Products missing cost";
         $data = array();
         $pre = $dbc->prepare("SELECT upc, brand, description, 
-            p.department, default_vendor_id, cost, created, DATEDIFF(NOW(), p.last_sold) AS days
+            p.department, default_vendor_id, cost, created, DATEDIFF(NOW(), p.last_sold) AS days_since_sold
             FROM products AS p
                 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
             WHERE m.superID IN (1,13,9,4,8,17,5,18) 
@@ -1298,7 +1297,7 @@ HTML;
         $res = $dbc->execute($pre);
         $count = $dbc->numRows($res);
         $cols = array('upc', 'brand', 'description', 'department',
-             'default_vendor_id', 'cost', 'created', 'days');
+             'default_vendor_id', 'cost', 'created', 'days_since_sold');
         while ($row = $dbc->fetchRow($res)) {
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
         }
@@ -1327,6 +1326,7 @@ HTML;
                     WHERE method = 'getProdMissingVendor'   
                         AND page = 'Dashboard'
                 )
+                AND p.department NOT IN (240,244)
             GROUP BY upc;");
         //$pre = $dbc->prepare("select * from products limit 1");
         $res = $dbc->execute($pre);
@@ -1421,6 +1421,11 @@ JAVASCRIPT;
 return <<<HTML
 body {
     background-color: #555D65;
+}
+.disabled {
+    pointer-events: none; 
+    background-color: lightgrey;
+    display: inline-block;
 }
 .card {
     //box-shadow: 5px 5px 5px #cacaca;
