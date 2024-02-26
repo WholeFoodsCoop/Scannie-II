@@ -446,38 +446,45 @@ class AuditReport extends PageLayoutA
 
         $dbc = ScanLib::getConObj('SCANALTDB');
 
+        // 1. Get majority default vendor name 
         $args = array($username);
-        $prep = $dbc->prepare("SELECT v.vendorName FROM AuditScan AS a 
-            LEFT JOIN is4c_op.products AS p ON p.upc=a.upc
-            LEFT JOIN is4c_op.vendors AS v ON v.vendorID=p.default_vendor_id
-            WHERE username = ? AND savedAs = 'default' 
-            LIMIT 1");
+        $prep = $dbc->prepare(" SELECT
+                COUNT(v.vendorName) AS Count, v.vendorName
+            FROM woodshed_no_replicate.AuditScan AS a
+                LEFT JOIN is4c_op.products AS p ON p.upc=a.upc
+                LEFT JOIN is4c_op.vendors AS v ON v.vendorID=p.default_vendor_id
+            WHERE username = ? AND savedAs = 'default'
+            GROUP BY v.vendorName
+            ORDER BY count(*) DESC
+            LIMIT 1
+        ");
         $res = $dbc->execute($prep, $args);
         $row = $dbc->fetchRow($res);
         $listName = str_replace("'", "", $row['vendorName']);
         $listName = $listName . " REVIEW LIST";
 
+        // 2. Remove DEL rows
+        $delA = array($username, $username, $listName);
+        $delP = $dbc->prepare("
+            UPDATE AuditScan a
+                INNER JOIN AuditScan b
+                    ON b.upc=a.upc
+                        AND b.savedAs = 'default'
+                        AND b.username=?
+                        AND b.notes = 'DEL'
+                SET a.notes = null, b.notes = null
+            WHERE a.username=?
+                AND a.savedAs=?");
+        $delR = $dbc->execute($delP, $delA);
+
+        // 3. Insert / Update notes
         $args = array($username, $storeID, $listName, $username);
-        $prep = $dbc->prepare("INSERT IGNORE INTO AuditScan (date, upc, username, storeID, notes, checked, savedAs) 
+        $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, notes, checked, savedAs) 
             SELECT date, upc, ?, ?, notes, checked, ? 
-            FROM AuditScan where savedAs = 'default' AND username = ? AND notes != ''
+                FROM AuditScan where savedAs = 'default' AND username = ? AND notes != '' AND notes != 'DEL' 
+            ON DUPLICATE KEY UPDATE notes=VALUES(notes), date=VALUES(date)
             ");
         $res = $dbc->execute($prep, $args);
-
-        $notes = array();
-        $args = array($username, $storeID);
-        $prep = $dbc->prepare("SELECT upc, notes FROM AuditScan WHERE username=? AND savedAs='default'
-            AND storeID=? AND notes != ''");
-        $res = $dbc->execute($prep, $args);
-        while ($r = $dbc->fetchRow($res)) {
-            $notes[$r['upc']] = $r['notes'];
-        }
-        
-        foreach ($notes as $upc => $text) {
-            $args = array($text, $username, $listName, $upc);
-            $prep = $dbc->prepare("UPDATE AuditScan SET notes = ? WHERE username = ? AND savedAs = ? AND storeID = ? AND upc = ?");
-            $dbc->execute($prep, $args);
-        }
 
         $json['saved'] = 1;
         echo json_encode($json);
@@ -779,6 +786,7 @@ class AuditReport extends PageLayoutA
         }
         $andReviewVendorID = ($costMode == 1) ? ' AND pr.vendorID = ? ' : '';
         $vendorAliasJoinOn = ($costMode == 1) ? ' va.vendorID='.$_SESSION['currentVendor'] : ' va.vendorID=p.default_vendor_id ';
+        $vendorItemsJoinOn = ($costMode == 1) ? ' v.vendorID='.$_SESSION['currentVendor'] : ' v.vendorID=p.default_vendor_id ';
 
         $upcs = array();
 
@@ -848,9 +856,10 @@ class AuditReport extends PageLayoutA
                     WHEN p.local = 2 THEN 'MN/WI'
                 END AS local,
                 fslv.sections AS floorSections,
+                fslv.subSections AS floorSections,
                 pr.comment
             FROM products AS p
-                LEFT JOIN vendorItems AS v ON p.default_vendor_id=v.vendorID AND p.upc=v.upc
+                LEFT JOIN vendorItems AS v ON $vendorItemsJoinOn AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
                 LEFT JOIN PriceRules AS r ON p.price_rule_id=r.PriceRuleID
                 LEFT JOIN PriceRuleTypes AS t ON r.priceRuleTypeID=t.priceRuleTypeID
@@ -865,9 +874,12 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN productCostChanges AS c ON p.upc=c.upc
                 LEFT JOIN subdepts ON subdepts.subdept_no=p.subdept AND subdepts.dept_ID=p.department
                 LEFT JOIN prodFlagsListView AS pf ON pf.upc=p.upc AND pf.storeID=p.store_id
-                LEFT JOIN FloorSectionsListView AS fslv ON fslv.upc=p.upc AND fslv.storeID=p.store_id
+                LEFT JOIN FloorSectionsListView2 AS fslv ON fslv.upc=p.upc AND fslv.storeID=p.store_id
                 LEFT JOIN VendorAliases AS va ON $vendorAliasJoinOn AND va.upc=p.upc
                 LEFT JOIN likeCodeView AS lc ON lc.upc=p.upc
+                LEFT JOIN FloorSectionProductMap AS fspm ON fspm.upc=p.upc
+                LEFT JOIN FloorSubSections AS fss ON fss.upc=p.upc
+                LEFT JOIN FloorSections AS fs ON fs.floorSectionID=fspm.floorSectionID AND fs.storeID=p.store_id
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
                 AND p.store_id = ?
@@ -1131,7 +1143,7 @@ class AuditReport extends PageLayoutA
             $units = $row['units'];
             $costChangeDate = $row['costChangeDate'];
             $costChange = $row['costChange'];
-            $floorSections = $row['floorSections'];
+            $floorSections = rtrim($row['floorSections'], "-");
             $reviewComments = $row['comment'];
             $prn = $row['PRN'];
             $scalePLU = ($bycount == null) ? '' : substr($upc, 3, 4);
@@ -1210,7 +1222,7 @@ class AuditReport extends PageLayoutA
             $brand = str_replace(',', '', $brand);
             $autoPar = str_replace("&#9608;", " | ", $autoPar);
 
-            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $uom, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$mnote\", \"$notes");
+            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $uom, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes\"");
             $prepCsv = str_replace("&nbsp;", "", $prepCsv);
             $prepCsv = str_replace("\"", "", $prepCsv);
             $csv .= "$prepCsv" . "\r\n";
@@ -1424,6 +1436,7 @@ HTML;
             $vncBtn = '
         <div class="form-group dummy-form">
             <button class="btn btn-default btn-sm small text-secondary" id="validate-notes-cost">VNC</button> |
+            <button class="btn btn-default btn-sm small text-secondary" id="validate-notes-cost-two">VNC-CC</button> |
             <button class="btn btn-default btn-sm small text-secondary" id="hide-validated">Hide VNC\'d</button>
         </div>';
             $checkPriceBtn = '
@@ -1607,6 +1620,17 @@ HTML;
             echo $this->postFetchHandler($demo);
         } else {
             return <<<HTML
+
+<div id="floating-window">
+    <div id="fw-border">
+        <!--<span style="position: absolute; top: 0px; right: 0px; background-color: white; width: 19px; height: 19px; margin: 0px; text-align: center; padding: 0px; cursor: pointer;">x</span>-->
+        <span id="fw-border-text">&nbsp;Output</span>
+        <span style="float: right; display: inline-block; cursor: pointer;"
+            onclick="$('#floating-window').css('display', 'none');">x&nbsp;&nbsp;</span>
+    </div>
+    <textarea id="fw-text"></textarea>
+</div>
+
 <div class="container-fluid">
 $modal
 <input type="hidden" name="keydown" id="keydown"/>
@@ -1760,12 +1784,13 @@ $columnCheckboxes
             $checkPriceBtn
             $vncBtn
             <select id="extHideFx" class="form-control form-control-sm">
-                <option value=null>More Filtering Methods</option>
+                <option value=null>More Filter/IT Methods</option>
                 <option value="hideNoPar">Hide Rows With 0 AutoPar for both stores</option>
                 <option value="hideHillNoPar">Hide Rows With 0 AutoPar for Hillside</option>
                 <option value="hideDenNoPar">Hide Rows With 0 AutoPar for Denfeld</option>
                 <option value="hideNOF">Hide Rows With 'NOF' entered as notes</option>
                 <option value="pullReviewListToPrn">[ IT ] Pull Review List to PRN</option>
+                <option value="exportJSONbatch">[ IT ] Create JSON export batch using notes as sale price</option>
             </select>
         </div>
     </div>
@@ -1844,6 +1869,7 @@ var storeID = $('#storeID').val();
 var username = $('#username').val();
 var scrollMode = $scrollMode;
 var columnFilterLast = null;
+var lastKeyUp = [];
 var stripeTable = function(){
     $('tr.prod-row').each(function(){
         $(this).removeClass('stripe');
@@ -2497,8 +2523,9 @@ $('#view-unchecked').click(function(){
         $(this).show();
     });
     $('#mytablebody tr').each(function(){
-        var checked = $(this).find('.row-check').is(':checked');
-        if (checked == false) {
+        let checked = $(this).find('.row-check').is(':checked');
+        let note = $(this).find('.editable-notes').text();
+        if (checked == false && !note.includes('NOF')) {
             $(this).show();
         } else {
             $(this).hide();
@@ -2784,6 +2811,22 @@ $('#validate-notes-cost').click(function(){
         }
     });
 });
+$('#validate-notes-cost-two').click(function(){
+    $('tr').each(function(){
+        if ($(this).hasClass('prod-row')) {
+            var col1 = $(this).find('td.caseCost').text();
+            col1 = parseFloat(col1);
+            var col2 = $(this).find('td.notes').text();
+            col2 = parseFloat(col2);
+            if (col1 == col2) {
+                $(this).css('background-color', 'tomato')
+                    .addClass('validated');
+            }
+            //console.log('col1: '+col1+', col2: '+col2);
+        }
+    });
+});
+
 $('#hide-validated').click(function(){
     $('tr.validated').each(function(){
         $(this).hide();
@@ -2794,7 +2837,9 @@ $( function() {
     $('#simpleInputCalc').draggable();
 });
 
-$('#storeSelector-storeID').css('border', '1px solid brown');
+$('#storeSelector-storeID').css('border', '1px solid darkgreen')
+    .css('background', 'linear-gradient(45deg, rgba(15,255,55,0.3), rgb(10,185,40))')
+    .css('font-weight', 'bold');
 $('#storeSelector-storeID').change(function(){
     var id = $(this).find(':selected').val();
     $.ajax({
@@ -2841,6 +2886,7 @@ var syncItem = function (upc)
     });
 }
 
+var tmpRet = '';
 $('#extHideFx').change(function(){
     let chosen = $(this).find(':selected').val();
     console.log(chosen);
@@ -2893,6 +2939,30 @@ $('#extHideFx').change(function(){
                 },
             });
             break;
+        case 'exportJSONbatch':
+            // create export JSON batch text as string
+            let batchType = prompt('Enter batch type (1=CD, 2=CHA, 4=PC, 12=OVR, 17=FC)');
+            let start = prompt('Enter start date');
+            let end = prompt('Enter end date');
+            let owner = prompt('Enter owner (super department)');
+            owner = owner.toUpperCase();
+            let batchName = prompt('Enter batch name');
+            let discountType = (batchType == 4) ? 0 : 1;
+            tmpRet = '{ "startDate":"'+start+' 00:00:00", "endDate":"'+end+' 00:00:00", "batchName":"'+batchName+'", "batchType":"'+batchType+'", "discountType":"'+discountType+'", "priority":"0", "owner":"'+owner+'", "transLimit":"0", "items":[ ';
+            $('tr.prod-row').each(function(){
+                let upc = $(this).find('td:eq(0)').text();
+                let salePrice = $(this).find('td.notes').text();
+                if (salePrice != null && salePrice != '' && salePrice > 0) {
+                    tmpRet += '{ "upc":"'+upc+'", "salePrice":"'+salePrice+'", "groupSalePrice":null, "active":"0", "pricemethod":"0", "quantity":"0", "signMultiplier":"1"},';
+                }
+            });
+            tmpRet = tmpRet.slice(0, -1);
+            tmpRet += ' ] } ';
+            $('#floating-window').css('display', 'block');
+            $('#fw-border-text').text('');
+            $('#fw-border-text').text('Batch Import');
+            $('#fw-text').val('');
+            $('#fw-text').val(tmpRet);
         default:
             break;
     }
@@ -2939,10 +3009,42 @@ $('#costModeSwitch').change(function(){
 */
 $('html').keypress(function(e){
     let keyCode = e.keyCode;
-    console.log(keyCode);
+    //console.log(keyCode);
     if (keyCode == 96) {
         e.preventDefault();
         $(columnFilterLast).focus();
+    }
+});
+
+$('html').keydown(function(e){
+    let keyCode = e.keyCode;
+    if (lastKeyUp.length > 0) {
+        lastKeyUp[1] = lastKeyUp[0];
+        lastKeyUp[0] = keyCode;
+    } else {
+        lastKeyUp.push(keyCode);
+    }
+    console.log(lastKeyUp);
+});
+
+$('.editable-description, .editable-brand').on('keydown', function(e) {
+    let keyCode = e.keyCode;
+    let elem = $(this);
+    let elemIndex = elem.index();
+    let nextElem = null;
+    // On TAB use defined behavior
+    if (e.keyCode == 9) {
+
+        nextElem = elem.closest('tr').next().find('td:eq('+elemIndex+')');
+        if (lastKeyUp.length > 0) {
+            // if SHIFT key was pressed, go backward 
+            if (lastKeyUp[0] == '16') {
+                nextElem = elem.closest('tr').prev().find('td:eq('+elemIndex+')');
+            }
+        }
+
+        e.preventDefault();
+        nextElem.focus();
     }
 });
 
@@ -3044,6 +3146,34 @@ thead {
     background: grey;
     background-color: grey;
     color: white;
+}
+
+#floating-window {
+    z-index: 999;
+    min-height: 300px;
+    width: 176px;
+    background: rgba(255,255,255,0,5);;
+    position: fixed;
+    top: 0px;
+    right: 0px;
+    border: 1px solid grey;
+    display: block;
+    display: none;
+}
+#fw-border {
+    background: lightblue;
+    position: relative;
+    height: 20px;
+    border-bottom: 1px solid grey;
+    padding-top: -5px;
+    color: black;
+    font-size: 13px
+}
+#fw-text {
+    height: 300px;
+    width: 100%;
+    border: 1px solid transparent;
+    outline: none;
 }
 HTML;
     }
