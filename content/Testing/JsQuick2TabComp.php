@@ -70,6 +70,13 @@ class JsQuick2TabComp extends PageLayoutA
             $thead .= "<th>$showB</th>";
         $thead .= '<th>Column</th><th>Table A</th><th>Table B</th></tr>';
 
+        $dbc = scanLib::getConObj(); 
+        $cols = $this->getTableCols($tables);
+        $colsHTML = '<strong>Table Columns</strong>: ';
+        foreach ($cols as $col) {
+            $colsHTML .= "$col, ";
+        }
+
         return <<<HTML
 <div class="row" style="padding: 25px;">
     <div class="col-lg-2">
@@ -88,7 +95,7 @@ class JsQuick2TabComp extends PageLayoutA
             <input type="text" name="joinOn" placeholder="column to join on" class="form-control" value="$joinOn" required />
         </div>
         <div class="form-group">
-            <label>Comp Only This Col</label>
+            <label>Comp Only Col (default=false)</label>
             <input type="text" name="column" placeholder="colum 2 check (opt)" class="form-control" value="$column" />
         </div>
         <div class="form-group">
@@ -105,6 +112,8 @@ class JsQuick2TabComp extends PageLayoutA
         </form>
     </div>
     <div class="col-lg-9">
+        $colsHTML
+        <div style="height: 10px"></div>
         <h4>Discrepancies Found</h4>
         <table class="table table-bordered table-consensed small" id="mytable">
             <thead>
@@ -127,7 +136,6 @@ HTML;
         return <<<HTML
 label {
     display: inline-block;
-    font-style: italic;
     background-color: #FAFAFA;
     padding: 5px;
     margin: 0px;
@@ -136,6 +144,7 @@ label {
     border-right: 1px solid lightgrey;
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
+    font-size: 13px;
 }
 HTML;
     }
@@ -170,6 +179,7 @@ const cols = $cols
 const alwaysShowColA = $showA;
 const alwaysShowColB = $showB;
 const column = $column;
+const onlyContainsNumbers = (str) => /^-?\d*\.?\d*$/.test(str);
 
 $.each(tableA, function(upc, row) {
     if (column != 'false') {
@@ -179,7 +189,15 @@ $.each(tableA, function(upc, row) {
             if (tableA[upc].hasOwnProperty(col) && tableB[upc].hasOwnProperty(col)) {
                 let a = tableA[upc][col];
                 let b = tableB[upc][col];
+
+                // special case cast as float
+                if (onlyContainsNumbers(a) && onlyContainsNumbers(b)) {
+                    a = parseFloat(a);
+                    b = parseFloat(b);
+                }
+
                 if (a != b) {
+
                     let newhtml = '';
                     newhtml += '<tr><td>'+upc+'</td>';
                     if (alwaysShowColA != 'false') {
@@ -201,6 +219,13 @@ $.each(tableA, function(upc, row) {
                 if (tableA[upc].hasOwnProperty(col) && tableB[upc].hasOwnProperty(col)) {
                     let a = tableA[upc][col];
                     let b = tableB[upc][col];
+
+                    // special case cast as float
+                    if (onlyContainsNumbers(a) && onlyContainsNumbers(b)) {
+                        a = parseFloat(a);
+                        b = parseFloat(b);
+                    }
+
                     if (a != b) {
                         let newhtml = '';
                         newhtml += '<tr><td>'+upc+'</td>';
