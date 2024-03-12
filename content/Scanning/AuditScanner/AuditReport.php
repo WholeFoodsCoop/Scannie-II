@@ -464,18 +464,25 @@ class AuditReport extends PageLayoutA
         $listName = $listName . " REVIEW LIST";
 
         // 2. Remove DEL rows
+        $delIDs = array();
         $delA = array($username, $username, $listName);
         $delP = $dbc->prepare("
-            UPDATE AuditScan a
+            SELECT a.id FROM AuditScan a
                 INNER JOIN AuditScan b
                     ON b.upc=a.upc
                         AND b.savedAs = 'default'
                         AND b.username=?
                         AND b.notes = 'DEL'
-                SET a.notes = null, b.notes = null
             WHERE a.username=?
                 AND a.savedAs=?");
         $delR = $dbc->execute($delP, $delA);
+        while ($row = $dbc->fetchRow($delR)) {
+            $delIDs[] = $row['id'];
+        }
+
+        list($inStr, $rmA) = $dbc->safeInClause($delIDs);
+        $rmP = $dbc->prepare("DELETE FROM AuditScan WHERE id IN ($inStr)");
+        $rmR = $dbc->execute($rmP, $rmA);
 
         // 3. Insert / Update notes
         $args = array($username, $storeID, $listName, $username);
@@ -1376,7 +1383,7 @@ HTML;
             $date = $row['date'];
             $saved = $row['savedAs'];
             $sel = ($saved == $loaded) ? ' selected ' : '';
-            $style = (strpos(strtolower($saved), 'review') !== false) ? "style=\"background-color: #FFFFCC; border: 1px solid grey;\"" : "";
+            $style = (strpos(strtolower($saved), 'review') !== false) ? "style=\"background-color: lightblue; border: 1px solid grey;\"" : "";
             $savedLists .= "<option value=\"$saved\" $style  $sel>[$date] $saved</option>";
             $datalist .= "<option value=\"$saved\">";
         }
@@ -1384,11 +1391,11 @@ HTML;
 
         $this->addScript('http://'.$FANNIE_ROOTDIR . '/src/javascript/chosen/chosen.jquery.min.js');
         $this->addCssFile('http://'.$FANNIE_ROOTDIR. '/src/javascript/chosen/bootstrap-chosen.css');
-        //$this->add_onload_command('$(\'.chosen-select:visible\').chosen();');
+        $this->add_onload_command('$(\'.chosen-select:visible\').chosen();');
         //$this->add_onload_command('$(\'#store-tabs a\').on(\'shown.bs.tab\', function(){$(\'.chosen-select:visible\').chosen();});');
 
         $this->vendors = array();
-        $vselect = '<option value="">Load by Vendor</option>';
+        $vselect = '<option value="">Select a Vendor</option>';
         $curVendor = FormLib::get('vendor');
         $prep = $dbc->prepare("SELECT vendorName, vendorID FROM vendors 
             WHERE vendorID NOT IN (-2,-1,1,2)
@@ -1401,7 +1408,7 @@ HTML;
              $this->vendor[$vid] = $vname;
          }
 
-        $bselect = '<option value="">Load All by Brand</option>';
+        $bselect = '<option value="">Select a Brand</option>';
         $prep = $dbc->prepare("
             SELECT brand FROM products AS p
                 INNER JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
@@ -1668,8 +1675,9 @@ $costModeSwitch
         <input name="username" type="hidden" value="$username" />
         <input name="storeID" type="hidden" value="$storeID" />
         <div class="form-group dummy-form">
-            <select name="loadList" class="form-control form-control-sm">
+            <select name="loadList" class="form-control form-control-sm chosen-select">
                 <option val=0>Saved Lists</option>
+                <option val=0>&nbsp;</option>
                 $savedLists
             </select>
         </div>
@@ -1706,18 +1714,12 @@ $costModeSwitch
         <input name="username" type="hidden" value="$username" />
         <input name="storeID" type="hidden" value="$storeID" />
         <div class="form-group dummy-form">
-            <select name="vendCat" class="form-control form-control-sm chosen-select" placeholder="Select a Vendor Catalog">
+            <span class="load-select-tabs">Load Vendor List <span class="mini-q" title="Loads only items that are in-use for at least one store">?</span></span>
+            <select name="vendCat" class="form-control form-control-sm" placeholder="Select a Vendor Catalog">
                 $vselect
             </select>
         </div>
         <div class="form-group dummy-form">
-
-        <label for="loadFullCat" style="font-size: 14px" title="Check to include items that are out-of-use">Opt A*</label>
-            <input type="checkbox" name="loadFullCat" id="loadFullCat" value="1" />&nbsp;
-
-        <label for="loadFullCatV" style="font-size: 14px" title="Check to include all items that exist in the vendor catalog, regardless of default vendor settings">Opt B*</label>
-            <input type="checkbox" name="loadFullCatV" id="loadFullCatV" value="1" />&nbsp;
-
             <button class="btn btn-default btn-sm" type="submit" id="loadCatBtn">Load</button>
         </div>
     </form>
@@ -1727,8 +1729,9 @@ $costModeSwitch
     <form name="loadBrandList" id="loadBrandList" method="post" action="AuditReport.php" style="display: inline-block">
         <input name="username" type="hidden" value="$username" />
         <input name="storeID" type="hidden" value="$storeID" />
-        <div class="form-group dummy-form">
-            <select name="brandList" class="form-control form-control-sm chosen-select" placeholder="Select a Brand">
+        <div class="form-group dummy-form" style="padding: 5px">
+            <span class="load-select-tabs">Load Items by Brand <span class="mini-q" title="Loads all items regardless of in-use status">?</span></span>
+            <select name="brandList" class="form-control form-control-sm" placeholder="Select a Brand">
                 $bselect
             </select>
         </div>
@@ -2837,9 +2840,15 @@ $( function() {
     $('#simpleInputCalc').draggable();
 });
 
-$('#storeSelector-storeID').css('border', '1px solid darkgreen')
-    .css('background', 'linear-gradient(45deg, rgba(15,255,55,0.3), rgb(10,185,40))')
-    .css('font-weight', 'bold');
+if (storeID == 1) {
+    $('#storeSelector-storeID').css('border', '1px solid darkgreen')
+        .css('background', 'linear-gradient(45deg, lightgreen, yellowgreen')
+        .css('font-weight', 'bold');
+} else {
+    $('#storeSelector-storeID').css('border', '1px solid darkgreen')
+        .css('background', 'linear-gradient(45deg, yellow, orange')
+        .css('font-weight', 'bold');
+}
 $('#storeSelector-storeID').change(function(){
     var id = $(this).find(':selected').val();
     $.ajax({
@@ -3175,6 +3184,24 @@ thead {
     border: 1px solid transparent;
     outline: none;
 }
+.load-select-tabs {
+    position: absolute;
+    margin-top: -30px;
+    margin-left: -5px;
+    background-color: #F2F2F2;
+    padding: 3px;
+    font-size: 13px;
+    border-top-right-radius: 5px;
+    border-top-left-radius: 5px;
+    font-weight: bold;
+    color: grey;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+.mini-q {
+    font-size: 10px;
+    cursor: pointer;
+}
 HTML;
     }
 
@@ -3242,11 +3269,6 @@ HTML;
             be an option to remove this list from Saved Lists.</li>
         <li><strong>Save List As</strong> Save the current list of items.</li>
         <li><strong>Load by Vendor</strong> Loads an entire vendor catalog. By default, only loads items that are in use (at at least one store), and only items where the selected vendor is the default (ordering) vendor for those items.
-            <ul>
-                <li>Opt A: if this option is checked, both in-use and not-in-use items will load.</li>
-                <li>Opt B: check this option to pull up a list of items with records from this vendor, regardless of the current default (ordering) vendor.</li>
-            </ul>
-            will load. If the <b>Load All</b> checkbox is checked, the entire catalog will be loaded including out-of-use items.</li>
         <li><strong>Load All By Brand</strong> Loads all items with the selected brand name, regardless of in-use status.</li>
     </ul>
     <li>Button Filters</li>
