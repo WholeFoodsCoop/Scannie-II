@@ -1467,7 +1467,8 @@ HTML;
             }
             $tempBtnID = "temp-btn";
             $reviewBtn = "<button class=\"btn $tempClass btn-sm page-control\" id=\"$tempBtnID\">$tempBtn</button>";
-            $saveReviewBtn = '<button id="saveReviewList" class="btn btn-secondary btn-sm page-control">Save Review List</button>';
+            $saveReviewBtn = '<button id="saveReviewList" class="btn btn-secondary btn-sm page-control">Save List <span class="mini-q"
+                title="Save items with notes (as REVIEW LIST)">?</span></button>';
 
             $reviewForm = '
 <div class="form-group dummy-form">
@@ -2441,7 +2442,7 @@ var styleChecked = function() {
         }
     });
 };
-$('.row-check').click(function(){
+$('.row-check').click(function(event){
     var checked = $(this).is(':checked');
     var upc = $(this).closest('tr').find('td.upc').attr('data-upc');
     var storeID = $('#storeID').val();
@@ -2457,6 +2458,23 @@ $('.row-check').click(function(){
             styleChecked();
         },
     });
+
+    /*
+        On click checkbox, focus next available checkbox
+    */
+    let tableSize = $('tr').filter(function(){
+        return $(this).css('display') !== 'none';
+    }).length - 2;
+
+    nextElm = $(this).closest('tr').next('tr').find('.row-check');
+    while (!nextElm.is(':visible')) {
+        nextElm = $(nextElm).closest('tr').next('tr').find('.row-check');
+        // !! don't allow infinite loop
+        if (nextElm.length == 0) {
+            break;
+        }
+    }
+    nextElm.focus();
 });
 styleChecked();
 
