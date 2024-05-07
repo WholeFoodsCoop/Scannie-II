@@ -36,6 +36,7 @@ class LocalFlagReport extends PageLayoutA
             WHERE brand = ?  
                 AND m.superID IN (1, 3, 4, 5, 8, 9,13,17,18)
                 AND default_vendor_id > 0
+                AND department <> 110
             GROUP BY upc ORDER BY local");
         $res = $dbc->execute($prep, $args);
         echo $dbc->error();
@@ -69,6 +70,7 @@ HTML;
                 AND brand != '' 
                 AND default_vendor_id > 0
                 AND brand != 'BULK'
+                AND department <> 110
             GROUP BY brand, local");
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
@@ -108,6 +110,7 @@ HTML;
         return <<<JAVASCRIPT
 $('.brand').click(function(){
     let brand = $(this).text();
+    brand = encodeURIComponent(brand);
     $.ajax({
         type: 'post',
         url: 'LocalFlagReport.php',
