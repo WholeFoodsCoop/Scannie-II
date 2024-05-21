@@ -1874,27 +1874,30 @@ var username = $('#username').val();
 var scrollMode = $scrollMode;
 var columnFilterLast = null;
 var lastKeyUp = [];
-var stripeTable = function(){
+
+var stripeIndex = 0;
+var restripe = function() {
     $('tr.prod-row').each(function(){
         $(this).removeClass('stripe');
     });
-    $('tr.prod-row').each(function(i = 0){
-        if ($(this).is(':visible')) {;
-            if (i % 2 == 0) {
+    $('tr.prod-row').each(function(){
+        let isVisible = $(this).is(":visible");
+        if (isVisible) {
+            if (stripeIndex % 2 == 0) {
                 $(this).addClass('stripe');
-            } else {
-                $(this).removeClass('stripe');
             }
-        i++;
+            stripeIndex++; 
         }
     });
-
-    return false;
 };
-stripeTable();
+restripe();
+
+$(document).mouseup(function(e) {
+    restripe();
+});
 
 $("#mytable").bind('sortEnd', function(){
-    stripeTable();
+    restripe();
 });
 
 
@@ -2041,6 +2044,10 @@ $('.editable-cost').focusout(function(){
                     */
                     ajaxRespPopOnElm(element, 1);
                 }
+            },
+            error: function(response)
+            {
+                ajaxRespPopOnElm(element, 1);
             },
         });
     }
@@ -2518,6 +2525,7 @@ $('.column-filter').keyup(function(){
             }
         }
     });
+    restripe();
 });
 
 
@@ -3033,13 +3041,37 @@ $('#costModeSwitch').change(function(){
 
 /*
     Press ` to set focus to last column-filter
+
+    Press Enter with only one row showing 
+    to check that row's checkbox
 */
 $('html').keypress(function(e){
     let keyCode = e.keyCode;
-    //console.log(keyCode);
+    //console.log('keyCode: '+keyCode);
     if (keyCode == 96) {
+        // ` grave acccent was pressed 
         e.preventDefault();
         $(columnFilterLast).focus();
+    }
+    if (keyCode == 12345) {
+        // non existing key was pressed
+        e.preventDefault();
+        let count = 0;
+        $('tr.prod-row').each(function(){
+            let isVisible = $(this).is(':visible');
+            if (isVisible)
+                count++;
+        });
+        if (count == 1) {
+            $('tr.prod-row').each(function(){
+                isVisible = $(this).is(':visible');
+                if (isVisible) {
+                    console.log('trigger checkbox click');
+                    let what = $(this).find('.row-check').trigger('click');
+                    console.log(what);
+                }
+            });
+        }
     }
 });
 
@@ -3074,6 +3106,7 @@ $('.editable-description, .editable-brand').on('keydown', function(e) {
         nextElem.focus();
     }
 });
+
 
 JAVASCRIPT;
     }
@@ -3215,6 +3248,7 @@ thead {
     color: grey;
     padding-left: 6px;
     padding-right: 6px;
+    border-bottom: 0.5px solid lightgrey;
 }
 .mini-q {
     font-size: 10px;
