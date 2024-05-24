@@ -87,8 +87,9 @@ class BrandFixer extends PageLayoutA
 
         $dbc->startTransaction();
         foreach ($data as $upc => $brand) {
-            $a = array($brand, $upc);
-            $p = $dbc->prepare("UPDATE productUser SET brand = ? WHERE upc = ?");
+            $a = array($brand, $upc, $brand);
+            $p = $dbc->prepare("INSERT INTO productUser (brand, upc) VALUES (?, ?)
+                ON DUPLICATE KEY UPDATE brand = ?;");
             $r = $dbc->execute($p, $a);
         }
         $dbc->commitTransaction();
