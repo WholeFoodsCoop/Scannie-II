@@ -42,74 +42,78 @@ class ScannerSettings extends PageLayoutA
         $scanner_settings = array();
         return <<<HTML
 <div class="container-fluid" style="margin-top: 25px;">
-    <label>Go To:</label>
-    <ul>
-        <li><div class="form-group"><a href="AuditScanner/Scanner.php" class="btn btn-default form-control">New Audit Scanner</a></div></li>
-        <li><div class="form-group"><a href="AuditScanner/QuickScanner.php" class="btn btn-default form-control">Quick Scanner</a></div></li>
-        <li><div class="form-group"><a href="AuditScanner/ProductScanner.php" class="btn btn-default form-control">Audit Scanner</a></div></li>
-        <li><div class="form-group"><a href="BatchCheck/SCS.php" class="btn btn-default form-control">Batch Check</a></div></li>
-    </ul>
-    <form method="post">
-    <label>Add Linea Sound on Scan:</label>
-        <ul>
-            <li>
-                <label>Beep After Scan: </label>
-                <input type="checkbox" name="scanBeep" value=1 id="toggleBeep" $checked_scanBeep/>
-            </li>
-        </ul>
-        <input type="hidden" name="sessionID" id="sessionID" value="$a" />
-    </form>
-    <form method="post">
-        <label>Audit Scanner <a href="" data-target="#scanner-settings" data-toggle="collapse">Settings</a></label>
-        <ul class="" id="scanner-settings">
-            <li>
-                <label>Par</label>
-                <input type="checkbox" name="auditPar" value=1 id="togglePar" $checked_auditPar/>
-            </li>
-            <li>
-                <label>Cost/Price/Margin</label>
-                <input type="checkbox" name="auditCost" value=1 id="toggleCost" $checked_auditCost/>
-            </li>
-            <li>
-                <label>SRP/Margin</label>
-                <input type="checkbox" name="auditSrp" value=1 id="toggleSrp" $checked_auditSrp/>
-            </li>
-            <li>
-                <label>Price Rule Type</label>
-                <input type="checkbox" name="auditPrtID" value=1 id="togglePrtID" $checked_auditPrtID/>
-            </li>
-            <li>
-                <label>Desc, Brand, Dept</label>
-                <input type="checkbox" name="auditProdInfo" value=1 id="toggleProdInfo" $checked_auditProdInfo/>
-            </li>
-            <li>
-                <label>Vendor Info</label>
-                <input type="checkbox" name="auditVendorInfo" value=1 id="toggleVendorInfo" $checked_auditVendorInfo/>
-            </li>
-            <li>
-                <label>Prod Location</label>
-                <input type="checkbox" name="auditLocations" value=1 id="toggleLocations" $checked_auditLocations/>
-            </li>
-            <li>
-                <label>Size</label>
-                <input type="checkbox" name="auditSize" value=1 id="toggleSize" $checked_auditSize/>
-            </li>
-            <li>
-                <label>Sign Info</label>
-                <input type="checkbox" name="auditSignInfo" value=1 id="toggleSignInfo" $checked_auditSignInfo/>
-            </li>
-            <li>
-                <label>Sale Info</label>
-                <input type="checkbox" name="auditSaleInfo" value=1 id="toggleSaleInfo" $checked_auditSaleInfo/>
-            </li>
-            <li>
-                <label>Socket Device</label>
-                <input type="checkbox" name="socketDevice" value=1 id="toggleSocketDevice" $checked_socketDevice/>
-            </li>
-        </ul>
-        <input type="hidden" name="sessionID" id="sessionID" value="$a" />
-    </form>
-</div>
+    <div class="row">
+        <div class="col-lg-4"></div>
+        <div class="col-lg-4">
+            <label><strong>GO TO</strong></label>
+            <ul>
+                <li><div class="form-group"><a href="AuditScanner/ProductScanner.php" class="btn btn-default form-control" style="font-weight: bold">Audit Scanner</a></div></li>
+                <li><div class="form-group"><a href="BatchCheck/SCS.php" class="btn btn-default form-control" style="color: green; font-weight: bold">Batch Check</a></div></li>
+            </ul>
+            <form method="post">
+            <label><strong>Add Linea Sound on Scan</strong>:</label>
+                <ul>
+                    <li>
+                        <label>Beep After Scan: </label>
+                        <input type="checkbox" name="scanBeep" value=1 id="toggleBeep" $checked_scanBeep/>
+                    </li>
+                </ul>
+                <input type="hidden" name="sessionID" id="sessionID" value="$a" />
+            </form>
+            <form method="post">
+                <label><strong>Audit Scanner</strong> <a href="" data-target="#scanner-settings" data-toggle="collapse">Settings</a></label>
+                <ul class="" id="scanner-settings">
+                    <li>
+                        <label>Par</label>
+                        <input type="checkbox" name="auditPar" value=1 id="togglePar" $checked_auditPar/>
+                    </li>
+                    <li>
+                        <label>Cost/Price/Margin</label>
+                        <input type="checkbox" name="auditCost" value=1 id="toggleCost" $checked_auditCost/>
+                    </li>
+                    <li>
+                        <label>SRP/Margin</label>
+                        <input type="checkbox" name="auditSrp" value=1 id="toggleSrp" $checked_auditSrp/>
+                    </li>
+                    <li>
+                        <label>Price Rule Type</label>
+                        <input type="checkbox" name="auditPrtID" value=1 id="togglePrtID" $checked_auditPrtID/>
+                    </li>
+                    <li>
+                        <label>Desc, Brand, Dept</label>
+                        <input type="checkbox" name="auditProdInfo" value=1 id="toggleProdInfo" $checked_auditProdInfo/>
+                    </li>
+                    <li>
+                        <label>Vendor Info</label>
+                        <input type="checkbox" name="auditVendorInfo" value=1 id="toggleVendorInfo" $checked_auditVendorInfo/>
+                    </li>
+                    <li>
+                        <label>Prod Location</label>
+                        <input type="checkbox" name="auditLocations" value=1 id="toggleLocations" $checked_auditLocations/>
+                    </li>
+                    <li>
+                        <label>Size</label>
+                        <input type="checkbox" name="auditSize" value=1 id="toggleSize" $checked_auditSize/>
+                    </li>
+                    <li>
+                        <label>Sign Info</label>
+                        <input type="checkbox" name="auditSignInfo" value=1 id="toggleSignInfo" $checked_auditSignInfo/>
+                    </li>
+                    <li>
+                        <label>Sale Info</label>
+                        <input type="checkbox" name="auditSaleInfo" value=1 id="toggleSaleInfo" $checked_auditSaleInfo/>
+                    </li>
+                    <li>
+                        <label>Socket Device</label>
+                        <input type="checkbox" name="socketDevice" value=1 id="toggleSocketDevice" $checked_socketDevice/>
+                    </li>
+                </ul>
+                <input type="hidden" name="sessionID" id="sessionID" value="$a" />
+            </form>
+        </div>
+        </div>
+        <div class="col-lg-4"></div>
+    </div>
 HTML;
     }
 

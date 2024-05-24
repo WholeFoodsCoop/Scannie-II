@@ -45,7 +45,6 @@ HTML;
         return <<<HTML
 <div class="container-fluid" style="margin-top: 20px;">
     <ul>
-        <li><a href="Handheld.html">Handheld (iPod like GUI)</a></li>
         <li><a href="MarginCalculator.html">Margin Calculator</a></li>
         <li><a href="SpecialCalculator.html">Special Calculator</a></li>
     </ul>

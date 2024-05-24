@@ -117,7 +117,11 @@ HTML;
     cursor: pointer;"
     onclick="$('#site-navbar').show(); $(this).hide(); return false;"></div>
 <nav class="navbar navbar-expand-md navbar-dark bg-custom mynav no-print" id="site-navbar">
-  <a class="navbar-brand" href="http://{$MY_ROOTDIR}">Sv2</a>
+  <a class="navbar-brand" style="font-size: 16px; padding: 7px; font-weight: bold;" href="http://{$MY_ROOTDIR}">SV2</a>
+  <span class="navbar-brand" style="font-size: 16px; padding: 1px; font-weight: bold;" >
+    <a class="navbar-brand" style="font-size: 16px; padding: 1px; font-weight: bold;" href="http://key/scanWiki" target="_blank">ScanWiki</a>|&nbsp;&nbsp;&nbsp;
+    <a class="navbar-brand" style="font-size: 16px; padding: 1px; font-weight: bold;" href="http://key/notwiki/" target="_blank">NotWiki</a>
+  </span>
   <button class="navbar-toggler" type="button" data-toggle="collapse" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
     data-target="navbarSupportedContent" onclick="navbarSupportedContent();" return false;">
     <span class="navbar-toggler-icon"></span>

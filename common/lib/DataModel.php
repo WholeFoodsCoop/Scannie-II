@@ -182,6 +182,19 @@ class DataModel
         $pinfoR = $this->connection->execute($pinfoP, $pinfoA);
         $pinfoW = $this->connection->fetchRow($pinfoR);
 
+        if ($cost > 999) {
+            echo array("Error" => "Cost limit exceeded");
+            return false;
+        }
+        if ($cost > ($pinfoW['cost'] * 5) && $pinfoW['cost'] > 0) {
+            echo array("Error" => "Cost limit exceeded");
+            return false;
+        }
+        if (!is_numeric($cost)) {
+            echo array("Error" => "Cost limit exceeded");
+            return false;
+        }
+
         $updateA = array('EDIT', $upc, $pinfoW['description'], $pinfoW['normal_price'], $pinfoW['special_price'], 
             $cost, $pinfoW['department'], $pinfoW['tax'], $pinfoW['foodstamp'], $pinfoW['wicable'], $pinfoW['scale'],
             null, $user, $pinfoW['qttyEnforced'], $pinfoW['discount'], $pinfoW['inUse']);

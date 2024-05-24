@@ -138,7 +138,7 @@ JAVASCRIPT;
                         <input type="password" name="pw" class="form-control"  placeholder="password">
                     </div>
                     <div class="form-group">
-                        <input type="submit" value="LOG IN" class="btn btn-defult btn-login form-control" >
+                        <input type="submit" id="submit" value="LOG IN" class="btn btn-defult btn-login form-control" >
                     </div>
                 </form>
 
@@ -152,7 +152,7 @@ JAVASCRIPT;
     {
         return <<<HTML
 html,body {
-    display:table;
+    display: table;
     width:100%;
     height:100%;
     margin:0;
@@ -190,7 +190,7 @@ h2.login {
 }
 body, html {
     background: black;
-    background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px); 
+    background: repeating-linear-gradient(127deg, #023047, #219ebc, #023047); 
 }
 .form-control {
     margin-top: 25px;

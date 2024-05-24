@@ -26,13 +26,65 @@ if (!class_exists('PageLayoutA')) {
 if (!class_exists('SQLManager')) {
     include_once(__DIR__.'/../../common/sqlconnect/SQLManager.php');
 }
+if (!class_exists('GetAutoPar')) {
+    include(__DIR__.'/../Testing/GetAutoPar.php');
+}
 class TrackItemChange extends PageLayoutA 
 {
 
     protected $title = "Track Change";
     protected $description = "[Track Change] Track all changes made to an item in POS/OFFICE.";
     protected $connect = true;
-    public $ui = TRUE;
+    public $ui = true;
+    protected $must_authenticate = true;
+
+    public function preprocess()
+    {
+        $this->__routes[] = "post<prodUpdateID>";
+        $this->__routes[] = "post<getPar>";
+        $this->__routes[] = "post<test>";
+        return parent::preprocess();
+    }
+
+    public function postTestHandler()
+    {
+        $json = array('test'=>'yes');
+        echo json_encode($json);
+
+        return false;
+    }
+
+    public function postGetParHandler()
+    {
+        $json = array();
+        $date = FormLib::get('date');
+        $storeID = FormLib::get('storeID');
+        $upc = FormLib::get('upc');
+
+        // init test values
+        //$upc = '0005150001700';
+        //$date = "2022-08-08";
+        //$storeID = 2;
+
+        $getter = new GetAutoPar();
+        $data = $getter->run($date, $storeID, $upc);
+        $json['data'] = $data;
+        $json['test'] = 'success';
+        echo json_encode($json);
+
+        return false;
+    }
+
+    public function postProdUpdateIDHandler()
+    {
+        $id = FormLib::get('prodUpdateID', false);
+        $dbc = $this->connect;
+        $args = array($id);
+        $prep = $dbc->prepare("DELETE FROM prodUpdate WHERE prodUpdateID = ?");
+        $res = $dbc->execute($prep, $args);
+
+        return false;
+    }
 
     public function body_content()
     {
@@ -92,7 +144,7 @@ class TrackItemChange extends PageLayoutA
         $data = array();
         $td = ""; $i = 0;
         $skips = array('updateType', 'storeID', 'modified' );
-        $prep = $dbc->prepare("SELECT updateType, storeID, description, price, salePrice, cost, dept, tax, fs, wic, scale, likeCode, 
+        $prep = $dbc->prepare("SELECT prodUpdateID, updateType, storeID, description, price, salePrice, cost, dept, tax, fs, wic, scale, likeCode, 
             modified, name AS user, forceQty, noDisc, inuse 
             FROM prodUpdate AS p
                 LEFT JOIN Users AS u ON p.user=u.uid
@@ -102,9 +154,11 @@ class TrackItemChange extends PageLayoutA
             $res = $dbc->execute($prep, array($upc, $storeID));
             while ($row = $dbc->fetchRow($res)) {
                 foreach ($row as $col => $v) {
-                    if (!is_numeric($col)) 
+                    if (!is_numeric($col) && $col != 'prodUpdateID') 
                         $data[$i][$col] = $v;
                 }
+                $id = $row['prodUpdateID'];
+                $data[$i]['trash'] = "<span class=\"scanicon scanicon-trash\" data-puID=\"$id\">&nbsp;</span>"; 
                 $i++;
             }
         }
@@ -165,7 +219,7 @@ class TrackItemChange extends PageLayoutA
             }
             $show = 0;
         }
-        $columns = array('updateType', 'description', 'price', 'salePrice', 'cost', 'dept', 'tax', 'fs', 'wic', 'scale', 'likeCode', 'date', 'user', 'forceQty', 'noDisc', 'inuse');
+        $columns = array('updateType', 'description', 'price', 'salePrice', 'cost', 'dept', 'tax', 'fs', 'wic', 'scale', 'likeCode', 'date', 'user', 'forceQty', 'noDisc', 'inuse','del');
         $th = '';
         foreach ($columns as $col) {
             $th .= "<th>$col</th>";
@@ -192,6 +246,9 @@ class TrackItemChange extends PageLayoutA
             <div><strong>Last Sold</strong>: $lastSold</div>
         </div>
         <div class="col-lg-4">
+            <div id="myChartContainer2">
+                <canvas id="myChart2"></canvas>
+            </div>
         </div>
         <div class="col-lg-4">
             <div id="myChartContainer">
@@ -246,11 +303,13 @@ var tmpcost = '';
 var tmp = null;
 tmpcost = $('#table-changes').closest('table').find(' tbody tr:first').find('td.cost').text();
 var costs = [];
+var date = '';
 var dates = []; 
 var prices = [];
 var chartCosts = [];
 var chartPrices = [];
 var chartLabels = [];
+var weeklyPars = [];
 $('#table-changes tr').each(function(){
     let cost = $(this).find('td.cost').text();
     let price = $(this).find('td.price').text();
@@ -267,17 +326,76 @@ $('#table-changes tr').each(function(){
 costs.reverse();
 dates.reverse();
 prices.reverse();
+
 $.each(costs, function(k,v){
     date = dates[k];
     price = prices[k];
     if (tmp != v && v != 0) {
-        console.log(v + ', ' + date);
+        //console.log(v + ', ' + date);
         chartCosts.push(v);
         chartPrices.push(price);
         chartLabels.push(date);
+
+        upc = $('#upc').val();
+        storeID = 2;
+        //$.ajax ({
+        //    type: 'post',
+        //    data: 'getPar=1&upc='+upc+'&date='+date+'&storeID='+storeID,
+        //    dataType: 'json',
+        //    url: 'TrackItemChange.php',
+        //    success: function(ajaxresp) {
+        //        callback(ajaxresp, weeklyPars);
+        //    },
+        //    error: function(e) {
+        //        console.log('error');
+        //    },
+        //    complete: function() {
+        //        ctx = document.getElementById('myChart2');
+        //        var setChart2 = function()
+        //        {
+        //            var data = [];
+        //            var datasets = {};
+        //            var labels = dates;
+
+        //            ctx = document.getElementById('myChart2');
+
+        //            new Chart(ctx, {
+        //                type: 'line',
+        //                data: {
+        //                    labels: chartLabels,
+        //                    datasets: [
+        //                        {
+        //                            label: 'Estimated Auto-Par',
+        //                            data: weeklyPars,
+        //                            borderWidth: 1,
+        //                            borderColor: 'tomato',
+        //                        },
+        //                    ]
+        //                },
+        //                options: {
+        //                    scales: {
+        //                        y: {
+        //                            beginAtZero: false
+        //                        }
+        //                    }
+        //                }
+        //            });
+        //        }
+        //        setChart2();
+
+        //    },
+        //});
     }
+
     tmp = v;
 });
+
+function callback(ajaxresp, weeklyPars){
+    //weeklyPars.push(ajaxresp.data.autoWeek);
+    weeklyPars.push(ajaxresp.data.sum);
+    //console.log(ajaxresp.data.autoWeek);
+    console.log(ajaxresp.data.sum);
+};
 
 ctx = document.getElementById('myChart');
 var setChart = function()
@@ -317,6 +435,32 @@ var setChart = function()
     });
 }
 setChart();
+
+
+$.each(weeklyPars, function(k,v) {
+    console.log(k+', '+v);
+});
+
+$('.scanicon-trash').click(function(){
+    let elem = $(this);
+    let c = confirm("Permanently remove this row from table?"); 
+    if (c == true) {
+        let id = $(this).attr('data-puID');
+        //alert(id); 
+        $.ajax ({
+            type: 'post',
+            data: 'prodUpdateID='+id,
+            url: 'TrackItemChange.php',
+            success: function(resp) {
+                //console.log(resp);
+                console.log('success');
+                window.location.reload;
+                elem.closest('tr').css('background-color', 'grey')
+                    .css('color', 'tomato');
+            },
+        });
+    }
+});
 JAVASCRIPT;
     }
 

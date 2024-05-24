@@ -30,7 +30,8 @@ class Home extends PageLayoutA
     <div style="font-size: 14">Whole Foods Community Co-op &copy; $year</div>
     <!--<div style="font-size: 10"><p style="width: 300px; margin-top: 25px;"><i>For us believing physicists, the distinction between past, present and future is only a stubbornly persistent illusion.</i></p></div>-->
 </div>
-<div><a href=""></a></div>
+<div>
+<!--<a href="../Testing/ScanTest.php">SCANTEST</a></div>-->
 HTML;
     }
 

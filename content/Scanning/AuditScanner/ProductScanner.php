@@ -688,6 +688,11 @@ HTML;
                             <a class="btn btn-default" style="background: lightgrey; color: black;" href="http://'.$FANNIE_ROOTDIR.'/modules/plugins2.0/ShelfAudit/SaMenuPage.php">Menu</a>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <a href="http://'.$FANNIE_ROOTDIR.'/modules/plugins2.0/SMS/scan/">Testing</a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -745,7 +750,15 @@ HTML;
         //$this->addOnloadCommand("window.location.reload();");
 
         return <<<HTML
-<div class="container-fluid">$ret</div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-4"></div>
+        <div class="col-lg-4">
+            $ret
+        </div>
+        <div class="col-lg-4"></div>
+    </div>
+</div>
 $hiddenContent
 HTML;
     }

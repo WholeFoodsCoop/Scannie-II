@@ -43,7 +43,17 @@ class CoopDealsFile extends PageLayoutA
     public function pageContent()
     {
         $ret = '';
+        $htmlFiles = "<ul>";
         $dbc = scanLib::getConObj();
+        $dealSet = FormLib::get('dealSet');
+
+        $files = scandir('noauto');
+        foreach ($files as $file) {
+            if ($file != '.' && $file != '..' && substr($file,0,-5) == $dealSet) {
+                $htmlFiles .= "<li>Raw Coop Deals File: <a href=\"noauto/$file\" target=\"_blank\">$file</a></li>"; 
+            }
+        }
+        $htmlFiles .= "</ul>";
 
         $ret = '';
         $dbc = ScanLib::getConObj();
@@ -54,7 +64,6 @@ class CoopDealsFile extends PageLayoutA
         }
         if ($dealSet = $_GET['dealSet']) {
             $ret .= $this->FormExtContent($dbc,$dealSet);
-            $monthSelected = '<div><span class="badge badge-dark">Month Selected: </span> '.$dealSet.'</div>';
 
             $args = array();
             $query = $dbc->prepare("
@@ -157,7 +166,7 @@ class CoopDealsFile extends PageLayoutA
             $ret
         </div>
         <div class="col-lg-3">
-            $monthSelected
+            $htmlFiles
         </div>
         <div class="col-lg-12 col-lf-offset-1">
         $table

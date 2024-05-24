@@ -231,6 +231,14 @@ ORDER BY COUNT(p.upc) DESC");
                 'handler' => self::getProdMissingSale($dbc),
                 'ranges' => array(1, 10, 999),
             ),
+            array(
+                'handler' => self::getTooBigUPC($dbc),
+                'ranges' => array(1, 10, 999),
+            ),
+            array(
+                'handler' => self::checkDeliProductionDepts($dbc),
+                'ranges' => array(1, 10, 999),
+            ),
         );
 
         $muData = $this->multiStoreDiscrepCheck($dbc);
@@ -684,7 +692,9 @@ HTML;
                 AND UPPER(u.description) NOT LIKE '%ORGANIC%'
                 AND superID NOT IN (6,3,1)
                 AND p.inUse = 1
-                AND numflag & (1<<16) <> 0;");
+                AND numflag & (1<<16) <> 0
+                AND UPPER(p.brand) != 'FOUR SIGMATIC'
+                ");
         $r = $dbc->execute($p);
         while ($row = $dbc->fetchRow($r)) {
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
@@ -712,6 +722,8 @@ HTML;
                 m.super_name
             FROM products AS p
                 RIGHT JOIN MasterSuperDepts AS m ON p.department = m.dept_ID
+                LEFT JOIN PriceRules pr ON pr.priceRuleID=p.price_rule_id
+                LEFT JOIN PriceRuleTypes prt ON prt.priceRuleTypeID=pr.priceRuleTypeID
             WHERE inUse=1
                 AND upc NOT IN (
                     SELECT upc FROM {$this->ALTDB}.doNotTrack 
@@ -724,6 +736,7 @@ HTML;
                 AND last_sold is not NULL
                 AND wicable = 0
                 AND m.superID IN (1,3,13,9,4,8,17,5,18) 
+                AND prt.description != 'OTHER'
             GROUP BY upc
         "
         );
@@ -785,6 +798,7 @@ HTML;
                 AND inUse = 1
                 AND p.department NOT IN (240, 241, 250)
                 AND m.superID IN (1,13,9,4,8,17,5,18) 
+                AND p.upc != '0000000000105'
                 AND p.default_vendor_id <> 200 #klean kanteen
         ");
         $r = $dbc->execute($p, $a);
@@ -970,6 +984,50 @@ HTML;
         return $ret;
     }
 
+    public function checkDeliProductionDepts($dbc)
+    {
+        $data = array();
+        $desc = "Deli: Should be default_vendor_id 70, WFC DELI";
+        $cols = array('upc', 'brand', 'description', 'created', 'department', 'default_vendor_id');
+        $prep = $dbc->prepare("SELECT upc, brand, description, created, default_vendor_id, department FROM products WHERE department IN (63,65,66,78,223,225,226,228,229) AND (default_vendor_id <> 70 || brand != 'WFC DELI') AND description != 'OPEN PLU';");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+            $count++;
+        }
+
+        if ($count > 0) {
+            $data['count'] = $count;
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
+    public function getTooBigUPC($dbc)
+    {
+        $data = array();
+        $desc = "New Items With Too Big UPC";
+        $cols = array('upc', 'brand', 'description', 'created');
+        $prep = $dbc->prepare("SELECT upc, brand, description, created
+            FROM products p
+                INNER JOIN MasterSuperDepts m ON m.dept_ID=p.department
+            WHERE upc > 999999999999
+            AND m.super_name != 'PRODUCE'");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+            $count++;
+        }
+
+        if ($count > 0) {
+            $data['count'] = $count;
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
     public function getProdMissingEDLP($dbc)
     {
         $count = 0;
@@ -1055,7 +1113,7 @@ HTML;
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
                 // temp(1) - don't show October A anymore. Add any sets to skip here
-                if ($row['dealSet'] != 'November2023' && $row['ABT'] != 'A') {
+                if ($row['dealSet'] != 'April2024' && $row['ABT'] != 'A') {
                     foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
                     $count++;
                 }

@@ -181,6 +181,8 @@ HTML;
             "%Emergen%" => "Emergen-C Products",
             "%Ener%" => "Ener-C Products",
             "%Klean%" => "Klean Kanteen",
+            "%Liquid%" => "Liquid IV",
+            "%Four%" => "Four Sigmatic",
         );
         $rows = array();
         foreach ($brands as $brand => $description) {
@@ -354,7 +356,7 @@ HTML;
                 AND p.normal_price <= bl.salePrice
                 AND bl.pricemethod = 0
             GROUP BY bl.upc
-            ORDER BY bl.batchID;
+            ORDER BY bl.batchID, p.brand;
         ");
 
         $result = $dbc->execute($query);

@@ -51,8 +51,8 @@ class BrandsHome extends PageLayoutA
     <div class="row">
         <div class="col-lg-4">
             <ul>
-                <li><a href="BrandFixer.php">Brand Fixer</a></li>
-                <li><a href="BrandAbbrFix.php"><strong>FANNIE</strong> BrandAbbrFix</a></li>
+                <li><a href="BrandFixer.php">Brand Fixer</a>: update a list of items</li>
+                <li><a href="BrandAbbrFix.php"><strong>FANNIE</strong> BrandAbbrFix</a>: add coding for bad brand names</li>
             </ul>
         </div>
         <div class="col-lg-4"></div>

@@ -3,38 +3,31 @@ $navData = array(
     'Products' => array(
         array(
             'type' => "link",
-            'text' => 'Edits by User',
+            'text' => 'Brands Subdirectory',
             'heading' => 'Main',
-            'url' => "Item/ProdUserChangeReport.php",
-            'user_type' => 1
-        ),
-        array(
-            'type' => "link",
-            'text' => 'Last Sold',
-            'heading' => 'Main',
-            'user_type' => 1,
-            'url' => "Item/LastSoldDates.php?paste_list=1"
+            'user_type' => 2,
+            'url' => "Item/Brands/"
         ),
         array(
             'type' => "link",
             'text' => 'Local Flag Discrep',
             'heading' => 'Main',
-            'user_type' => 1,
+            'user_type' => 2,
             'url' => "Item/LocalFlagReport.php"
         ),
         array(
             'type' => "link",
             'text' => 'Pending Action',
             'heading' => 'Main',
-            'user_type' => 1,
+            'user_type' => 2,
             'url' => "Item/PendingAction.php"
         ),
         array(
             'type' => "link",
-            'text' => 'Sign Alias',
+            'text' => 'Track Product Change',
             'heading' => 'Main',
             'user_type' => 1,
-            'url' => "Item/SignAlias.php"
+            'url' => "Item/TrackItemChange.php"
         ),
     ),
     'Reports' => array(
@@ -44,20 +37,6 @@ $navData = array(
             'heading' => 'Main',
             'url' => "Reports/DBA.php",
             'user_type' => 2
-        ),
-        array(
-            'type' => "link",
-            'text' => 'Cashless Dashboard',
-            'heading' => 'Main',
-            'user_type' => 2,
-            'url' => "Tables/CashlessCheckPage.php"
-        ),
-        array(
-            'type' => "link",
-            'text' => 'Coop Deals File',
-            'heading' => 'Main',
-            'user_type' => 1,
-            'url' => "Tables/CoopDealsFile.php"
         ),
         array(
             'type' => "link",
@@ -75,10 +54,17 @@ $navData = array(
         ),
         array(
             'type' => "link",
-            'text' => 'Brands Subdirectory',
+            'text' => 'Find PLU To Reuse BULK',
             'heading' => 'Main',
-            'user_type' => 2,
-            'url' => "Item/Brands/"
+            'user_type' => 1,
+            'url' => "Reports/BulkReusePluReport.php"
+        ),
+        array(
+            'type' => "link",
+            'text' => 'Find PLU To Reuse DELI',
+            'heading' => 'Main',
+            'user_type' => 1,
+            'url' => "Reports/DeliReusePluReport.php"
         ),
         array(
             'type' => "link",
@@ -86,20 +72,6 @@ $navData = array(
             'heading' => 'Main',
             'user_type' => 2,
             'url' => "Reports/NotYetExistSrpAdjustment.php"
-        ),
-        array(
-            'type' => "link",
-            'text' => 'Tx Comment Report',
-            'heading' => 'Main',
-            'user_type' => 2,
-            'url' => "Reports/TransCommentView.php"
-        ),
-        array(
-            'type' => "link",
-            'text' => 'DELI Find PLU To Reuse',
-            'heading' => 'Main',
-            'user_type' => 1,
-            'url' => "Reports/DeliReusePluReport.php"
         ),
         array(
             'type' => "link",
@@ -170,12 +142,19 @@ $navData = array(
             'type' => "link",
             'text' => 'Handheld Settings',
             'heading' => 'Main',
-            'url' => "url",
+            'url' => "Scanning/ScannerSettings.php",
             'user_type' => 1
         ),
     ),
 
     'Misc' => array(
+        array(
+            'type' => "link",
+            'text' => 'Breakdown NCG Edlp Files',
+            'heading' => 'Main',
+            'url' => "Testing/NcgEdlpFileBreakdown.php",
+            'user_type' => 2
+        ),
         array(
             'type' => "link",
             'text' => 'Print Multiple Receipts',
@@ -192,10 +171,10 @@ $navData = array(
         ),
         array(
             'type' => "link",
-            'text' => 'In Use Date Task',
+            'text' => 'Rest Test',
             'heading' => 'Main',
-            'url' => "Testing/InUseDateTask.php",
-            'user_type' => 2
+            'url' => "Testing/RestTest.php",
+            'user_type' => 1
         ),
         array(
             'type' => "help",
@@ -205,4 +184,5 @@ $navData = array(
             'user_type' => 1
         ),
     ),
+
 );

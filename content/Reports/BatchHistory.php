@@ -21,7 +21,7 @@ class BatchHistory extends PageLayoutA
     public function pageContent()
     {
         $dbc = scanLib::getConObj();
-        $LIMIT = (FormLib::get('limit', false)) ? FormLib::get('limit') : 100;
+        $LIMIT = (FormLib::get('limit', false)) ? FormLib::get('limit') : 20;
         $prep = $dbc->prepare("SELECT b.*, p.brand, p.description, u.name AS user
             FROM batchUpdate AS b
                 LEFT JOIN products AS p ON b.upc=p.upc

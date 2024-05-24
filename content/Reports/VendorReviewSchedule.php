@@ -228,7 +228,8 @@ HTML;
                 $td .= "<td>{$row['r90']}</td>";
                 $td .= "<td>{$row['depts']}</td>";
                 $td .= "</tr>";
-                $checklists .= "INSERT INTO checklists (tableID, description, active, row) VALUES ('SMV', '$checklistName', 1, $i); ";
+                //$checklists .= "INSERT INTO checklists (tableID, description, active, row) VALUES ('SMV', '$checklistName', 1, $i); ";
+                $checklists .= "INSERT INTO Items (ListID, TabID, Description, Active) VALUES ('WFC_Corey', 'SMV', '$checklistName', NULL);";
                 $i++;
                 $itemCounts[$monthName] += $row['count'];
             }
@@ -240,11 +241,12 @@ HTML;
         }
 
         $missingHTML = (!empty($missingVendors)) ? '<div class="alert alert-warning" id="missing-html">' . $missingHTML . '</div>' : '';
+        $invoiceWatch = '';
 
         return <<<HTML
 <div class="container" style="padding: 15px;">
 $missingHTML
-<div style="background-color: #F8F8F8; border: 1px solid lightgrey;">
+<div style="background-color: #F8F8F8; border: 1px solid lightgrey; display: none;">
     <div style="padding:15px">
         <h4>Vendor Invoices To Watch</h4>
         <div class="row">
@@ -293,6 +295,7 @@ HTML;
                 AND v.vendorID NOT IN (SELECT upc FROM woodshed_no_replicate.doNotTrack WHERE page = 'VendorReviewSchedule' AND method = 'getMissingVendors')
                 AND m.super_name NOT IN ('PRODUCE', 'BRAND', 'MISC')
                 AND p.numflag & (1<<19) = 0
+                AND p.department <> 240
             GROUP BY v.vendorID
         ");
         $r = $dbc->execute($p);
