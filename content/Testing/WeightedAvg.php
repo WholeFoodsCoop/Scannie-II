@@ -31,11 +31,21 @@ class WeightedAvg extends PageLayoutA
 
         list($inStr, $args) = $dbc->safeInClause($upcs);
         $prep = $dbc->prepare("
-SELECT p.upc, p.brand, p.description, p.cost,
+SELECT p.upc, p.brand, p.description, 
+
+#    p.cost,
+
+    CASE
+        WHEN f.futureCost IS NOT NULL THEN f.futureCost
+        ELSE p.cost
+    END AS cost,
+
+    p.default_vendor_id,
     SUM(d.ItemQtty) AS mt
 FROM products AS p 
 LEFT JOIN is4c_trans.dlog_90_view AS d
     ON p.upc=d.upc
+LEFT JOIN FutureVendorItems AS f ON f.upc=p.upc AND f.vendorID=p.default_vendor_id AND f.startDate > DATE(NOW())
 WHERE d.tdate > NOW() - INTERVAL 30 DAY
     AND p.upc IN ($inStr)
     GROUP BY d.upc
@@ -52,10 +62,12 @@ WHERE d.tdate > NOW() - INTERVAL 30 DAY
             $desc = $row['description'];
             $cost = $row['cost'];
             $mt = $row['mt'];
+            $vendorID = $row['default_vendor_id'];
             $data[$upc]['brand'] = $brand;
             $data[$upc]['desc'] = $desc;
             $data[$upc]['mt'] = $mt;
             $data[$upc]['cost'] = $cost;
+            $data[$upc]['vendorID'] = $vendorID;
             $sumMt += $mt;
         }
 
@@ -63,6 +75,11 @@ WHERE d.tdate > NOW() - INTERVAL 30 DAY
             $brand = $row['brand'];
             $desc = $row['desc'];
             $cost = $row['cost'];
+            $vendorID = $row['vendorID'];
+            if ($vendorID == 1) 
+                $vendorID = 'UNFI';
+            if ($vendorID == 2) 
+                $vendorID = 'SELECT';
             $mt = $row['mt'];
             $costMt = $cost * $mt / $sumMt;
             $costAvg += $costMt;
@@ -75,8 +92,9 @@ WHERE d.tdate > NOW() - INTERVAL 30 DAY
                     <td>%s</td>
                     <td>%s</td>
                     <td>%s</td>
+                    <td>%s</td>
                 </tr>',
-                $upc, $brand, $desc, $mt, $cost, round($mt / $sumMt, 2)*100 . '%'
+                $upc, $vendorID, $brand, $desc, $mt, $cost, round($mt / $sumMt, 2)*100 . '%'
             );
         }
         $costAvg = round($costAvg, 3);
@@ -98,6 +116,7 @@ WHERE d.tdate > NOW() - INTERVAL 30 DAY
             <table class="table table-bordered condensed small table-sm">
                 <thead>
                     <th>upc</th>
+                    <th>vendor</th>
                     <th>brand</th>
                     <th>description</th>
                     <th>mt</th>
@@ -118,9 +137,12 @@ WHERE d.tdate > NOW() - INTERVAL 30 DAY
 HTML;
     }
 
-    public function cssContent()
+    public function helpContent()
     {
         return <<<HTML
+<div><strong>Weighted Average</strong></div>
+<p>Enter a list of UPCs to calculate an average cost (calculation
+    based on item movement over the last 90 days).</p>
 HTML;
     }
 
