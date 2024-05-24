@@ -56,7 +56,7 @@ HTML;
             <button id="submit" class="form-control btn btn-default">Submit</button>
         </div>
         <div class="form-group" style="position: relative">
-            <label>Watch:</label>
+            <label>Watch <span style="cursor: pointer; font-size: 10px; position: absolute; top: -3px; left: +45px;" title="Turning Watch 'ON' will repeat query once per second">?</span></label>
             <input type="number" value=0 min=0 max=1 name="watch_n" id="watch_n" class="form-control" />
             <span id="watch_v" style="position: absolute; top: 40px; left: 10px; background: white; color: red;">OFF</span>
         </div>
@@ -81,6 +81,8 @@ HTML;
 
     public function javascriptContent()
     {
+        $initQ = FormLib::get("initQ", false);
+
         return <<<JAVASCRIPT
 // codemirror start
 var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
@@ -357,6 +359,17 @@ var expandTextArea = function() {
             .addClass('col-lg-10');
     }
 };
+
+var initQ = '$initQ';
+$('#saved-queries-filter').val(initQ);
+$('#saved-queries-filter').keyup();
+$('.quick_query').each(function(){
+    let name = $(this).text();
+    name = name.toLowerCase(name);
+    if (name == initQ) {
+        $(this).trigger('click');
+    }
+});
 
 JAVASCRIPT;
     }
