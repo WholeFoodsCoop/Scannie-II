@@ -24,27 +24,42 @@ class PriceRuleTypeReport extends PageLayoutA
         $prep = $dbc->prepare("
             SELECT 
                 p.upc, p.brand, p.description, t.description AS prType, p.normal_price,
-                p.cost
+                CASE
+                    WHEN f.futureCost IS NOT NULL THEN f.futureCost
+                    ELSE p.cost
+                END AS cost,
+                CASE
+                    WHEN f.futureCost IS NOT NULL THEN 'futureCost'
+                    ELSE 'Cost'
+                END AS costTable,
+                pr.details
+                # p.cost
             FROM products AS p
                 LEFT JOIN PriceRules AS pr ON p.price_rule_id=pr.priceRuleID
                 LEFT JOIN PriceRuleTypes AS t ON pr.priceRuleTypeID=t.priceRuleTypeID
                 LEFT JOIN MasterSuperDepts AS m ON p.department=m.dept_ID
+                LEFT JOIN FutureVendorItems AS f ON f.upc=p.upc AND f.startDate > DATE(NOW())
             WHERE t.priceRuleTypeID > 0
                 AND m.super_name = ? 
                 AND p.inUse = 1
             GROUP BY p.upc
-            ORDER BY t.description, p.normal_price, p.upc
+            ORDER BY t.description, p.brand, p.normal_price, p.upc
         ");
+        echo $dbc->error();
         $res = $dbc->execute($prep, $args);
         $table = "";
         if ($cur_super != false) {
             while ($row = $dbc->fetchRow($res)) {
-                $table .= sprintf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>",
-                    $row['upc'],
+                $costTable = $row['costTable'];
+                $costStyle = ($costTable == 'futureCost') ? ' background: lightblue; ' : '';
+                $table .= sprintf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td style=\"%s\">%s</td></tr>",
+                    "<a href=\"../../..//git/IS4C/fannie/item/ItemEditorPage.php?searchupc={$row['upc']}\" target=\"_blank\">{$row['upc']}</a>",
                     $row['brand'],
                     $row['description'],
                     $row['prType'],
+                    $row['details'],
                     $row['normal_price'],
+                    $costStyle,
                     $row['cost']
                 );
             }
@@ -55,14 +70,16 @@ class PriceRuleTypeReport extends PageLayoutA
     <div class="row">
         <div class="col-lg-8">
             <table class="table table-condensed table-bordered table-striped table-sm small" id="main-table">
-                <thead><th>upc</th><th>brand</th><th>description</th><th>price rule type</th></thead>
+                <thead><th>upc</th><th>brand</th><th>description</th><th>price rule type</th><th>price rule details</th></thead>
                 <tbody>$table</tbody>
             </table>
         </div>
         <div class="col-lg-4">
             {$this->formContent()}
+            <div style="position: fixed;">
             <iframe src="http://key/Scannie/content/Item/MarginCalculator.php"
                 frameBorder=0 height="500px"></iframe>
+            </div>
         </div>
     </div>
 </div>
@@ -130,6 +147,7 @@ JAVASCRIPT;
     {
         return <<<HTML
 <p>Review items using special pricing rules by super department.</p>
+<p>Costs with <span style="background: lightblue">light blue</span> background reflect a future cost rather than current.</p>
 HTML;
     }
 
