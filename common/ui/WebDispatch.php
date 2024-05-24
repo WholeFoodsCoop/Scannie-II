@@ -161,11 +161,22 @@ class WebDispatch
     private function header()
     {
         $MY_ROOTDIR = $this->config->vars['MY_ROOTDIR'];
+
+
         if ($this->enable_linea) {
-            $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/cordova-2.2.0.js");
-            $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/ScannerLib-Linea-2.0.0.js");
-            $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/WebHub.js");
-            $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/core.js");
+
+            if (strpos($_SERVER['HTTP_USER_AGENT'], 'Linux; Android 10; K') !== false) {
+                // call Zebra TC52X script(s)
+                //$this->addScript("http://{$MY_ROOTDIR}/node_modules/onscan.js/onscan.min.js");
+                $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/tc52x/core.js?reload=".uniqid());
+            } else {
+                // call Linea scripts
+                $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/cordova-2.2.0.js");
+                $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/ScannerLib-Linea-2.0.0.js");
+                $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/WebHub.js");
+                $this->addScript("http://{$MY_ROOTDIR}/common/lib/javascript/linea/core.js");
+            }
+
         }
         if ($this->ui == true) {
             $this->addScript("http://{$MY_ROOTDIR}/common/ui/search.js");
@@ -354,6 +365,11 @@ HTML;
         require_once(__DIR__.'/../../common/Mobile-Detect/Mobile_Detect.php');
         $detect = new Mobile_Detect;
         $device = '';
+        $tmp = $_SERVER['HTTP_USER_AGENT'];
+        if (strpos($tmp, 'TC52X')) {
+            //echo "HI";
+            return 'TC52X';
+        }
         if ( $detect->isMobile() ) {
         }
 
