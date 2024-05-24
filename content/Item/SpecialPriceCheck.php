@@ -131,63 +131,65 @@ class SpecialPriceCheck extends WebDispatch
         $td2 = "";
         $td3 = "";
 
-            $missing[] = $this->checkCurrentSales($upcs2, 2);
+        $missing[] = $this->checkCurrentSales($upcs1, 1);
+        $missing[] = $this->checkCurrentSales($upcs2, 2);
 
-            foreach ($missing as $upcs) {
-                foreach ($upcs as $upc => $stores) {
-                    foreach ($stores as $storeID => $v) {
-                        $td1 .= "<tr>";
-                        $td1 .= "<td>{$upc}</td>";
-                        $td1 .= "<td>{$storeID}</td>";
-                        $td1 .= "<td>{$allSales[$upc][$storeID]['salePrice']}</td>";
-                        $td1 .= "<td>{$allSales[$upc][$storeID]['batchID']}</td>";
-                        $td1 .= "<td>{$allSales[$upc][$storeID]['brand']}</td>";
-                        $td1 .= "<td>{$allSales[$upc][$storeID]['desc']}</td>";
-                        $td1 .= "</tr>";
-                    }
+        foreach ($missing as $upcs) {
+            foreach ($upcs as $upc => $stores) {
+                foreach ($stores as $storeID => $v) {
+                    $td1 .= "<tr>";
+                    $td1 .= "<td>{$upc}</td>";
+                    $td1 .= "<td>{$storeID}</td>";
+                    $td1 .= "<td>{$allSales[$upc][$storeID]['salePrice']}</td>";
+                    $td1 .= "<td>{$allSales[$upc][$storeID]['batchID']}</td>";
+                    $td1 .= "<td>{$allSales[$upc][$storeID]['brand']}</td>";
+                    $td1 .= "<td>{$allSales[$upc][$storeID]['desc']}</td>";
+                    $td1 .= "</tr>";
                 }
             }
+        }
 
-                foreach ($this->config->vars['FANNIE_HIL_LANES'] as $lane) {
-                    $missingLane[] = $this->checkLaneSales($upcs1, 1, $lane);
-                }
-                foreach ($missingLane as $upcs) {
-                    foreach ($upcs as $upc => $stores) {
-                        foreach ($stores as $storeID => $v) {
-                            $td2 .= "<tr>";
-                            $td2 .= "<td>{$upc}</td>";
-                            $td2 .= "<td>{$storeID}</td>";
-                            $td2 .= "<td>{$allSales[$upc][$storeID]['salePrice']}</td>";
-                            $td2 .= "<td>{$allSales[$upc][$storeID]['batchID']}</td>";
-                            $td2 .= "<td>{$allSales[$upc][$storeID]['brand']}</td>";
-                            $td2 .= "<td>{$allSales[$upc][$storeID]['desc']}</td>";
-                            $td2 .= "</tr>";
-                        }
-                    }
-                }
+                // CORE POS LANES NO LONGER EXIST
+                //foreach ($this->config->vars['FANNIE_HIL_LANES'] as $lane) {
+                //    $missingLane[] = $this->checkLaneSales($upcs1, 1, $lane);
+                //}
+                //foreach ($missingLane as $upcs) {
+                //    foreach ($upcs as $upc => $stores) {
+                //        foreach ($stores as $storeID => $v) {
+                //            $td2 .= "<tr>";
+                //            $td2 .= "<td>{$upc}</td>";
+                //            $td2 .= "<td>{$storeID}</td>";
+                //            $td2 .= "<td>{$allSales[$upc][$storeID]['salePrice']}</td>";
+                //            $td2 .= "<td>{$allSales[$upc][$storeID]['batchID']}</td>";
+                //            $td2 .= "<td>{$allSales[$upc][$storeID]['brand']}</td>";
+                //            $td2 .= "<td>{$allSales[$upc][$storeID]['desc']}</td>";
+                //            $td2 .= "</tr>";
+                //        }
+                //    }
+                //}
 
-                unset($missingLane);
-                foreach ($this->config->vars['FANNIE_DEN_LANES'] as $lane) {
-                    try {
-                        $missingLane[] = $this->checkLaneSales($upcs1, 1, $lane);
-                    } catch (Exception $e) {
-                        echo $e->getMessage();
-                    }
-                }
-                foreach ($missingLane as $upcs) {
-                    foreach ($upcs as $upc => $stores) {
-                        foreach ($stores as $storeID => $v) {
-                            $td3 .= "<tr>";
-                            $td3 .= "<td>{$upc}</td>";
-                            $td3 .= "<td>{$storeID}</td>";
-                            $td3 .= "<td>{$allSales[$upc][$storeID]['salePrice']}</td>";
-                            $td3 .= "<td>{$allSales[$upc][$storeID]['batchID']}</td>";
-                            $td3 .= "<td>{$allSales[$upc][$storeID]['brand']}</td>";
-                            $td3 .= "<td>{$allSales[$upc][$storeID]['desc']}</td>";
-                            $td3 .= "</tr>";
-                        }
-                    }
-                }
+                //unset($missingLane);
+                //foreach ($this->config->vars['FANNIE_DEN_LANES'] as $lane) {
+                //    try {
+                //        $missingLane[] = $this->checkLaneSales($upcs1, 1, $lane);
+                //    } catch (Exception $e) {
+                //        echo $e->getMessage();
+                //    }
+                //}
+                //foreach ($missingLane as $upcs) {
+                //    foreach ($upcs as $upc => $stores) {
+                //        foreach ($stores as $storeID => $v) {
+                //            $td3 .= "<tr>";
+                //            $td3 .= "<td>{$upc}</td>";
+                //            $td3 .= "<td>{$storeID}</td>";
+                //            $td3 .= "<td>{$allSales[$upc][$storeID]['salePrice']}</td>";
+                //            $td3 .= "<td>{$allSales[$upc][$storeID]['batchID']}</td>";
+                //            $td3 .= "<td>{$allSales[$upc][$storeID]['brand']}</td>";
+                //            $td3 .= "<td>{$allSales[$upc][$storeID]['desc']}</td>";
+                //            $td3 .= "</tr>";
+                //        }
+                //    }
+                //}
 
 
         return <<<HTML
@@ -205,6 +207,7 @@ class SpecialPriceCheck extends WebDispatch
         <thead><th>upc</th><th>storeID</th><th>sale price</th><th>batchID</th><th>brand</th><th>description</th></thead>
         <tbody>$td1</tbody>
     </table>
+    <!--
     <h4><i>Unforced/Unsynced Sales</i> found on Hillside POS Lanes</h4>
     <table class="table table-bordered table-sm small">
         <thead><th>upc</th><th>storeID</th><th>sale price</th><th>batchID</th><th>brand</th><th>description</th></thead>
@@ -216,6 +219,7 @@ class SpecialPriceCheck extends WebDispatch
         <thead><th>upc</th><th>storeID</th><th>sale price</th><th>batchID</th><th>brand</th><th>description</th></thead>
         <tbody>$td3</tbody>
     </table>
+    -->
 </div>
 HTML;
     }
