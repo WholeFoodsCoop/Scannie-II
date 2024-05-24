@@ -2533,6 +2533,7 @@ $('#view-all').click(function(){
     $('#mytablebody tr').each(function(){
         $(this).show();
     });
+    restripe();
 });
 $('#view-checked').click(function(){
     $('#mytablebody tr').each(function(){
@@ -2546,6 +2547,7 @@ $('#view-checked').click(function(){
             $(this).hide();
         }
     });
+    restripe();
 });
 $('#view-unchecked').click(function(){
     $('#mytablebody tr').each(function(){
@@ -2560,6 +2562,7 @@ $('#view-unchecked').click(function(){
             $(this).hide();
         }
     });
+    restripe();
 });
 $('#check-prices').click(function(){
     $('#mytablebody tr').each(function(){
@@ -3253,6 +3256,8 @@ thead {
 .mini-q {
     font-size: 10px;
     cursor: pointer;
+}
+tr.prod-row:hover {
 }
 HTML;
     }
