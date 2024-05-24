@@ -134,6 +134,9 @@ class FDFBulkFormatter
         );
         
         $this->storeID = COREPOS\Fannie\API\lib\Store::getIdByIp();
+        if ($this->storeID == NULL) {
+            $this->storeID = 1;
+        }
         $date = new DateTime();
         $DVS = $this->getDVs();
         $nutrients = $this->getItemNutrientVals();
