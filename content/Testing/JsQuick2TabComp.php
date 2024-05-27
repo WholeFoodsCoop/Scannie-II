@@ -84,11 +84,11 @@ class JsQuick2TabComp extends PageLayoutA
         <form>
         <div class="form-group">
             <label>Table A</label>
-            <input type="text" name="tables[]" placeholder="table A" class="form-control" value="$tables[0]" required />
+            <input type="text" name="tables[]" placeholder="table A (as database.table) " class="form-control" value="$tables[0]" required />
         </div>
         <div class="form-group">
             <label>Table B</label>
-            <input type="text" name="tables[]" placeholder="table B" class="form-control" value="$tables[1]" required />
+            <input type="text" name="tables[]" placeholder="table B (as database.table) " class="form-control" value="$tables[1]" required />
         </div>
         <div class="form-group">
             <label>JOIN on Column</label>
