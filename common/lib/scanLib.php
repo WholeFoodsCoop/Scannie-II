@@ -25,9 +25,6 @@
 *   @class scanLib
 *   common methods included in all Scannie pages.
 */
-if (!class_exists('SQLManager')) {
-    include_once(__DIR__.'/../sqlconnect/SQLManager.php');
-}
 class scanLib
 {
 
@@ -43,7 +40,19 @@ class scanLib
     public static function getConObj($db="SCANDB")
     {
         include(__DIR__.'/../../config.php');
+        if (!class_exists('SQLManager')) {
+            include_once(__DIR__.'/../sqlconnect/SQLManager.php');
+        }
         $dbc = new SQLManager($SCANHOST, 'pdo_mysql', ${$db}, $SCANUSER, $SCANPASS);
+
+        return $dbc;
+    }
+
+    public static function getPosDB()
+    {
+        include(__DIR__.'/../../config.php');
+        include(__DIR__.'/../../../git/IS4C/common/SQLManager.php');
+        $dbc = new SQLManager($FANNIE_PLUGIN_SETTINGS['SMSHost'], 'pdo_sqlsrv', 'STORESQL', $FANNIE_PLUGIN_SETTINGS['SMSUser'], $FANNIE_PLUGIN_SETTINGS['SMSPassword']);
 
         return $dbc;
     }
@@ -230,7 +239,6 @@ class scanLib
         $data = array();
         $data['html'] = "<select id=\"$selectName\" name=\"$selectName\" class=\"form-control\" onChange=\"$onChange\">";
         $dbc = self::getConObj();
-        //$suggest = ($current == "") ? self::getStoreID() : $current;
 
         $prep = $dbc->prepare("SELECT storeID, description FROM Stores");
         $res = $dbc->execute($prep);
@@ -342,7 +350,7 @@ class scanLib
     {
         $outStr = $inStr;
         // ucwords must be called before special case is checked, make sure special case strings are in ucwords format
-        $specialCase = array('Mn', 'Wi', 'Tvp', 'Tsp', 'Bbq', 'Wfc', 'R.w.', 'Ncg', 'J.r.');
+        $specialCase = array('Mn', 'Wi', 'Tvp', 'Tsp', 'Bbq', 'Wfc', 'R.w.', 'Ncg', 'J.r.', 'Cbd', 'Iq', 'I.v.');
         foreach ($specialCase as $search) {
             if (strpos(strtolower($inStr), strtolower($search)) !== false) {
                 $outStr = str_replace($search, strtoupper($search), $inStr) ;
@@ -352,15 +360,95 @@ class scanLib
         return $outStr;
     }
 
+    public function getRecentPurchase($dbc, $upc)
+    {
+        $args = array($upc);
+        $prep = $dbc->prepare("SELECT
+            sku, internalUPC, brand, description, DATE(receivedDate) AS receivedDate,
+            caseSize, receivedTotalCost AS cost,
+            unitCost, ROUND(receivedTotalCost/caseSize,3) AS mpcost
+            FROM PurchaseOrderItems WHERE internalUPC = ?
+                AND unitCost > 0
+            ORDER BY receivedDate DESC
+            limit 1");
+        $result = $dbc->execute($prep,$args);
+        $options = array();
+        $row = $dbc->fetch_row($result);
+        $unitCost = (isset($row['unitCost'])) ? $row['unitCost'] : 0;
+        $received = (isset($row['receivedDate'])) ? $row['receivedDate'] : 0;
+
+        return array($unitCost, $received);
+    }
+
+    public function getRawSrp($cost, $margin) {
+        $srp = $cost / (1 - ($margin * 0.01));
+
+        return $srp;
+    }
+
+    public function getRoundSrp($price) {
+        $rounder = new pricerounder();
+        $ans = $rounder->round($price);
+
+        return $ans;
+    }
+
+    public function getScaleData($dbc, $upc)
+    {
+        $bycount = null;
+        $args = array($upc);
+        // WHEN bycount = 0 THEN 'Random'
+        // WHEN bycount = 1 THEN 'Fixed'
+        $prep = $dbc->prepare("SELECT
+            CASE
+                WHEN weight = 0 THEN 'Random'
+                WHEN weight = 1 THEN 'Fixed'
+                ELSE 'not in scale'
+            END AS bycount
+            FROM scaleItems
+            WHERE plu = ?");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $value = $row['bycount'];
+            $bycount = ($value > -1) ? $value : 5;
+        }
+        echo $dbc->error();
+
+        return $bycount;
+    }
+    
+    public function getPriceFromDate($dbc, $upc, $date)
+    {
+
+        $args = array($upc, $date);
+        $prep = $dbc->prepare("SELECT price FROM prodUpdate WHERE upc = ? AND DATE(modified) <= ? ORDER BY modified DESC limit 1;");
+        $res = $dbc->execute($prep, $args);
+        $price = $dbc->fetchRow($res);
+        $price = $price['price'];
+
+        return $price;
+
+    }
+
+    public static function getTextInLastDelimiter($instr, $delimiter)
+    {
+        $lines = explode("\n", $instr);
+
+        $strs = array();
+        $i = 0;
+        foreach ($lines as $line) {
+            $line = trim($line, $delimiter);
+            $offset = 0;
+            $string = '';
+            while ($pos = strpos($line, $delimiter, $offset)) {
+                $str = substr($line, $pos, strlen($line));
+                $strs[$i] = str_replace($delimiter, "", $str);
+                $offset = $pos+1;
+            }
+            $i++;
+        }
+
+        return $strs;
+    }
+
 }
-
-
-
-
-
-
-
-
-
-
-
