@@ -216,12 +216,14 @@ HTML;
     <input type="hidden" id="curQueue" value="$queue"/>
     <span id="hide-old-btn" class="inactive btn btn-default btn-sm" onclick="hideOld(); return false;">Hide <i>Old</i></span>
 </form>
-<div style="border-radius: 2.5px; background-color: #F0F0F0; padding: 5px; margin: 5px;">
-    <div>SHIFT + CLICK table cell to select column</div>
-    <label>Column Selected: </label>
-    <span id="column-filter-selected" style=" padding: 2.5px; border: 1px solid grey; border-radius: 5px;">None</span>
-    <label for="column-filter-input">String To Filter By: </label>
-    <span id="column-filter-input" style=" padding: 2.5px; border: 1px solid grey; border-radius: 5px;" contentEditable=true>Enter String To Filter</span>
+<div style="border-radius: 2.5px; padding: 5px; margin: 5px; max-width: 700px; border: 1px solid lightgrey;">
+    <div style="text-align:center">
+        <div>SHIFT + LEFT CLICK table cell to select column</div>
+        <label>Column Selected: </label>
+        <span id="column-filter-selected" style=" padding: 2.5px; border: 1px solid grey; border-radius: 5px;">None</span>
+        <label for="column-filter-input">Search: </label>
+        <span id="column-filter-input" style=" padding: 2.5px; border: 1px solid grey; border-radius: 5px;" contentEditable=true>Type to filter rows</span>
+    </div>
 </div>
 HTML;
     }

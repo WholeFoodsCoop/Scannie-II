@@ -1,18 +1,21 @@
 // dynamically add stipe to table
-function stripeTable(){
-    var i = 0;
-    $('tr').each(function(){
-        $(this).css('background', 'white');
-    });
-    $('tr').each(function(){
-        if ( $(this).is(':visible') ) {
-            if (i % 2 != 0) {
-                $(this).css('background', '#FEF7E2');   
-            }
-            i++;
-        }
-    });
-};
+//var stripeTable = function(){
+//    $('tr.mytable').each(function(){
+//        $(this).removeClass('stripe');
+//    });
+//    $('tr.mytable').each(function(i = 0){
+//        if ($(this).is(':visible')) {;
+//            if (i % 2 == 0) {
+//                $(this).addClass('stripe');
+//            } else {
+//                $(this).removeClass('stripe');
+//            }
+//        i++;
+//        }
+//    });
+//
+//    return false;
+//};
 
 var hideOld = function()
 {
@@ -136,22 +139,17 @@ $('#product-list tr').each(function(){
 $(document).ready(function(){
     $('#loading').hide();
 });
-$("table").bind("sortStart",function() { 
+
+$("table").bind('sortEnd', function(){
+    console.log('hi');
     stripeTable();
-}).bind("sortEnd",function() { 
-    striptTable();
-}); 
+});
 //end of new.js
 /*
     old batchCheckQueues.js
 */
 // sort & hide columns
 $(function(){
-    $('#mytable').tablesorter({
-        selectorSort : 'button.sorter'    
-    }).bind("sortEnd",function(e, t) {
-        stripeTable();    
-    });
     $('.col-hide').click(function(){
         var colName = $(this).val();
         var filterBtnID = '#col-filter-'+colName;
@@ -383,3 +381,4 @@ $('.copy-text').focus(function(){
             .delay(400).fadeOut(400);
     }
 });
+
