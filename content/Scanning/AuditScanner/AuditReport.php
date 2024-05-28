@@ -11,9 +11,11 @@ if (!class_exists('PriceRounder')) {
 class AuditReport extends PageLayoutA
 {
 
-    public $columns = array('check', 'upc', 'sku', 'alias', 'likeCode', 'brand', 'sign-brand', 'description', 'sign-description', 'size', 'uom', 'units', 'netcost', 'cost', 'vcost', 'recentPurchase',
-        'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept', 'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 
-        'scalePLU', 'mnote', 'notes', 'reviewed', 'costChange', 'floorSections', 'comment', 'PRN', 'caseCost');
+    public $columns = array('check', 'upc', 'sku', 'alias', 'likeCode', 'brand', 'sign-brand', 'description', 
+        'sign-description', 'size', 'uom', 'units', 'netcost', 'cost', 'vcost', 'recentPurchase',
+        'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept',
+        'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 'scalePLU', 'mnote', 'notes', 'reviewed', 
+        'costChange', 'floorSections', 'comment', 'PRN', 'caseCost'); 
 
     public function preprocess()
     {
@@ -47,8 +49,115 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<setStoreID>';
         $this->__routes[] = 'get<exportExcel>';
         $this->__routes[] = 'post<setPRN>';
+        $this->__routes[] = 'post<updatesrps>';
+        $this->__routes[] = 'post<visrpnotes>';
 
         return parent::preprocess();
+    }
+
+    public function postVisrpnotesHandler()
+    {
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+        $dbc = ScanLib::getConObj();
+        $items = array();
+
+        $ret = '';
+
+        $listA = array($username, $storeID);
+        $listP = $dbc->prepare("SELECT v.upc, v.srp, v.vendorID
+            FROM vendorItems v
+                INNER JOIN products p on p.upc=v.upc and v.vendorID=p.default_vendor_id
+                INNER JOIN woodshed_no_replicate.AuditScan a on a.upc=v.upc
+            WHERE a.username=?
+                AND a.savedAs='default'
+                AND a.storeID=?
+                AND p.normal_price <> v.srp
+            GROUP BY v.upc
+            ORDER BY v.upc;");
+        $listR = $dbc->execute($listP, $listA);
+        while ($row = $dbc->fetchRow($listR)) {
+            $upc = $row['upc'];
+            $srp = $row['srp'];
+            $items[$upc]['srp'] = $srp;
+        }
+
+        $ret .= $dbc->error();
+
+        $prep = $dbc->prepare("
+            UPDATE woodshed_no_replicate.AuditScan AS a
+            SET notes=?
+            WHERE a.upc=?
+                AND a.username=?
+                AND a.storeID=?
+                AND a.savedAs='default' 
+        ");
+
+        $dbc->startTransaction();
+        foreach ($items as $upc => $row) {
+            $args = array(
+                $row['srp'],
+                $upc,
+                $username,
+                $storeID
+            );
+            $dbc->execute($prep, $args);
+            $ret .= $dbc->error();
+        }
+        $dbc->commitTransaction();
+
+        echo $ret . ' END';
+        return false; 
+    }
+
+    public function postUpdatesrpsHandler()
+    {
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+        $dbc = ScanLib::getConObj();
+        $args = array($username, $storeID);
+        $rounder = new PriceRounder();
+        $items = array();
+
+        $listP = $dbc->prepare("SELECT v.upc, v.srp, v.vendorID FROM vendorItems v
+            INNER JOIN products p on p.upc=v.upc and v.vendorID=p.default_vendor_id
+            INNER JOIN woodshed_no_replicate.AuditScan a on a.upc=v.upc
+            WHERE a.username=?
+                AND a.savedAs='default'
+                AND a.storeID=?
+            GROUP BY v.upc
+            ORDER BY v.upc;");
+        $listR = $dbc->execute($listP, $args);
+        while ($row = $dbc->fetchRow($listR)) {
+            $upc = $row['upc'];
+            $srp = $row['srp'];
+            $vendorID = $row['vendorID'];
+            $items[$upc]['srp'] = $srp;
+            $items[$upc]['vendorID'] = $vendorID;
+        }
+
+        $prep = $dbc->prepare("
+            UPDATE vendorItems f 
+                LEFT JOIN products as p ON p.upc=f.upc 
+                LEFT JOIN departments AS b ON p.department=b.dept_no 
+                LEFT JOIN VendorSpecificMargins AS c ON c.vendorID=p.default_vendor_id AND p.department=c.deptID 
+                INNER JOIN woodshed_no_replicate.AuditScan AS a ON a.upc=f.upc AND a.username=? AND a.storeID=? AND a.savedAs='default'
+            SET f.srp = ROUND( CASE    WHEN c.margin IS NOT NULL THEN f.cost / (1 - c.margin)    ELSE CASE WHEN b.margin IS NOT NULL THEN f.cost / (1 - b.margin) ELSE f.cost / (1 - 0.40) END END,3) 
+                WHERE f.vendorID=p.default_vendor_id
+        ");
+        $res = $dbc->execute($prep, $args);
+
+        $dbc->startTransaction();
+        $roundP = $dbc->prepare("UPDATE vendorItems SET srp = ? WHERE upc = ? AND vendorID = ?");
+        foreach ($items as $upc => $row) {
+            $newSrp = $rounder->round($row['srp']);
+            $roundA = array($newSrp, $upc, $row['vendorID']);
+            $roundR = $dbc->execute($roundP, $roundA);
+        }
+        $dbc->commitTransaction();
+
+        return false;
+
     }
 
     public function postSetPRNHandler()
@@ -1326,6 +1435,7 @@ HTML;
         $loaded = FormLib::get('loaded');
         $loadedHTMLSpec = htmlspecialchars($loaded);
         $scrollMode = 'on';
+        $admin = ($_COOKIE['user_type'] == 2) ? true : false;
 
         $costMode = FormLib::get('costModeSwitch', false);
         if ($costMode === false) {
@@ -1437,7 +1547,7 @@ HTML;
         $tempBtnID = "prevent-default";
         $reviewForm = '';
         //$exportExcelForm = '';
-        if ($_COOKIE['user_type'] == 2) {
+        if ($admin == true) {
             // user is admin 
             $tempClass = "btn-secondary";
             $vncBtn = '
@@ -1624,6 +1734,15 @@ HTML;
             header("Content-Disposition: attachment; filename=$file");
         }
 
+        $adminFxOpts = ($admin) ? "
+            <option value=\"hideNOF\">Hide Rows With 'NOF' entered as notes</option>
+            <option value=\"pullReviewListToPrn\">[ IT ] Pull Review List to PRN</option>
+            <option value=\"exportJSONbatch\">[ IT ] Create JSON export batch using notes as sale price</option>
+            <option value=\"updateViSrps\">[ IT ] Update Vendor Item SRPs for all items in list</option>
+            <option value=\"ViSrpsToNotes\">[ IT ] Update Notes = SRP (of default vendorID)</option>
+        " : "";
+
+
         if ($demo == true) {
             echo $this->postFetchHandler($demo);
         } else {
@@ -1792,9 +1911,7 @@ $columnCheckboxes
                 <option value="hideNoPar">Hide Rows With 0 AutoPar for both stores</option>
                 <option value="hideHillNoPar">Hide Rows With 0 AutoPar for Hillside</option>
                 <option value="hideDenNoPar">Hide Rows With 0 AutoPar for Denfeld</option>
-                <option value="hideNOF">Hide Rows With 'NOF' entered as notes</option>
-                <option value="pullReviewListToPrn">[ IT ] Pull Review List to PRN</option>
-                <option value="exportJSONbatch">[ IT ] Create JSON export batch using notes as sale price</option>
+                $adminFxOpts
             </select>
         </div>
     </div>
@@ -2926,6 +3043,9 @@ var syncItem = function (upc)
 
 var tmpRet = '';
 $('#extHideFx').change(function(){
+    let c = false;
+    let storeID = $('#storeID').val();
+    let username = $('#username').val();
     let chosen = $(this).find(':selected').val();
     console.log(chosen);
     switch (chosen) {
@@ -3001,6 +3121,43 @@ $('#extHideFx').change(function(){
             $('#fw-border-text').text('Batch Import');
             $('#fw-text').val('');
             $('#fw-text').val(tmpRet);
+            break;
+        case 'updateViSrps':
+            c = confirm("Update vendor item SRPs for items in list?");
+            if (c == true) {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&updatesrps=true',
+                    dataType: 'json',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error');
+                    },
+                });
+            }
+            break;
+        case 'ViSrpsToNotes':
+            c = confirm("Replace notes with VI SRPs?");
+            if (c == true) {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&visrpnotes=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error:');
+                        console.log(response);
+                    },
+                });
+            }
+            break;
         default:
             break;
     }
