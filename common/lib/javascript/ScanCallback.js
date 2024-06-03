@@ -9,7 +9,13 @@
 
 */
 /*
-    function ScanCaseEval (
+    example usage:
+
+    ScanConfirm("Are you sure?", 'case', function() {
+        // code here is executed when 
+        // ScanCaseEval('case'); // is executed with 'case' as argument
+    });
+
 */
 var ScanCallbacks = {
    'default': [() => false]
@@ -66,9 +72,24 @@ var ScanConfirm = function(text, _case, callback) {
 
     alertElement.style.margin = '-150px 0 0 -150px';
 
+    let headingElement = document.createElement("div");
+    headingElement.style.padding = '10px';
+    headingElement.style.width = '280px';
+    headingElement.style.marginLeft = '10px';
+    headingElement.style.marginTop = '10px';
+    headingElement.style.background = 'rgba(206,151,207,0.5)';
+    headingElement.style.color = 'rgba(255,255,255,0.9)';
+    headingElement.style.fontWeight = 'bold';
+    headingElement.style.textShadow = '1px 1px black';
+    headingElement.style.fontSize = '18px';
+    headingElement.style.border = '1px solid black';
+    headingElement.align = 'center';
+    headingElement.innerHTML = 'Scannie Confirm';
+
     let msgElement = document.createElement("div");
     msgElement.style.padding = '10px';
     msgElement.style.width = '280px';
+    msgElement.style.height = '180px';
     msgElement.style.marginLeft = '10px';
     msgElement.style.marginTop = '10px';
     msgElement.style.background = 'rgba(255,255,255,0.9)';
@@ -109,6 +130,7 @@ var ScanConfirm = function(text, _case, callback) {
         $(this).parent().remove();
     }, false);
 
+    alertElement.append(headingElement);
     alertElement.append(msgElement);
     alertElement.append(confirmElement);
     alertElement.append(declineElement);
