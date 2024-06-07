@@ -1693,9 +1693,9 @@ HTML;
         $modal = "
             <div id=\"upcs_modal\" class=\"modal\">
                 <div class=\"modal-dialog\" role=\"document\">
-                    <div class=\"modal-content\">
+                    <div class=\"modal-content\" style=\"background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px)\" >
                       <div class=\"modal-header\">
-                        <h3 class=\"modal-title\" style=\"color: #8c7b70\">Enter a list of Barcodes</h3>
+                        <h3 class=\"modal-title\" style=\"color: white; text-shadow: 1px 1px black; background: rgba(206,151,207,0.5); padding: 10px; width: 100%;\">Enter a list of Barcodes</h3>
                         <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\"
                                 style=\"position: absolute; top:20; right: 20\">
                               <span aria-hidden=\"true\">&times;</span>
@@ -1705,13 +1705,14 @@ HTML;
                             <div align=\"center\">
                                 <form method=\"post\" class=\"\">
                                     <div class=\"form-group\">
-                                        <textarea class=\"form-control\" name=\"upcs\" rows=\"10\"></textarea>
+                                        <textarea class=\"form-control\" name=\"upcs\" rows=\"10\" style=\"background: rgba(255,255,255,0.8);\"></textarea>
                                     </div>
                                     <div class=\"form-group\">
                                         <button type=\"submit\" class=\"btn btn-default btn-xs\">Submit</button>
                                     </div>
                                     <div class=\"form-group\" align=\"right\">
-                                        <label for=\"add-delete-list\"><span style=\"font-weight: bold; color: tomato\">Delete</span> Instead of Add</label>
+                                        <label for=\"add-delete-list\" style=\"background: rgba(255,255,255,0.5); padding: 2px; border-radius: 4px; padding-right: 5px; padding-left: 5px;\">
+                                            <span style=\"font-weight: bold; color: tomato; text-shadow: 1px 1px black;\">Delete</span> <span style=\"color: white; text-shadow: 1px 1px black;\">Instead of Add</span></label>
                                         <input type=\"checkbox\" id=\"add-delete-list\" name=\"add-delete-list\" value=1 />
                                     </div>
                                     <input type=\"hidden\" name=\"storeID\" value=\"$storeID\" />
