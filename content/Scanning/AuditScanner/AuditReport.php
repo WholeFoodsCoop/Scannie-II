@@ -57,6 +57,7 @@ class AuditReport extends PageLayoutA
 
     public function postVisrpnotesHandler()
     {
+        $rounder = new PriceRounder();
         $username = FormLib::get('username');
         $storeID = FormLib::get('storeID');
         $dbc = ScanLib::getConObj();
@@ -65,20 +66,33 @@ class AuditReport extends PageLayoutA
         $ret = '';
 
         $listA = array($username, $storeID);
-        $listP = $dbc->prepare("SELECT v.upc, v.srp, v.vendorID
-            FROM vendorItems v
-                INNER JOIN products p on p.upc=v.upc and v.vendorID=p.default_vendor_id
-                INNER JOIN woodshed_no_replicate.AuditScan a on a.upc=v.upc
+        $listP = $dbc->prepare("
+            SELECT
+                a.upc, 
+                ROUND(
+                    CASE 
+                        WHEN c.margin IS NOT NULL THEN p.cost / (1 - c.margin) ELSE 
+                            CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40) END 
+                    END, 3) AS srp
+            FROM woodshed_no_replicate.AuditScan AS a
+            INNER JOIN products AS p ON p.upc=a.upc
+            LEFT JOIN departments AS b ON p.department=b.dept_no 
+            LEFT JOIN vendors AS v on v.vendorID=p.default_vendor_ID
+            LEFT JOIN VendorSpecificMargins AS c ON c.vendorID=p.default_vendor_id AND p.department=c.deptID 
+            LEFT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
+            LEFT JOIN batchList AS bl ON bl.upc=p.upc
+            LEFT JOIN batchReviewLog AS brl ON brl.bid=bl.batchID AND brl.forced = '0000-00-00 00:00:00'
+            LEFT JOIN prodReview AS pr ON pr.upc=p.upc AND pr.vendorID=p.default_vendor_id
             WHERE a.username=?
                 AND a.savedAs='default'
                 AND a.storeID=?
-                AND p.normal_price <> v.srp
-            GROUP BY v.upc
-            ORDER BY v.upc;");
+            GROUP BY p.upc
+        ");
         $listR = $dbc->execute($listP, $listA);
         while ($row = $dbc->fetchRow($listR)) {
             $upc = $row['upc'];
             $srp = $row['srp'];
+            $srp = $rounder->round($srp);
             $items[$upc]['srp'] = $srp;
         }
 
@@ -1840,7 +1854,7 @@ $costModeSwitch
             </select>
         </div>
         <div class="form-group dummy-form">
-            <button class="btn btn-default btn-sm" type="submit" id="loadCatBtn">Load</button>
+            <span class="btn btn-default btn-sm" type="submit" id="loadCatBtn">Load</span>
         </div>
     </form>
 </div>
@@ -1856,7 +1870,7 @@ $costModeSwitch
             </select>
         </div>
         <div class="form-group dummy-form">
-            <button class="btn btn-default btn-sm" type="submit" id="loadBrandBtn">Load</button>
+            <span class="btn btn-default btn-sm" type="submit" id="loadBrandBtn">Load</span>
         </div>
     </form>
 </div>
@@ -2019,8 +2033,7 @@ $("#mytable").bind('sortEnd', function(){
 
 
 $('#clearNotesInputB').click(function() {
-    var c = confirm("Are you sure?");
-    if (c == true) {
+    ScanConfirm("Are you sure?", 'clear_notes', function() {
         $.ajax({
             type: 'post',
             data: 'storeID='+storeID+'&username='+username+'&notes=true',
@@ -2032,11 +2045,10 @@ $('#clearNotesInputB').click(function() {
             error: function(response) {
             },
         });
-    }
+    });
 });
 $('#saveReviewList').click(function() {
-    var c = confirm("Save notated rows as review list?");
-    if (c == true) {
+    ScanConfirm("<br/><br/>Save notated rows as review list?", 'save_review_list', function() {
         $.ajax({
             type: 'post',
             data: 'storeID='+storeID+'&username='+username+'&reviewList=true',
@@ -2048,11 +2060,10 @@ $('#saveReviewList').click(function() {
             error: function(response) {
             },
         });
-    }
+    });
 });
 $('#clearAllInputB').click(function() {
-    var c = confirm("Are you sure?");
-    if (c == true) {
+    ScanConfirm("<br/><br/>Delete list<br/> Are you sure?", 'clear_entire_list', function() {
         $.ajax({
             type: 'post',
             data: 'storeID='+storeID+'&username='+username+'&clear=true',
@@ -2065,7 +2076,7 @@ $('#clearAllInputB').click(function() {
                 alert('error');
             },
         });
-    };
+    });
 });
 
 $("#notes").change( function() {
@@ -2893,12 +2904,14 @@ $('#prevent-default').click(function(e) {
 });
 
 $('#loadCatBtn').on('click', function(){
-    c = confirm("Are you sure you would like to load this catalog? This will replace the current list.");
-    return c;
+    ScanConfirm("<br/>Are you sure you would like to load this catalog? This will replace the current list.", 'loadCatBtn', function() {
+        $('#loadVendCat').submit();
+    });
 });
 $('#loadBrandBtn').on('click', function(){
-    c = confirm("Are you sure you would like to load all from this brand? This will replace the current list.");
-    return c;
+    ScanConfirm("<br/>Are you sure you would like to load all from this brand? This will replace the current list.", 'loadBrandBtn', function() {
+        $('#loadBrandList').submit();
+    });
 });
 
 //var scrollMode = 0;
@@ -3123,8 +3136,7 @@ $('#extHideFx').change(function(){
             $('#fw-text').val(tmpRet);
             break;
         case 'updateViSrps':
-            c = confirm("Update vendor item SRPs for items in list?");
-            if (c == true) {
+            ScanConfirm("<br/><br/>Update vendor item SRPs for items in list?", 'update_vi_srps', function() {
                 $.ajax({
                     type: 'post',
                     data: 'username='+username+'&storeID='+storeID+'&updatesrps=true',
@@ -3138,11 +3150,10 @@ $('#extHideFx').change(function(){
                         console.log('error');
                     },
                 });
-            }
+            });
             break;
         case 'ViSrpsToNotes':
-            c = confirm("Replace notes with VI SRPs?");
-            if (c == true) {
+            ScanConfirm("<br/><br/>Replace notes with VI SRPs?", 'vi_srps_to_notes', function() {
                 $.ajax({
                     type: 'post',
                     data: 'username='+username+'&storeID='+storeID+'&visrpnotes=true',
@@ -3156,7 +3167,7 @@ $('#extHideFx').change(function(){
                         console.log(response);
                     },
                 });
-            }
+            });
             break;
         default:
             break;
