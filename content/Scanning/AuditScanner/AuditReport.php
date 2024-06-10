@@ -1700,7 +1700,7 @@ HTML;
         $modal = "
             <div id=\"upcs_modal\" class=\"modal\">
                 <div class=\"modal-dialog\" role=\"document\">
-                    <div class=\"modal-content\" style=\"background: rgba(155,155,155,0.7)\" >
+                    <div class=\"modal-content\" style=\"background: rgba(200,200,200,0.95)\" >
                       <div class=\"modal-header\" style=\"background: repeating-linear-gradient(#68747F,  #565E66, #68747F 5px)\">
                         <h3 class=\"modal-title\" style=\"color: white; text-shadow: 1px 1px black; background: rgba(206,151,207,0.5); padding: 10px; width: 100%;\">Enter a list of Barcodes</h3>
                         <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\"
@@ -1718,7 +1718,7 @@ HTML;
                                         <button type=\"submit\" class=\"btn btn-default btn-xs\">Submit</button>
                                     </div>
                                     <div class=\"form-group\" align=\"right\">
-                                        <label for=\"add-delete-list\" style=\"background: rgba(255,255,255,0.5); padding: 2px; border-radius: 4px; padding-right: 5px; padding-left: 5px;\">
+                                        <label for=\"add-delete-list\" style=\"background: rgba(255,255,255,0.0); padding: 2px; border-radius: 4px; padding-right: 5px; padding-left: 5px;\">
                                             <span style=\"font-weight: bold; color: tomato; text-shadow: 1px 1px black;\">Delete</span> <span style=\"color: white; text-shadow: 1px 1px black;\">Instead of Add</span></label>
                                         <input type=\"checkbox\" id=\"add-delete-list\" name=\"add-delete-list\" value=1 />
                                     </div>
@@ -3274,10 +3274,16 @@ $('.editable-description, .editable-brand').on('keydown', function(e) {
     if (e.keyCode == 9) {
 
         nextElem = elem.closest('tr').next().find('td:eq('+elemIndex+')');
+        while (!nextElem.is(":visible")) {
+            nextElem = nextElem.closest('tr').next().find('td:eq('+elemIndex+')');
+        }
         if (lastKeyUp.length > 0) {
             // if SHIFT key was pressed, go backward 
             if (lastKeyUp[0] == '16') {
                 nextElem = elem.closest('tr').prev().find('td:eq('+elemIndex+')');
+                while (!nextElem.is(":visible")) {
+                    nextElem = nextElem.closest('tr').prev().find('td:eq('+elemIndex+')');
+                }
             }
         }
 
