@@ -3276,6 +3276,8 @@ $('.editable-description, .editable-brand').on('keydown', function(e) {
         nextElem = elem.closest('tr').next().find('td:eq('+elemIndex+')');
         while (!nextElem.is(":visible")) {
             nextElem = nextElem.closest('tr').next().find('td:eq('+elemIndex+')');
+            if (nextElem.length == 0)
+                break;
         }
         if (lastKeyUp.length > 0) {
             // if SHIFT key was pressed, go backward 
@@ -3283,6 +3285,8 @@ $('.editable-description, .editable-brand').on('keydown', function(e) {
                 nextElem = elem.closest('tr').prev().find('td:eq('+elemIndex+')');
                 while (!nextElem.is(":visible")) {
                     nextElem = nextElem.closest('tr').prev().find('td:eq('+elemIndex+')');
+                    if (nextElem.length == 0)
+                        break;
                 }
             }
         }
