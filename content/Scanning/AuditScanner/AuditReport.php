@@ -1862,7 +1862,7 @@ $costModeSwitch
             </select>
         </div>
         <div class="form-group dummy-form">
-            <span class="btn btn-default btn-sm" type="submit" id="loadCatBtn">Load</span>
+            <span class="btn btn-default btn-sm" id="loadCatBtn" tabindex="0">Load</span>
         </div>
     </form>
 </div>
@@ -1878,7 +1878,7 @@ $costModeSwitch
             </select>
         </div>
         <div class="form-group dummy-form">
-            <span class="btn btn-default btn-sm" type="submit" id="loadBrandBtn">Load</span>
+            <span class="btn btn-default btn-sm" type="submit" id="loadBrandBtn" tabindex="0">Load</span>
         </div>
     </form>
 </div>
@@ -2911,12 +2911,12 @@ $('#prevent-default').click(function(e) {
     e.preventDefault();
 });
 
-$('#loadCatBtn').on('click', function(){
+$('#loadCatBtn').on('click keypress', function(){
     ScanConfirm("<br/>Are you sure you would like to load this catalog? This will replace the current list.", 'loadCatBtn', function() {
         $('#loadVendCat').submit();
     });
 });
-$('#loadBrandBtn').on('click', function(){
+$('#loadBrandBtn').on('click keypress', function(){
     ScanConfirm("<br/>Are you sure you would like to load all from this brand? This will replace the current list.", 'loadBrandBtn', function() {
         $('#loadBrandList').submit();
     });
