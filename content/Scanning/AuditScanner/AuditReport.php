@@ -13,9 +13,11 @@ class AuditReport extends PageLayoutA
 
     public $columns = array('check', 'upc', 'sku', 'alias', 'likeCode', 'brand', 'sign-brand', 'description', 
         'sign-description', 'size', 'uom', 'units', 'netcost', 'cost', 'vcost', 'recentPurchase',
-        'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'dept', 'subdept',
+        'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'tax', 'dept', 'subdept',
         'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 'scalePLU', 'mnote', 'notes', 'reviewed', 
         'costChange', 'floorSections', 'comment', 'PRN', 'caseCost'); 
+
+    public $taxes = array('None', 'Regular', 'Deli', 'Cannabis');
 
     public function preprocess()
     {
@@ -987,7 +989,8 @@ class AuditReport extends PageLayoutA
                 END AS local,
                 fslv.sections AS floorSections,
                 fslv.subSections AS floorSections,
-                pr.comment
+                pr.comment,
+                p.tax
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON $vendorItemsJoinOn AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -1052,7 +1055,7 @@ class AuditReport extends PageLayoutA
         }
 
         $td = "";
-        $csv = "UPC, SKU, ALIAS, LIKECODE, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UOM, UNITS, NETCOST, COST, VCOST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CASE COST, NOTES\r\n";
+        $csv = "UPC, SKU, ALIAS, LIKECODE, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UOM, UNITS, NETCOST, COST, VCOST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, TAX, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CASE COST, NOTES\r\n";
 
             //$prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDesecription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $autoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
         $textarea = "<div style=\"position: relative\">
@@ -1084,6 +1087,7 @@ class AuditReport extends PageLayoutA
             <td title=\"srp\" data-column=\"srp\"class=\"srp column-filter\"></td>
             <td title=\"rsrp\" data-column=\"rsrp\"class=\"rsrp column-filter\"></td>
             <td title=\"prid\" data-column=\"prid\"class=\"prid column-filter\"></td>
+            <td title=\"tax\" data-column=\"tax\"class=\"tax column-filter\"></td>
             <td title=\"dept\" data-column=\"dept\"class=\"dept column-filter\"></td>
             <td title=\"subdebt\" data-column=\"subdept\"class=\"subdept column-filter\"></td>
             <td title=\"local\" data-column=\"local\"class=\"local column-filter\"></td>
@@ -1131,6 +1135,7 @@ class AuditReport extends PageLayoutA
             <th class=\"rsrp\">raw srp</th>
             <th class=\"srp\">srp</th>
             <th class=\"prid\">prid</th>
+            <th class=\"tax\">tax</th>
             <th class=\"dept\">dept</th>
             <th class=\"subdept\">subdept</th>
             <th class=\"local\">local</th>
@@ -1253,6 +1258,7 @@ class AuditReport extends PageLayoutA
             //override srp with value in products
             $srp = $row['vsrp'];
             $prid = $row['priceRuleType'];
+            $tax = $this->taxes[$row['tax']];
             $dept = $row['dept'];
             $subdept = $row['subdept'];
             $local = $row['local'];
@@ -1311,6 +1317,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"rsrp\">$rsrp</td>";
             $td .= "<td class=\"srp\">$srp</td>";
             $td .= "<td class=\"prid\">$prid</td>";
+            $td .= "<td class=\"tax\">$tax</td>";
             //$td .= "<td class=\"dept\">
             //    <span class=\"dept-text\">$dept</span>
             //    <span class=\"dept-select hidden\">$deptOpts</span>
@@ -1352,7 +1359,7 @@ class AuditReport extends PageLayoutA
             $brand = str_replace(',', '', $brand);
             $autoPar = str_replace("&#9608;", " | ", $autoPar);
 
-            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $uom, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes\"");
+            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $uom, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $tax, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes\"");
             $prepCsv = str_replace("&nbsp;", "", $prepCsv);
             $prepCsv = str_replace("\"", "", $prepCsv);
             $csv .= "$prepCsv" . "\r\n";
@@ -1482,8 +1489,8 @@ HTML;
             $x |= 1 << 17;
             $x |= 1 << 18;
             $x |= 1 << 23;
-            $x |= 1 << 32;
             $x |= 1 << 33;
+            $x |= 1 << 34;
             $_SESSION['columnBitSet'] = $x;
         }
 
@@ -1693,8 +1700,8 @@ HTML;
         $modal = "
             <div id=\"upcs_modal\" class=\"modal\">
                 <div class=\"modal-dialog\" role=\"document\">
-                    <div class=\"modal-content\" style=\"background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px)\" >
-                      <div class=\"modal-header\">
+                    <div class=\"modal-content\" style=\"background: rgba(155,155,155,0.7)\" >
+                      <div class=\"modal-header\" style=\"background: repeating-linear-gradient(#68747F,  #565E66, #68747F 5px)\">
                         <h3 class=\"modal-title\" style=\"color: white; text-shadow: 1px 1px black; background: rgba(206,151,207,0.5); padding: 10px; width: 100%;\">Enter a list of Barcodes</h3>
                         <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\"
                                 style=\"position: absolute; top:20; right: 20\">
