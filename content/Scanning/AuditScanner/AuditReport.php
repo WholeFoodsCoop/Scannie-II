@@ -70,17 +70,23 @@ class AuditReport extends PageLayoutA
         $listA = array($username, $storeID);
         $listP = $dbc->prepare("
             SELECT
-                a.upc, 
+                a.upc,
                 ROUND(
-                    CASE 
-                        WHEN c.margin IS NOT NULL THEN p.cost / (1 - c.margin) ELSE 
-                            CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40) END 
-                    END, 3) AS srp
+                    CASE
+                        WHEN c.margin IS NOT NULL THEN p.cost / (1 - c.margin) ELSE
+                            CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40) END
+                    END, 3) AS srp,
+                ROUND(
+                    CASE
+                        WHEN c.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - c.margin) ELSE
+                            CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - b.margin) ELSE (p.cost + (p.cost * v.shippingMarkup)) / (1 - 0.40) END
+                    END, 3) AS srp2,
+                v.shippingMarkup
             FROM woodshed_no_replicate.AuditScan AS a
             INNER JOIN products AS p ON p.upc=a.upc
-            LEFT JOIN departments AS b ON p.department=b.dept_no 
+            LEFT JOIN departments AS b ON p.department=b.dept_no
             LEFT JOIN vendors AS v on v.vendorID=p.default_vendor_ID
-            LEFT JOIN VendorSpecificMargins AS c ON c.vendorID=p.default_vendor_id AND p.department=c.deptID 
+            LEFT JOIN VendorSpecificMargins AS c ON c.vendorID=p.default_vendor_id AND p.department=c.deptID
             LEFT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
             LEFT JOIN batchList AS bl ON bl.upc=p.upc
             LEFT JOIN batchReviewLog AS brl ON brl.bid=bl.batchID AND brl.forced = '0000-00-00 00:00:00'
@@ -94,6 +100,9 @@ class AuditReport extends PageLayoutA
         while ($row = $dbc->fetchRow($listR)) {
             $upc = $row['upc'];
             $srp = $row['srp'];
+            $srp2 = $row['srp2'];
+            if ($srp2 > $srp)
+                $srp = $srp2;
             $srp = $rounder->round($srp);
             $items[$upc]['srp'] = $srp;
         }
@@ -1700,7 +1709,7 @@ HTML;
         $modal = "
             <div id=\"upcs_modal\" class=\"modal\">
                 <div class=\"modal-dialog\" role=\"document\">
-                    <div class=\"modal-content\" style=\"background: rgba(200,200,200,0.95)\" >
+                    <div class=\"modal-content\" style=\"background: linear-gradient(black, 10%,  white, white, lightgrey);\" >
                       <div class=\"modal-header\" style=\"background: repeating-linear-gradient(#68747F,  #565E66, #68747F 5px)\">
                         <h3 class=\"modal-title\" style=\"color: white; text-shadow: 1px 1px black; background: rgba(206,151,207,0.5); padding: 10px; width: 100%;\">Enter a list of Barcodes</h3>
                         <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\"
@@ -1719,7 +1728,7 @@ HTML;
                                     </div>
                                     <div class=\"form-group\" align=\"right\">
                                         <label for=\"add-delete-list\" style=\"background: rgba(255,255,255,0.0); padding: 2px; border-radius: 4px; padding-right: 5px; padding-left: 5px;\">
-                                            <span style=\"font-weight: bold; color: tomato; text-shadow: 1px 1px black;\">Delete</span> <span style=\"color: white; text-shadow: 1px 1px black;\">Instead of Add</span></label>
+                                            <span style=\"font-weight: bold; color: tomato; text-shadow: 1px 1px lightgrey;\">Delete</span> <span style=\"color: black; text-shadow: 1px 1px lightgrey;\">Instead of Add</span></label>
                                         <input type=\"checkbox\" id=\"add-delete-list\" name=\"add-delete-list\" value=1 />
                                     </div>
                                     <input type=\"hidden\" name=\"storeID\" value=\"$storeID\" />
