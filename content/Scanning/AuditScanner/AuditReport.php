@@ -81,7 +81,8 @@ class AuditReport extends PageLayoutA
                         WHEN c.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - c.margin) ELSE
                             CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - b.margin) ELSE (p.cost + (p.cost * v.shippingMarkup)) / (1 - 0.40) END
                     END, 3) AS srp2,
-                v.shippingMarkup
+                v.shippingMarkup,
+                v.vendorID
             FROM woodshed_no_replicate.AuditScan AS a
             INNER JOIN products AS p ON p.upc=a.upc
             LEFT JOIN departments AS b ON p.department=b.dept_no
@@ -98,12 +99,14 @@ class AuditReport extends PageLayoutA
         $listR = $dbc->execute($listP, $listA);
         while ($row = $dbc->fetchRow($listR)) {
             $upc = $row['upc'];
+            $vendorID = $row['vendorID'];
             $srp = $row['srp'];
             $srp2 = $row['srp2'];
             if ($srp2 > $srp)
                 $srp = $srp2;
             $srp = $rounder->round($srp);
             $items[$upc]['srp'] = $srp;
+            $items[$upc]['vendorID'] = $vendorID;
         }
 
         $ret .= $dbc->error();
@@ -130,57 +133,88 @@ class AuditReport extends PageLayoutA
         }
         $dbc->commitTransaction();
 
+
         echo $ret . ' END';
         return false; 
     }
 
     public function postUpdatesrpsHandler()
     {
+        $rounder = new PriceRounder();
         $username = FormLib::get('username');
         $storeID = FormLib::get('storeID');
         $dbc = ScanLib::getConObj();
-        $args = array($username, $storeID);
-        $rounder = new PriceRounder();
         $items = array();
 
-        $listP = $dbc->prepare("SELECT v.upc, v.srp, v.vendorID FROM vendorItems v
-            INNER JOIN products p on p.upc=v.upc and v.vendorID=p.default_vendor_id
-            INNER JOIN woodshed_no_replicate.AuditScan a on a.upc=v.upc
+        $ret = '';
+
+        $listA = array($username);
+        $listP = $dbc->prepare("
+            SELECT
+                a.upc,
+                ROUND(
+                    CASE
+                        WHEN c.margin IS NOT NULL THEN p.cost / (1 - c.margin) ELSE
+                            CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40) END
+                    END, 3) AS srp,
+                ROUND(
+                    CASE
+                        WHEN c.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - c.margin) ELSE
+                            CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - b.margin) ELSE (p.cost + (p.cost * v.shippingMarkup)) / (1 - 0.40) END
+                    END, 3) AS srp2,
+                v.shippingMarkup,
+                v.vendorID
+            FROM woodshed_no_replicate.AuditScan AS a
+            INNER JOIN products AS p ON p.upc=a.upc
+            LEFT JOIN departments AS b ON p.department=b.dept_no
+            LEFT JOIN vendors AS v on v.vendorID=p.default_vendor_ID
+            LEFT JOIN VendorSpecificMargins AS c ON c.vendorID=p.default_vendor_id AND p.department=c.deptID
+            LEFT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
+            LEFT JOIN batchList AS bl ON bl.upc=p.upc
+            LEFT JOIN batchReviewLog AS brl ON brl.bid=bl.batchID AND brl.forced = '0000-00-00 00:00:00'
+            LEFT JOIN prodReview AS pr ON pr.upc=p.upc AND pr.vendorID=p.default_vendor_id
             WHERE a.username=?
                 AND a.savedAs='default'
-                AND a.storeID=?
-            GROUP BY v.upc
-            ORDER BY v.upc;");
-        $listR = $dbc->execute($listP, $args);
+            GROUP BY p.upc
+        ");
+        $listR = $dbc->execute($listP, $listA);
         while ($row = $dbc->fetchRow($listR)) {
             $upc = $row['upc'];
-            $srp = $row['srp'];
             $vendorID = $row['vendorID'];
+            $srp = $row['srp'];
+            $srp2 = $row['srp2'];
+            if ($srp2 > $srp)
+                $srp = $srp2;
+            $srp = $rounder->round($srp);
             $items[$upc]['srp'] = $srp;
             $items[$upc]['vendorID'] = $vendorID;
         }
 
+        $ret .= $dbc->error();
+
         $prep = $dbc->prepare("
-            UPDATE vendorItems f 
-                LEFT JOIN products as p ON p.upc=f.upc 
-                LEFT JOIN departments AS b ON p.department=b.dept_no 
-                LEFT JOIN VendorSpecificMargins AS c ON c.vendorID=p.default_vendor_id AND p.department=c.deptID 
-                INNER JOIN woodshed_no_replicate.AuditScan AS a ON a.upc=f.upc AND a.username=? AND a.storeID=? AND a.savedAs='default'
-            SET f.srp = ROUND( CASE    WHEN c.margin IS NOT NULL THEN f.cost / (1 - c.margin)    ELSE CASE WHEN b.margin IS NOT NULL THEN f.cost / (1 - b.margin) ELSE f.cost / (1 - 0.40) END END,3) 
-                WHERE f.vendorID=p.default_vendor_id
+            UPDATE woodshed_no_replicate.AuditScan AS a
+            SET notes=?
+            WHERE a.upc=?
+                AND a.username=?
+                AND a.storeID=?
+                AND a.savedAs='default' 
         ");
-        $res = $dbc->execute($prep, $args);
 
         $dbc->startTransaction();
-        $roundP = $dbc->prepare("UPDATE vendorItems SET srp = ? WHERE upc = ? AND vendorID = ?");
+        $roundP = $dbc->prepare("UPDATE vendorItems SET srp = ?, modified = NOW() WHERE upc = ? AND vendorID = ?");
         foreach ($items as $upc => $row) {
-            $newSrp = $rounder->round($row['srp']);
-            $roundA = array($newSrp, $upc, $row['vendorID']);
+            $roundA = array(
+                $row['srp'],
+                $upc,
+                $row['vendorID']
+            );
             $roundR = $dbc->execute($roundP, $roundA);
         }
         $dbc->commitTransaction();
 
-        return false;
+        echo $ret . ' END';
+        return false; 
 
     }
 
@@ -1766,10 +1800,10 @@ HTML;
 
         $adminFxOpts = ($admin) ? "
             <option value=\"hideNOF\">Hide Rows With 'NOF' entered as notes</option>
-            <option value=\"pullReviewListToPrn\">[ IT ] Pull Review List to PRN</option>
-            <option value=\"exportJSONbatch\">[ IT ] Create JSON export batch using notes as sale price</option>
-            <option value=\"updateViSrps\">[ IT ] Update Vendor Item SRPs for all items in list</option>
-            <option value=\"ViSrpsToNotes\">[ IT ] Update Notes = SRP (of default vendorID)</option>
+            <option value=\"pullReviewListToPrn\">[ IT ] Review List () => PRN</option>
+            <option value=\"exportJSONbatch\">[ IT ] JSON Export Batch </option>
+            <option value=\"updateViSrps\">[ IT ] Update vendorItems.srp(s)</option>
+            <option value=\"ViSrpsToNotes\">[ IT ] SRP () => Notes</option>
         " : "";
 
 
@@ -3156,14 +3190,13 @@ $('#extHideFx').change(function(){
                 $.ajax({
                     type: 'post',
                     data: 'username='+username+'&storeID='+storeID+'&updatesrps=true',
-                    dataType: 'json',
                     url: 'AuditReport.php',
                     success: function(response) {
                         console.log('success');
                         window.location.reload();
                     },
                     error: function(response) {
-                        console.log('error');
+                        console.log('error: '+response);
                     },
                 });
             });
