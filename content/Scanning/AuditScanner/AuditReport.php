@@ -67,7 +67,7 @@ class AuditReport extends PageLayoutA
 
         $ret = '';
 
-        $listA = array($username, $storeID);
+        $listA = array($username);
         $listP = $dbc->prepare("
             SELECT
                 a.upc,
@@ -93,7 +93,6 @@ class AuditReport extends PageLayoutA
             LEFT JOIN prodReview AS pr ON pr.upc=p.upc AND pr.vendorID=p.default_vendor_id
             WHERE a.username=?
                 AND a.savedAs='default'
-                AND a.storeID=?
             GROUP BY p.upc
         ");
         $listR = $dbc->execute($listP, $listA);
