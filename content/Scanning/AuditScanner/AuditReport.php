@@ -50,6 +50,7 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<brandList>';
         $this->__routes[] = 'post<setStoreID>';
         $this->__routes[] = 'get<exportExcel>';
+        $this->__routes[] = 'get<exportCsv>';
         $this->__routes[] = 'post<setPRN>';
         $this->__routes[] = 'post<updatesrps>';
         $this->__routes[] = 'post<visrpnotes>';
@@ -240,6 +241,43 @@ class AuditReport extends PageLayoutA
     public function getExportExcelHandler()
     {
         echo $this->postView('true');
+
+        return false;
+    }
+
+    public function postExportCsvHandler()
+    {
+        $files = glob('./noauto/' . '*', GLOB_MARK);
+        foreach ($files as $file) {
+            if (is_dir($file)) {
+                deleteDir($file);
+            } else {
+                unlink($file);
+            }
+        }
+
+        $filename = 'AuditReport' . uniqid() . '.csv'; 
+
+        $theadStr = FormLib::get('thead', false);
+        $theadStr = json_decode($theadStr);
+
+        $tdStr = FormLib::get('tableData', false);
+        $tdStr = json_decode($tdStr);
+
+        $data = array(
+            $theadStr,
+        );
+        foreach ($tdStr as $arr) {
+            $data[] = $arr;
+        }
+
+        $f = fopen("noauto/$filename", "w");
+        foreach ($data as $arr) {
+            fputcsv($f, $arr);
+        }
+        fclose($f);
+
+        echo $filename;
 
         return false;
     }
@@ -1255,7 +1293,7 @@ class AuditReport extends PageLayoutA
                     $par = "<span style=\"color: transparent\">_</span>".$par;
                 //$autoPar .= "<span style=\"border: 1px solid $woSalesText;\"><span style=\"color: $woSalesText; \">&#9608;</span> $par</span> ";
                 //$autoPar .= "<td style=\"width: 25px\"><span style=\"color: $woSalesText; \">&#9608;</span> $par</td>";
-                $autoPar .= "<td style=\"width: 25px; border-left: 5px solid $woSalesText; \"> $par</td>";
+                $autoPar .= "<td style=\"width: 25px; border-left: 5px solid $woSalesText; \" class=\"autoPar\"> $par</td>";
                 $csvAutoPar .= "[$storeID] $par ";
             }
             $autoPar .= "</table></div>";
@@ -1742,7 +1780,7 @@ HTML;
         $modal = "
             <div id=\"upcs_modal\" class=\"modal\">
                 <div class=\"modal-dialog\" role=\"document\">
-                    <div class=\"modal-content\" style=\"background: linear-gradient(black, 10%,  white, white, lightgrey);\" >
+                    <div class=\"modal-content\" style=\"\" >
                       <div class=\"modal-header\" style=\"background: repeating-linear-gradient(#68747F,  #565E66, #68747F 5px)\">
                         <h3 class=\"modal-title\" style=\"color: white; text-shadow: 1px 1px black; background: rgba(206,151,207,0.5); padding: 10px; width: 100%;\">Enter a list of Barcodes</h3>
                         <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-label=\"Close\"
@@ -1750,6 +1788,7 @@ HTML;
                               <span aria-hidden=\"true\">&times;</span>
                             </button>
                           </div>
+                      <div style=\"height: 15px; background: linear-gradient(#586069,  white); margin-top: -5px;\"></div>
                           <div class=\"modal-body\">
                             <div align=\"center\">
                                 <form method=\"post\" class=\"\">
@@ -1806,6 +1845,8 @@ HTML;
             <option value=\"ViSrpsToNotes\">[ IT ] SRP () => Notes</option>
         " : "";
 
+
+        $newExcelFilename = "AuditReport_" . uniqid() . ".csv";
 
         if ($demo == true) {
             echo $this->postFetchHandler($demo);
@@ -1926,8 +1967,9 @@ $costModeSwitch
 </div>
 <div class="row">
     <div class="col-lg-2">
-        <div style="font-size: 12px;">
-            <li><a href="AuditReport.php?exportExcel=1" download>Export to Excel (CSV)</a></li>
+        <div style="font-size: 12px;" id="GenerateExcelFileDiv">
+            <li><a href="#" id="ExportCsvAnchor">Generate File (csv)</a></li>
+            <li><a href="../../../../git/fannie/batches/newbatch/BatchImportExportPage.php" target="_blank">Batch Import</a></li>
         </div>
     </div>
     <div class="col-lg-2">
@@ -2073,9 +2115,9 @@ var restripe = function() {
 };
 restripe();
 
-$(document).mouseup(function(e) {
-    restripe();
-});
+//$(document).mouseup(function(e) {
+//    restripe();
+//});
 
 $("#mytable").bind('sortEnd', function(){
     restripe();
@@ -3338,12 +3380,94 @@ $('.editable-description, .editable-brand').on('keydown', function(e) {
 });
 
 
+/*
+    Write a CSV file of table 
+*/
+var CsvTitleData = [];
+var CsvTableData = [];
+const PrepCSV = function() {
+
+    $('thead').each(function(){
+        $(this).find('th').each(function(){
+            let value = $(this).text();
+            if (value.substring(0, 7) == 'autoPar') {
+                // do nothing
+            } else {
+                value = value.replaceAll(",", " ");
+                CsvTitleData.push(value);
+            }
+        });
+    });
+
+    $('tr.prod-row').each(function(){
+        let tmpArr = [];
+        $(this).find('td').each(function(){
+            if ($(this).hasClass('autoPar')) {
+                // do nothing
+            } else {
+                let value = $(this).text();
+                tmpArr.push(value);
+            }
+        });
+        CsvTableData.push(tmpArr);
+    });
+
+    let thead = JSON.stringify(CsvTitleData);
+    let td = JSON.stringify(CsvTableData);
+    td = encodeURIComponent(td);
+
+    $.ajax({
+        type: 'post',
+        data: "exportCsv=1&thead="+thead+"&tableData="+td,
+        url: 'AuditReport.php',
+        success: function(response) {
+            console.log('Export CSV');
+
+            let download = document.createElement("a");
+            download.href = 'noauto/'+response;
+            download.innerHTML = 'Download File';
+            download.style.padding = '5px';
+            download.style.borderRadius = '3px';
+            download.addEventListener('click', function(){
+                $(this).remove();
+            }, false);
+
+            $('#GenerateExcelFileDiv').append(download);
+        },
+        error: function(response) {
+        },
+    });
+}
+$('#ExportCsvAnchor').on('click', function(){
+    PrepCSV();
+});
+
 JAVASCRIPT;
     }
 
     public function cssContent()
     {
+        $username = ($un = scanLib::getUser()) ? $un : "Generic User";
+        $dbc = ScanLib::getConObj();
+
+        $prep = $dbc->prepare("SELECT altHLColor FROM woodshed_no_replicate.ScannieAuth 
+            WHERE name = ?"); 
+        $res = $dbc->execute($prep, array($username));
+        $row = $dbc->fetchRow($res);
+        $altHLColor = $row['altHLColor'];
+        $stripeColor = ($altHLColor) ? $altHLColor : "FFFFCC";
+        
+        $cursor = '';
+        if ($username=='csather') {
+            $cursor = <<<HTML
+    //cursor: url('../../../common/src/img/icons/reptaur-xs-pointer.png'), auto;
+HTML;
+        }
+
         return <<<HTML
+body {
+    $cursor
+}
 div.gui-group {
     background-color: #F2F2F2;
     display: inline-block;
@@ -3402,7 +3526,7 @@ tr.highlight {
     font-weight: bold;
 }
 .stripe {
-    background: #FFFFCC;
+    background: #$stripeColor;
 }
 thead {
     background-color: lightgrey;
