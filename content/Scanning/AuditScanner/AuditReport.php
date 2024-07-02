@@ -2527,6 +2527,17 @@ $('.editable-description').focusout(function(){
 $(document).keydown(function(e){
     var key = e.keyCode;
     $('#keydown').val(key);
+
+    if (e.keyCode == 13) {
+        $('.confirm-yes').each(function(){
+            $(this).trigger('click');
+        });
+    }
+    if (e.keyCode == 27) {
+        $('.confirm-no').each(function(){
+            $(this).trigger('click');
+        });
+    }
 });
 $(document).keyup(function(e){
     var key = e.keyCode;

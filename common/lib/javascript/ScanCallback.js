@@ -110,6 +110,7 @@ var ScanConfirm = function(text, _case, callback) {
     confirmElement.align = 'center';
     confirmElement.innerHTML += 'YES';
     confirmElement.style.cursor = 'pointer';
+    confirmElement.classList.add('confirm-yes');
     // On YES click, call method using ScanCaseEval
     confirmElement.addEventListener('click', function() { 
         ScanCaseEval(_case);
@@ -117,6 +118,7 @@ var ScanConfirm = function(text, _case, callback) {
     }, false);
 
     let declineElement = document.createElement("button");
+    declineElement.id = "ScanConfirmNO";
     declineElement.style.background = 'rgba(255,255,255,0.9)';
     declineElement.style.position = 'absolute';
     declineElement.style.bottom = '10px';
@@ -126,14 +128,41 @@ var ScanConfirm = function(text, _case, callback) {
     declineElement.align = 'center';
     declineElement.innerHTML += 'NO';
     declineElement.style.cursor = 'pointer';
+    declineElement.classList.add('confirm-no');
     declineElement.addEventListener('click', function() { 
         $(this).parent().remove();
     }, false);
+    declineElement.focus();
+
+    let hotkeyVisElement = document.createElement("span");
+    hotkeyVisElement.style.background = 'rgba(0,0,0,0)';
+    hotkeyVisElement.style.position = 'absolute';
+    hotkeyVisElement.style.bottom = '15px';
+    hotkeyVisElement.style.color = 'white';
+    hotkeyVisElement.style.right = '24%';
+    hotkeyVisElement.style.borderRadius = '3px';
+    hotkeyVisElement.style.fontSize = '12px';
+    hotkeyVisElement.align = 'center';
+    hotkeyVisElement.innerHTML += '[Enter]';
+
+    let hotkeyVisTwoElement = document.createElement("span");
+    hotkeyVisTwoElement.style.background = 'rgba(0,0,0,0)';
+    hotkeyVisTwoElement.style.position = 'absolute';
+    hotkeyVisTwoElement.style.bottom = '15px';
+    hotkeyVisTwoElement.style.color = 'white';
+    hotkeyVisTwoElement.style.left= '24%';
+    hotkeyVisTwoElement.style.borderRadius = '3px';
+    hotkeyVisTwoElement.style.fontSize = '12px';
+    hotkeyVisTwoElement.align = 'center';
+    hotkeyVisTwoElement.innerHTML += '[Esc]';
+    hotkeyVisTwoElement.style.cursor = 'pointer';
 
     alertElement.append(headingElement);
     alertElement.append(msgElement);
-    alertElement.append(confirmElement);
     alertElement.append(declineElement);
+    alertElement.append(confirmElement);
+    alertElement.append(hotkeyVisElement);
+    alertElement.append(hotkeyVisTwoElement);
 
     $('body').prepend(alertElement);
 
