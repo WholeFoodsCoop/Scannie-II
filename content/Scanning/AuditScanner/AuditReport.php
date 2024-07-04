@@ -54,8 +54,28 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<setPRN>';
         $this->__routes[] = 'post<updatesrps>';
         $this->__routes[] = 'post<visrpnotes>';
+        $this->__routes[] = 'post<viclearnotes>';
 
         return parent::preprocess();
+    }
+
+    public function postViclearnotesHandler()
+    {
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+        $dbc = ScanLib::getConObj();
+
+        $args = array($username, $storeID);
+        $prep = $dbc->prepare("
+            UPDATE woodshed_no_replicate.AuditScan AS a
+            SET notes=null
+            WHERE a.username=?
+                AND a.storeID=?
+                AND a.savedAs='default' ");
+        $res = $dbc->execute($prep, $args);
+
+        echo "Notes cleared";
+        return false;
     }
 
     public function postVisrpnotesHandler()
@@ -75,12 +95,18 @@ class AuditReport extends PageLayoutA
                 ROUND(
                     CASE
                         WHEN c.margin IS NOT NULL THEN p.cost / (1 - c.margin) ELSE
-                            CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40) END
+                            CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN p.cost / (1 - vd.margin) ELSE
+                                CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40) 
+                            END
+                        END
                     END, 3) AS srp,
                 ROUND(
                     CASE
                         WHEN c.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - c.margin) ELSE
-                            CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - b.margin) ELSE (p.cost + (p.cost * v.shippingMarkup)) / (1 - 0.40) END
+                            CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - vd.margin) ELSE
+                                CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - b.margin) ELSE (p.cost + (p.cost * v.shippingMarkup)) / (1 - 0.40)
+                            END
+                        END
                     END, 3) AS srp2,
                 v.shippingMarkup,
                 v.vendorID
@@ -93,6 +119,10 @@ class AuditReport extends PageLayoutA
             LEFT JOIN batchList AS bl ON bl.upc=p.upc
             LEFT JOIN batchReviewLog AS brl ON brl.bid=bl.batchID AND brl.forced = '0000-00-00 00:00:00'
             LEFT JOIN prodReview AS pr ON pr.upc=p.upc AND pr.vendorID=p.default_vendor_id
+
+            LEFT JOIN vendorItems AS vi ON vi.upc=p.upc AND vi.vendorID=p.default_vendor_id
+            LEFT JOIN vendorDepartments AS vd ON vd.vendorID=p.default_vendor_id AND vd.deptID=vi.vendorDept
+
             WHERE a.username=?
                 AND a.savedAs='default'
             GROUP BY p.upc
@@ -104,6 +134,7 @@ class AuditReport extends PageLayoutA
             $srp = $row['srp'];
             $srp2 = $row['srp2'];
             if ($srp2 > $srp)
+                // if $srp2 > $srp, then a shipping markup exists
                 $srp = $srp2;
             $srp = $rounder->round($srp);
             $items[$upc]['srp'] = $srp;
@@ -152,7 +183,7 @@ class AuditReport extends PageLayoutA
         $listA = array($username);
         $listP = $dbc->prepare("
             SELECT
-                a.upc,
+                a.upc, p.normal_price, 
                 ROUND(
                     CASE
                         WHEN c.margin IS NOT NULL THEN p.cost / (1 - c.margin) ELSE
@@ -182,18 +213,22 @@ class AuditReport extends PageLayoutA
         while ($row = $dbc->fetchRow($listR)) {
             $upc = $row['upc'];
             $vendorID = $row['vendorID'];
+            $normal_price = $row['normal_price'];
             $srp = $row['srp'];
             $srp2 = $row['srp2'];
-            if ($srp2 > $srp)
+            if ($srp2 > $srp) {
+                // if $srp2 <> $srp, then vendor has shipping markup
                 $srp = $srp2;
+            }
             $srp = $rounder->round($srp);
             $items[$upc]['srp'] = $srp;
+            $items[$upc]['normal_price'] = $normal_price;
             $items[$upc]['vendorID'] = $vendorID;
         }
 
         $ret .= $dbc->error();
 
-        $prep = $dbc->prepare("
+        $notesP = $dbc->prepare("
             UPDATE woodshed_no_replicate.AuditScan AS a
             SET notes=?
             WHERE a.upc=?
@@ -211,6 +246,11 @@ class AuditReport extends PageLayoutA
                 $row['vendorID']
             );
             $roundR = $dbc->execute($roundP, $roundA);
+
+            if ($row['srp'] != $row['normal_price']) {
+                $notesA = array($row['srp'], $upc, $username, $storeID);
+                $dbc->execute($notesP, $notesA);
+            }
         }
         $dbc->commitTransaction();
 
@@ -1841,8 +1881,9 @@ HTML;
             <option value=\"hideNOF\">Hide Rows With 'NOF' entered as notes</option>
             <option value=\"pullReviewListToPrn\">[ IT ] Review List () => PRN</option>
             <option value=\"exportJSONbatch\">[ IT ] JSON Export Batch </option>
-            <option value=\"updateViSrps\">[ IT ] Update vendorItems.srp(s)</option>
-            <option value=\"ViSrpsToNotes\">[ IT ] SRP () => Notes</option>
+            <option value=\"updateViSrps\">[ IT ] SRP () => Notes (also updates vendorItems.srp(s))</option>
+            <!--<option value=\"ViSrpsToNotes\">[ IT ] SRP () => Notes</option>-->
+            <option value=\"ViClearNotes\">[ IT ] Clear Notes</option>
         " : "";
 
 
@@ -3267,6 +3308,22 @@ $('#extHideFx').change(function(){
                     error: function(response) {
                         console.log('error:');
                         console.log(response);
+                    },
+                });
+            });
+            break;
+        case 'ViClearNotes':
+            ScanConfirm("<br/><br/>Clear all notes?", 'clear_vi_notes', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&viclearnotes=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
                     },
                 });
             });
