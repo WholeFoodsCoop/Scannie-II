@@ -3427,6 +3427,7 @@ btnsdiv.setAttribute("id", "btnsDiv");
 btnsdiv.style.background = "rgba(155,155,155,0.2)";
 btnsdiv.innerHTML = "&nbsp;";
 btnsdiv.border = "2px solid grey";
+btnsdiv.style.width = "75px";
 $('#BtnFx1').find('.col-lg-6').append(btnsdiv);
 
 let btnUp = document.createElement('button');
@@ -3483,6 +3484,14 @@ $('#up-btn').on('click', function(){
         .removeClass('highlight')
         .closest('tr').prev('tr').addClass('highlight');
 
+    let helm = document.getElementsByClassName("highlight")[0];
+    while (!$(helm).is(':visible')) {
+        $(helm).removeClass('highlight')
+        .closest('tr').prev('tr').addClass('highlight');
+
+        helm = document.getElementsByClassName("highlight")[0];
+    }
+
     const elm = document.getElementsByClassName("highlight")[0];
     let ans = elm.getBoundingClientRect();
     console.log(ans.y);
@@ -3497,6 +3506,14 @@ $('#down-btn').on('click', function(){
     let ret = $('#mytable').find('.highlight')
         .removeClass('highlight')
         .closest('tr').next('tr').addClass('highlight');
+
+    let helm = document.getElementsByClassName("highlight")[0];
+    while (!$(helm).is(':visible')) {
+        $(helm).removeClass('highlight')
+        .closest('tr').next('tr').addClass('highlight');
+
+        helm = document.getElementsByClassName("highlight")[0];
+    }
 
     const elm = document.getElementsByClassName("highlight")[0];
     let ans = elm.getBoundingClientRect();
