@@ -2031,7 +2031,7 @@ $costModeSwitch
 </div>
 
 $columnCheckboxes
-<div class="row">
+<div class="row" id="BtnFx1">
     <div class="col-lg-6">
         <div id="countDisplay" style="font-size: 12px; padding: 10px; display: none;">
             <span id="checkedCount"></span> <b>/
@@ -3405,6 +3405,8 @@ $('html').keypress(function(e){
     }
 });
 
+var holdTimer = 0;
+
 $('html').keydown(function(e){
     let keyCode = e.keyCode;
     if (lastKeyUp.length > 0) {
@@ -3414,7 +3416,98 @@ $('html').keydown(function(e){
         lastKeyUp.push(keyCode);
     }
     console.log(lastKeyUp);
+
+    if (keyCode == 17 && lastKeyUp[0] == 40) {
+        console.log("HI!");
+    }
 });
+
+let btnsdiv = document.createElement('div');
+btnsdiv.setAttribute("id", "btnsDiv");
+btnsdiv.style.background = "rgba(155,155,155,0.2)";
+btnsdiv.innerHTML = "&nbsp;";
+btnsdiv.border = "2px solid grey";
+$('#BtnFx1').find('.col-lg-6').append(btnsdiv);
+
+let btnUp = document.createElement('button');
+btnUp.innerHTML = '&uarr;';
+btnUp.setAttribute("id", "up-btn");
+btnUp.classList.add('btn');
+btnUp.classList.add('btn-default');
+btnUp.classList.add('btn-sm');
+btnUp.style.margin = '2px';
+
+let btnDown = document.createElement('button');
+btnDown.innerHTML = '&darr;';
+btnDown.setAttribute("id", "down-btn");
+btnDown.classList.add('btn');
+btnDown.classList.add('btn-default');
+btnDown.classList.add('btn-sm');
+btnDown.style.margin = '5px';
+
+$('#btnsDiv').append(btnUp);
+$('#btnsDiv').append(btnDown);
+
+/*
+    Detect Viewport Visibility
+    jQuery.expr.finter.offscreen thanks to scurker (2024-07-05):
+    --https://stackoverflow.com/questions/8897289/how-to-check-if-an-element-is-off-screen
+*/
+jQuery.expr.filters.offscreen = function(el) {
+    var rect = el.getBoundingClientRect();
+    return (
+        (rect.x + rect.width) < 0
+            || (rect.y + rect.height) < 0
+            || (rect.x > window.innerWidth || rect.y > window.innerHeight)
+    );
+}
+
+$(window).on('scroll', function(){
+    var scrollTop = $(this).scrollTop();
+    if (scrollTop > 300) {
+        $('#btnsDiv').css('position', 'fixed')
+            .css('top', '5px')
+            .css('left', '5px');
+    } else {
+        $('#btnsDiv').css('position', 'relative');
+    }
+});
+
+/*
+    Move Selected Item (move .highlight up, down)
+*/
+var ScreenMiddle = window.innerHeight / 2;
+
+$('#up-btn').on('click', function(){
+    $('#mytable').find('.highlight')
+        .removeClass('highlight')
+        .closest('tr').prev('tr').addClass('highlight');
+
+    const elm = document.getElementsByClassName("highlight")[0];
+    let ans = elm.getBoundingClientRect();
+    console.log(ans.y);
+    console.log(ScreenMiddle);
+    if (ans.y <= ScreenMiddle) {
+        window.scrollBy(0, -25);
+    }
+});
+
+$('#down-btn').on('click', function(){
+    console.log("I CLICK DOWN!");
+    let ret = $('#mytable').find('.highlight')
+        .removeClass('highlight')
+        .closest('tr').next('tr').addClass('highlight');
+
+    const elm = document.getElementsByClassName("highlight")[0];
+    let ans = elm.getBoundingClientRect();
+    console.log(ans.y);
+    console.log(ScreenMiddle);
+    if (ans.y >= ScreenMiddle) {
+        window.scrollBy(0, 25);
+    }
+});
+
+
 
 $('.editable-description, .editable-brand').on('keydown', function(e) {
     let keyCode = e.keyCode;
