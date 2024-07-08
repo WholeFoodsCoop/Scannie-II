@@ -2581,6 +2581,21 @@ $(document).keydown(function(e){
             $(this).trigger('click');
         });
     }
+
+    let hlElm = document.getElementsByClassName("highlight")[0];
+    console.log(hlElm);
+    if (hlElm != 'undefined') {
+        switch (e.keyCode) {
+            case 40:
+                e.preventDefault();
+                $('#down-btn').trigger('click');
+                break;
+            case 38:
+                e.preventDefault();
+                $('#up-btn').trigger('click');
+                break; 
+        }
+    }
 });
 $(document).keyup(function(e){
     var key = e.keyCode;
@@ -3499,11 +3514,13 @@ $('#up-btn').on('click', function(){
     }
 
     const elm = document.getElementsByClassName("highlight")[0];
-    let ans = elm.getBoundingClientRect();
-    console.log(ans.y);
-    console.log(ScreenMiddle);
-    if (ans.y <= ScreenMiddle) {
-        window.scrollBy(0, -25);
+    if (elm) {
+        let ans = elm.getBoundingClientRect();
+        console.log(ans.y);
+        console.log(ScreenMiddle);
+        if (ans.y <= ScreenMiddle) {
+            window.scrollBy(0, -25);
+        }
     }
 });
 
@@ -3526,11 +3543,13 @@ $('#down-btn').on('click', function(){
     }
 
     const elm = document.getElementsByClassName("highlight")[0];
-    let ans = elm.getBoundingClientRect();
-    console.log(ans.y);
-    console.log(ScreenMiddle);
-    if (ans.y >= ScreenMiddle) {
-        window.scrollBy(0, 25);
+    if (elm) {
+        let ans = elm.getBoundingClientRect();
+        console.log(ans.y);
+        console.log(ScreenMiddle);
+        if (ans.y >= ScreenMiddle) {
+            window.scrollBy(0, 25);
+        }
     }
 });
 
