@@ -1594,23 +1594,25 @@ HTML;
         }
 
         if (!isset($_SESSION['columnBitSet'])) {
-            // define default columns to show
+            // define default columns to check (view)
             $_SESSION['columnBitSet'] = 0;
             $x = 0;
-            $x |= 1 << 0;
-            $x |= 1 << 1;
-            $x |= 1 << 2;
-            $x |= 1 << 5;
-            $x |= 1 << 7;
-            $x |= 1 << 9;
-            $x |= 1 << 11;
-            $x |= 1 << 12;
-            $x |= 1 << 16;
-            $x |= 1 << 17;
-            $x |= 1 << 18;
-            $x |= 1 << 23;
-            $x |= 1 << 33;
-            $x |= 1 << 34;
+            $x |= 1 << 0; //check 
+            $x |= 1 << 1; //upc
+            $x |= 1 << 2; //sku
+            $x |= 1 << 5; //brand
+            $x |= 1 << 7; //description
+            $x |= 1 << 9; //size
+            $x |= 1 << 10;//uom
+            $x |= 1 << 11;//units
+            $x |= 1 << 12;//netcost
+            $x |= 1 << 16;//price
+            $x |= 1 << 17;//saleprice
+            $x |= 1 << 18;//autopar
+            $x |= 1 << 23;//tax
+            $x |= 1 << 24;//dept
+            $x |= 1 << 33;//notes
+            $x |= 1 << 34;//reviewed
             $_SESSION['columnBitSet'] = $x;
         }
 
@@ -3453,7 +3455,6 @@ $('#btnsDiv').append(btnDown);
     Detect Viewport Visibility
     jQuery.expr.finter.offscreen thanks to scurker (2024-07-05):
     --https://stackoverflow.com/questions/8897289/how-to-check-if-an-element-is-off-screen
-*/
 jQuery.expr.filters.offscreen = function(el) {
     var rect = el.getBoundingClientRect();
     return (
@@ -3462,6 +3463,7 @@ jQuery.expr.filters.offscreen = function(el) {
             || (rect.x > window.innerWidth || rect.y > window.innerHeight)
     );
 }
+*/
 
 $(window).on('scroll', function(){
     var scrollTop = $(this).scrollTop();
@@ -3486,8 +3488,12 @@ $('#up-btn').on('click', function(){
 
     let helm = document.getElementsByClassName("highlight")[0];
     while (!$(helm).is(':visible')) {
-        $(helm).removeClass('highlight')
+        let ret = $(helm).removeClass('highlight')
         .closest('tr').prev('tr').addClass('highlight');
+
+        if (!ret.length > 0) {
+            break;
+        }
 
         helm = document.getElementsByClassName("highlight")[0];
     }
@@ -3503,14 +3509,18 @@ $('#up-btn').on('click', function(){
 
 $('#down-btn').on('click', function(){
     console.log("I CLICK DOWN!");
-    let ret = $('#mytable').find('.highlight')
+    $('#mytable').find('.highlight')
         .removeClass('highlight')
         .closest('tr').next('tr').addClass('highlight');
 
     let helm = document.getElementsByClassName("highlight")[0];
     while (!$(helm).is(':visible')) {
-        $(helm).removeClass('highlight')
+        let ret = $(helm).removeClass('highlight')
         .closest('tr').next('tr').addClass('highlight');
+
+        if (!ret.length > 0) {
+            break;
+        }
 
         helm = document.getElementsByClassName("highlight")[0];
     }
