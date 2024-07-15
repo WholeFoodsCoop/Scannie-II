@@ -183,17 +183,17 @@ class AuditReport extends PageLayoutA
         $listA = array($username);
         $listP = $dbc->prepare("
             SELECT
-                a.upc, p.normal_price, 
+                a.upc, p.normal_price, p.cost, 
                 ROUND(
                     CASE
                         WHEN c.margin IS NOT NULL THEN p.cost / (1 - c.margin) ELSE
                             CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40) END
-                    END, 3) AS srp,
+                    END, 2) AS srp,
                 ROUND(
                     CASE
                         WHEN c.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - c.margin) ELSE
                             CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - b.margin) ELSE (p.cost + (p.cost * v.shippingMarkup)) / (1 - 0.40) END
-                    END, 3) AS srp2,
+                    END, 2) AS srp2,
                 v.shippingMarkup,
                 v.vendorID
             FROM woodshed_no_replicate.AuditScan AS a
@@ -207,11 +207,13 @@ class AuditReport extends PageLayoutA
             LEFT JOIN prodReview AS pr ON pr.upc=p.upc AND pr.vendorID=p.default_vendor_id
             WHERE a.username=?
                 AND a.savedAs='default'
+                AND p.price_rule_id = 0
             GROUP BY p.upc
         ");
         $listR = $dbc->execute($listP, $listA);
         while ($row = $dbc->fetchRow($listR)) {
             $upc = $row['upc'];
+            $cost = $row['cost'];
             $vendorID = $row['vendorID'];
             $normal_price = $row['normal_price'];
             $srp = $row['srp'];
@@ -221,9 +223,11 @@ class AuditReport extends PageLayoutA
                 $srp = $srp2;
             }
             $srp = $rounder->round($srp);
-            $items[$upc]['srp'] = $srp;
-            $items[$upc]['normal_price'] = $normal_price;
-            $items[$upc]['vendorID'] = $vendorID;
+            if ($cost != 0 && abs($normal_price - $srp) > 0.01 ) {
+                $items[$upc]['srp'] = $srp;
+                $items[$upc]['normal_price'] = $normal_price;
+                $items[$upc]['vendorID'] = $vendorID;
+            }
         }
 
         $ret .= $dbc->error();
@@ -2276,11 +2280,12 @@ $('.editable-cost').click(function(){
     $(this).attr('contentEditable', 'true');
     $(this).css('font-weight', 'bold');
 });
-$('.editable-cost').focusout(function(){
-    var cost = $(this).text();
-    var upc = $(this).parent().find('.upc').attr('data-upc');
-    var vendorID = $(this).attr('data-vid'); 
-    var element = $(this);
+
+var saveEditCost = function(elm) {
+    var cost = elm.text();
+    var upc = elm.parent().find('.upc').attr('data-upc');
+    var vendorID = elm.attr('data-vid'); 
+    var element = elm;
     if (lastCost != cost) {
         $.ajax({
             type: 'post',
@@ -2314,8 +2319,12 @@ $('.editable-cost').focusout(function(){
             },
         });
     }
-    $(this).attr('contentEditable', 'false');
-    $(this).css('font-weight', 'normal');
+    elm.attr('contentEditable', 'false');
+    elm.css('font-weight', 'normal');
+}
+
+$('.editable-cost').on('focusout', function() {
+    saveEditCost($(this));
 });
 
 
