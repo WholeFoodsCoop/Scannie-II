@@ -55,6 +55,11 @@ HTML;
         <div class="form-group" style="margin-top: 50px;">
             <button id="submit" class="form-control btn btn-default">Submit</button>
         </div>
+        <div class="form-group" style="margin-top: 50px;" id="GenerateExcelFileDiv">
+            <ul>
+                <li><a href="#" id="ExportCsvAnchor">Export CSV</a></li>
+            </ul>
+        </div>
         <div class="form-group" style="position: relative">
             <label>Watch <span style="cursor: pointer; font-size: 10px; position: absolute; top: -3px; left: +45px;" title="Turning Watch 'ON' will repeat query once per second">?</span></label>
             <input type="number" value=0 min=0 max=1 name="watch_n" id="watch_n" class="form-control" />
@@ -369,6 +374,63 @@ $('.quick_query').each(function(){
     if (name == initQ) {
         $(this).trigger('click');
     }
+});
+
+/*
+    Write a CSV file of table 
+*/
+var CsvTitleData = [];
+var CsvTableData = [];
+const PrepCSV = function() {
+
+    $('th').each(function(){
+        let value = $(this).text();
+        value = value.replaceAll(",", " ");
+        CsvTitleData.push(value);
+    });
+
+    $('tr').each(function(){
+        let tmpArr = [];
+        $(this).find('td').each(function(){
+            if ($(this).hasClass('autoPar')) {
+                // do nothing
+            } else {
+                let value = $(this).text();
+                tmpArr.push(value);
+            }
+        });
+        CsvTableData.push(tmpArr);
+    });
+
+    let thead = JSON.stringify(CsvTitleData);
+    let td = JSON.stringify(CsvTableData);
+    td = encodeURIComponent(td);
+
+    $.ajax({
+        type: 'post',
+        data: "exportCsv=1&thead="+thead+"&tableData="+td,
+        url: '../Scanning/AuditScanner/AuditReport.php',
+        success: function(response) {
+            console.log('Export CSV');
+
+            let download = document.createElement("a");
+            download.href = '../Scanning/AuditScanner/noauto/'+response;
+            download.innerHTML = 'Download File';
+            download.style.padding = '5px';
+            download.style.borderRadius = '3px';
+            download.style.border = '1px solid lightgrey';
+            download.addEventListener('click', function(){
+                $(this).remove();
+            }, false);
+
+            $('#GenerateExcelFileDiv').append(download);
+        },
+        error: function(response) {
+        },
+    });
+}
+$('#ExportCsvAnchor').on('click', function(){
+    PrepCSV();
 });
 
 JAVASCRIPT;
