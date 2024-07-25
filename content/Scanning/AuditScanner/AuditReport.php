@@ -8,6 +8,9 @@ if (!class_exists('SQLManager')) {
 if (!class_exists('PriceRounder')) {
     include(__DIR__.'/../../../common/lib/PriceRounder.php');
 }
+if (!class_exists('VendorPricingLib')) {
+    include(__DIR__.'/../../../common/lib/VendorPricingLib.php');
+}
 class AuditReport extends PageLayoutA
 {
 
@@ -57,6 +60,90 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<viclearnotes>';
 
         return parent::preprocess();
+    }
+
+
+    public function postUpdatesrpsHandler()
+    {
+        $username = FormLib::get('username');
+        $vendorID = FormLib::get('vendorID');
+        $storeID = FormLib::get('storeID');
+        $items = array();
+
+        $rounder = new PriceRounder();
+        $dbc = ScanLib::getConObj();
+        $query = VendorPricingLib::recalcVendorSrpsQ();
+
+        $auditUpcs = array();
+        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan WHERE username=?
+            AND savedAs='default'");
+        $res = $dbc->execute($prep, array($username));
+        while ($row = $dbc->fetchRow($res)) {
+            $auditUpcs[] = $row['upc'];
+        }
+
+        $args = array($vendorID);
+        $prep = $dbc->prepare($query);
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $upc = $row['upc'];
+            $cost = $row['cost'];
+            $srp = $row['rawSRP'];
+            //$srp = $row['NewSRP'];
+
+            //echo 'upc: '.$upc.', rawSRP: '.$srp;
+            if (($srp - substr($srp, 0, 4)) == 0) {
+                $srp = substr($srp, 0, 4);
+            }
+            $srp = $rounder->round($srp);
+            //echo 'roundedSRP: '.$srp;
+             
+
+            $normal_price = $row['normal_price'];
+            if ($cost != 0 && in_array($upc, $auditUpcs)) {
+                $items[$upc]['srp'] = $srp;
+                $items[$upc]['normal_price'] = $normal_price;
+            }
+        }
+
+        $ret .= $dbc->error();
+
+        $auditP = $dbc->prepare("
+            UPDATE woodshed_no_replicate.AuditScan AS a
+            SET notes=?
+            WHERE a.upc=?
+                AND a.username=?
+                AND a.storeID=?
+                AND a.savedAs='default' 
+        ");
+        $vendorItemsP = $dbc->prepare("UPDATE vendorItems SET srp = ?, modified = NOW() WHERE upc = ? AND vendorID = ?");
+
+        $dbc->startTransaction();
+        foreach ($items as $upc => $row) {
+            if (abs($row['normal_price'] - $row['srp']) > 0.01) {
+                $auditA = array(
+                    $row['srp'],
+                    $upc,
+                    $username,
+                    $storeID
+                );
+                $dbc->execute($auditP, $auditA);
+                $ret .= $dbc->error();
+            }
+
+            $vendorItemsA = array(
+                $row['srp'],
+                $upc,
+                $vendorID
+            );
+            $dbc->execute($vendorItemsP, $vendorItemsA);
+            $ret .= $dbc->error();
+
+        }
+        $dbc->commitTransaction();
+
+        echo $ret . ' END';
+        return false; 
     }
 
     public function postViclearnotesHandler()
@@ -168,99 +255,6 @@ class AuditReport extends PageLayoutA
 
         echo $ret . ' END';
         return false; 
-    }
-
-    public function postUpdatesrpsHandler()
-    {
-        $rounder = new PriceRounder();
-        $username = FormLib::get('username');
-        $storeID = FormLib::get('storeID');
-        $dbc = ScanLib::getConObj();
-        $items = array();
-
-        $ret = '';
-
-        $listA = array($username);
-        $listP = $dbc->prepare("
-            SELECT
-                a.upc, p.normal_price, p.cost, 
-                ROUND(
-                    CASE
-                        WHEN c.margin IS NOT NULL THEN p.cost / (1 - c.margin) ELSE
-                            CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40) END
-                    END, 2) AS srp,
-                ROUND(
-                    CASE
-                        WHEN c.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - c.margin) ELSE
-                            CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * v.shippingMarkup)) / (1 - b.margin) ELSE (p.cost + (p.cost * v.shippingMarkup)) / (1 - 0.40) END
-                    END, 2) AS srp2,
-                v.shippingMarkup,
-                v.vendorID
-            FROM woodshed_no_replicate.AuditScan AS a
-            INNER JOIN products AS p ON p.upc=a.upc
-            LEFT JOIN departments AS b ON p.department=b.dept_no
-            LEFT JOIN vendors AS v on v.vendorID=p.default_vendor_ID
-            LEFT JOIN VendorSpecificMargins AS c ON c.vendorID=p.default_vendor_id AND p.department=c.deptID
-            LEFT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
-            LEFT JOIN batchList AS bl ON bl.upc=p.upc
-            LEFT JOIN batchReviewLog AS brl ON brl.bid=bl.batchID AND brl.forced = '0000-00-00 00:00:00'
-            LEFT JOIN prodReview AS pr ON pr.upc=p.upc AND pr.vendorID=p.default_vendor_id
-            WHERE a.username=?
-                AND a.savedAs='default'
-                AND p.price_rule_id = 0
-            GROUP BY p.upc
-        ");
-        $listR = $dbc->execute($listP, $listA);
-        while ($row = $dbc->fetchRow($listR)) {
-            $upc = $row['upc'];
-            $cost = $row['cost'];
-            $vendorID = $row['vendorID'];
-            $normal_price = $row['normal_price'];
-            $srp = $row['srp'];
-            $srp2 = $row['srp2'];
-            if ($srp2 > $srp) {
-                // if $srp2 <> $srp, then vendor has shipping markup
-                $srp = $srp2;
-            }
-            $srp = $rounder->round($srp);
-            if ($cost != 0 && abs($normal_price - $srp) > 0.01 ) {
-                $items[$upc]['srp'] = $srp;
-                $items[$upc]['normal_price'] = $normal_price;
-                $items[$upc]['vendorID'] = $vendorID;
-            }
-        }
-
-        $ret .= $dbc->error();
-
-        $notesP = $dbc->prepare("
-            UPDATE woodshed_no_replicate.AuditScan AS a
-            SET notes=?
-            WHERE a.upc=?
-                AND a.username=?
-                AND a.storeID=?
-                AND a.savedAs='default' 
-        ");
-
-        $dbc->startTransaction();
-        $roundP = $dbc->prepare("UPDATE vendorItems SET srp = ?, modified = NOW() WHERE upc = ? AND vendorID = ?");
-        foreach ($items as $upc => $row) {
-            $roundA = array(
-                $row['srp'],
-                $upc,
-                $row['vendorID']
-            );
-            $roundR = $dbc->execute($roundP, $roundA);
-
-            if ($row['srp'] != $row['normal_price']) {
-                $notesA = array($row['srp'], $upc, $username, $storeID);
-                $dbc->execute($notesP, $notesA);
-            }
-        }
-        $dbc->commitTransaction();
-
-        echo $ret . ' END';
-        return false; 
-
     }
 
     public function postSetPRNHandler()
@@ -1753,8 +1747,8 @@ HTML;
         </select>
     </form>
 </div>
-| Current Vendor: 
-'.$_SESSION['currentVendor'];
+| Current Vendor: <input type="text" style="border: 0px solid transparent;" id="currentVendor" value=" 
+'.$_SESSION['currentVendor'].'" />';
 
             // don't show cost mode swith for other users at this time
             if ($_COOKIE['user_type'] != 2) {
@@ -1888,10 +1882,8 @@ HTML;
             <option value=\"pullReviewListToPrn\">[ IT ] Review List () => PRN</option>
             <option value=\"exportJSONbatch\">[ IT ] JSON Export Batch </option>
             <option value=\"updateViSrps\">[ IT ] SRP () => Notes (also updates vendorItems.srp(s))</option>
-            <!--<option value=\"ViSrpsToNotes\">[ IT ] SRP () => Notes</option>-->
             <option value=\"ViClearNotes\">[ IT ] Clear Notes</option>
         " : "";
-
 
         $newExcelFilename = "AuditReport_" . uniqid() . ".csv";
 
@@ -1899,7 +1891,6 @@ HTML;
             echo $this->postFetchHandler($demo);
         } else {
             return <<<HTML
-
 <div id="floating-window">
     <div id="fw-border">
         <!--<span style="position: absolute; top: 0px; right: 0px; background-color: white; width: 19px; height: 19px; margin: 0px; text-align: center; padding: 0px; cursor: pointer;">x</span>-->
@@ -3306,34 +3297,19 @@ $('#extHideFx').change(function(){
             $('#fw-text').val(tmpRet);
             break;
         case 'updateViSrps':
+            let vendorID = $('#currentVendor').val();
             ScanConfirm("<br/><br/>Update vendor item SRPs for items in list?", 'update_vi_srps', function() {
                 $.ajax({
                     type: 'post',
-                    data: 'username='+username+'&storeID='+storeID+'&updatesrps=true',
+                    data: 'username='+username+'&storeID='+storeID+'&vendorID='+vendorID+'&updatesrps=true',
                     url: 'AuditReport.php',
                     success: function(response) {
                         console.log('success');
+                        console.log(response);
                         window.location.reload();
                     },
                     error: function(response) {
                         console.log('error: '+response);
-                    },
-                });
-            });
-            break;
-        case 'ViSrpsToNotes':
-            ScanConfirm("<br/><br/>Replace notes with VI SRPs?", 'vi_srps_to_notes', function() {
-                $.ajax({
-                    type: 'post',
-                    data: 'username='+username+'&storeID='+storeID+'&visrpnotes=true',
-                    url: 'AuditReport.php',
-                    success: function(response) {
-                        console.log('success');
-                        window.location.reload();
-                    },
-                    error: function(response) {
-                        console.log('error:');
-                        console.log(response);
                     },
                 });
             });
