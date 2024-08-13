@@ -58,10 +58,55 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<updatesrps>';
         $this->__routes[] = 'post<visrpnotes>';
         $this->__routes[] = 'post<viclearnotes>';
+        $this->__routes[] = 'post<roundPriceNotes>';
 
         return parent::preprocess();
     }
 
+    public function postRoundPriceNotesHandler()
+    {
+        $items = array();
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+        $rounder = new PriceRounder();
+
+        $args = array($username);
+        $prep = $dbc->prepare("SELECT upc, notes FROM woodshed_no_replicate.AuditScan 
+            WHERE username=? AND savedAs='default'");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $upc = $row['upc'];
+            $raw = $row['notes'];
+            $items[$upc] = $rounder->round($raw);
+        }
+
+        $updateP = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan 
+            SET notes = ? WHERE upc = ? AND username = ? AND savedAs = 'default'");
+
+        $dbc->startTransaction();
+        foreach ($items as $upc => $srp) {
+            $updateA = array($srp, $upc, $username);
+            $dbc->execute($updateP, $updateA);
+        }
+        $dbc->commitTransaction();
+
+        $er = ($dbc->error()) ? $dbc->error() : '';
+        echo $er;
+
+        return false;
+    }
+
+    public function getShippingMarkup($vendorID)
+    {
+        $dbc = ScanLib::getConObj();
+        $prep = $dbc->prepare("SELECT shippingMarkup
+            FROM vendors WHERE vendorID = ?");
+        $res = $dbc->execute($prep, array($vendorID));
+        $row = $dbc->fetchRow($res); 
+        $markup = $row['shippingMarkup'];
+        
+        return $markup;
+    }
 
     public function postUpdatesrpsHandler()
     {
@@ -72,7 +117,10 @@ class AuditReport extends PageLayoutA
 
         $rounder = new PriceRounder();
         $dbc = ScanLib::getConObj();
-        $query = VendorPricingLib::recalcVendorSrpsQ();
+        
+        $shippingMarkup = $this->getShippingMarkup($vendorID);
+        $query = VendorPricingLib::recalcVendorSrpsQ($shippingMarkup);
+        //$query = VendorPricingLib::recalcVendorSrpsQ();
 
         $auditUpcs = array();
         $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan WHERE username=?
@@ -1747,8 +1795,7 @@ HTML;
         </select>
     </form>
 </div>
-| Current Vendor: <input type="text" style="border: 0px solid transparent;" id="currentVendor" value=" 
-'.$_SESSION['currentVendor'].'" />';
+| Current Vendor: <input type="text" style="border: 0px solid transparent;" id="currentVendor" value="'.$_SESSION['currentVendor'].'" />';
 
             // don't show cost mode swith for other users at this time
             if ($_COOKIE['user_type'] != 2) {
@@ -1883,6 +1930,9 @@ HTML;
             <option value=\"exportJSONbatch\">[ IT ] JSON Export Batch </option>
             <option value=\"updateViSrps\">[ IT ] SRP () => Notes (also updates vendorItems.srp(s))</option>
             <option value=\"ViClearNotes\">[ IT ] Clear Notes</option>
+            <option value=\"jsUnitsDivision\">[ IT ] Divide Notes / Units</option>
+            <option value=\"jsPrnDivision\">[ IT ] Divide Notes / PRN</option>
+            <option value=\"roundPriceNotes\">[ IT ] Price Round Notes</option>
         " : "";
 
         $newExcelFilename = "AuditReport_" . uniqid() . ".csv";
@@ -2603,8 +2653,8 @@ $(document).keyup(function(e){
 });
 $(document).mousedown(function(e){
     if (e.which == 1 && $('#keydown').val() == 16) {
-        e.preventDefault();
         // SHIFT + LEFT CLICK
+        e.preventDefault();
         var target = $(e.target);
         if (target.closest('tr').hasClass('highlight')) {
             target.closest('tr').removeClass('highlight');
@@ -2617,6 +2667,17 @@ $(document).mousedown(function(e){
             target.closest('tr').addClass('highlight');
         }
         $('#keydown').val(0);
+    }
+    if (e.which == 1 && $('#keydown').val() == 81) {
+        // 'q' key + Left Click
+        e.preventDefault();
+        var target = $(e.target);
+        let newSize = target.closest('tr').find('.notes').text();
+        target.closest('tr').find('.notes').text('');
+        target.closest('tr').find('.size').focus();
+        target.closest('tr').find('.size').text(newSize);
+        target.closest('tr').find('.size').focusout();
+        target.closest('tr').find('.check').find('input').trigger('click');
     }
 });
 
@@ -2845,7 +2906,7 @@ $('#view-unchecked').click(function(){
     $('#mytablebody tr').each(function(){
         let checked = $(this).find('.row-check').is(':checked');
         let note = $(this).find('.editable-notes').text();
-        if (checked == false && !note.includes('NOF')) {
+        if (checked == false && !note.includes('NOF') && !note.includes('skip')) {
             $(this).show();
         } else {
             $(this).hide();
@@ -3330,6 +3391,58 @@ $('#extHideFx').change(function(){
                 });
             });
             break;
+        case 'jsUnitsDivision':
+            ScanConfirm("<br/><br/>Divide all notes (case prices) by units?", 'js_units_d_notes', function() {
+                $('tr').each(function() {
+                    let col1 = $(this).find('td.units').text();
+                    col1 = parseFloat(col1);
+                    let col2 = $(this).find('td.notes').text();
+                    col2 = parseFloat(col2);
+
+                    let answer = col2 / col1;
+                    answer = Math.ceil(answer * 1000) / 1000;
+                    console.log('col2: '+ col2 + ',' + col2.length);
+                    if (answer > 0) {
+                        $(this).find('td.notes').text(answer);
+                    }
+                    
+                });
+            });
+            break;
+        case 'jsPrnDivision':
+            ScanConfirm("<br/><br/>Divide all notes (case prices) by PRN Column?", 'js_prn_d_notes', function() {
+                $('tr').each(function() {
+                    let col1 = $(this).find('td.PRN').text();
+                    col1 = parseFloat(col1);
+                    let col2 = $(this).find('td.notes').text();
+                    col2 = parseFloat(col2);
+
+                    let answer = col2 / col1;
+                    answer = Math.ceil(answer * 1000) / 1000;
+                    console.log('col2: '+ col2 + ',' + col2.length);
+                    if (answer > 0) {
+                        $(this).find('td.notes').text(answer);
+                    }
+                    
+                });
+            });
+            break;
+        case 'roundPriceNotes':
+            ScanConfirm("<br/><br/>Round Notes (Pricing)?", 'js_round_notes', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&roundPriceNotes=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
         default:
             break;
     }
@@ -3620,6 +3733,9 @@ const PrepCSV = function() {
             download.innerHTML = 'Download File';
             download.style.padding = '5px';
             download.style.borderRadius = '3px';
+            download.style.background = 'lightgrey';
+            download.style.width = '100px';
+            download.style.textAlign = 'center';
             download.addEventListener('click', function(){
                 $(this).remove();
             }, false);
@@ -3633,6 +3749,17 @@ const PrepCSV = function() {
 $('#ExportCsvAnchor').on('click', function(){
     PrepCSV();
 });
+
+$('.description').on('keydown', function(e) {
+    let strlen = $(this).text().length;
+    console.log(strlen)
+    console.log(e.keyCode)
+    if (strlen > 29 && e.keyCode != 8) {
+        e.preventDefault();
+        console.log('max string limit reached')
+    }
+});
+
 
 JAVASCRIPT;
     }
