@@ -1660,8 +1660,8 @@ HTML;
             $x |= 1 << 16;//price
             $x |= 1 << 17;//saleprice
             $x |= 1 << 18;//autopar
-            $x |= 1 << 23;//tax
-            $x |= 1 << 24;//dept
+            $x |= 1 << 24;//tax
+            $x |= 1 << 25;//dept
             $x |= 1 << 34;//notes
             $x |= 1 << 35;//reviewed
             $_SESSION['columnBitSet'] = $x;
