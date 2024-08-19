@@ -16,7 +16,7 @@ class AuditReport extends PageLayoutA
 
     public $columns = array('check', 'upc', 'sku', 'alias', 'likeCode', 'brand', 'sign-brand', 'description', 
         'sign-description', 'size', 'uom', 'units', 'netcost', 'cost', 'vcost', 'recentPurchase',
-        'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'tax', 'dept', 'subdept',
+        'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'prt', 'tax', 'dept', 'subdept',
         'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 'scalePLU', 'mnote', 'notes', 'reviewed', 
         'costChange', 'floorSections', 'comment', 'PRN', 'caseCost'); 
 
@@ -1156,7 +1156,8 @@ class AuditReport extends PageLayoutA
                 fslv.sections AS floorSections,
                 fslv.subSections AS floorSections,
                 pr.comment,
-                p.tax
+                p.tax,
+                r.details AS prtDetails
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON $vendorItemsJoinOn AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -1253,6 +1254,7 @@ class AuditReport extends PageLayoutA
             <td title=\"srp\" data-column=\"srp\"class=\"srp column-filter\"></td>
             <td title=\"rsrp\" data-column=\"rsrp\"class=\"rsrp column-filter\"></td>
             <td title=\"prid\" data-column=\"prid\"class=\"prid column-filter\"></td>
+            <td title=\"prt\" data-column=\"prt\"class=\"prt column-filter\"></td>
             <td title=\"tax\" data-column=\"tax\"class=\"tax column-filter\"></td>
             <td title=\"dept\" data-column=\"dept\"class=\"dept column-filter\"></td>
             <td title=\"subdebt\" data-column=\"subdept\"class=\"subdept column-filter\"></td>
@@ -1301,6 +1303,7 @@ class AuditReport extends PageLayoutA
             <th class=\"rsrp\">raw srp</th>
             <th class=\"srp\">srp</th>
             <th class=\"prid\">prid</th>
+            <th class=\"prt\">prt</th>
             <th class=\"tax\">tax</th>
             <th class=\"dept\">dept</th>
             <th class=\"subdept\">subdept</th>
@@ -1424,6 +1427,7 @@ class AuditReport extends PageLayoutA
             //override srp with value in products
             $srp = $row['vsrp'];
             $prid = $row['priceRuleType'];
+            $prt = $row['prtDetails'];
             $tax = $this->taxes[$row['tax']];
             $dept = $row['dept'];
             $subdept = $row['subdept'];
@@ -1483,6 +1487,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"rsrp\">$rsrp</td>";
             $td .= "<td class=\"srp\">$srp</td>";
             $td .= "<td class=\"prid\">$prid</td>";
+            $td .= "<td class=\"prt\">$prt</td>";
             $td .= "<td class=\"tax\">$tax</td>";
             //$td .= "<td class=\"dept\">
             //    <span class=\"dept-text\">$dept</span>
@@ -1525,7 +1530,7 @@ class AuditReport extends PageLayoutA
             $brand = str_replace(',', '', $brand);
             $autoPar = str_replace("&#9608;", " | ", $autoPar);
 
-            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $uom, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $tax, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes\"");
+            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $uom, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $prt, $tax, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes\"");
             $prepCsv = str_replace("&nbsp;", "", $prepCsv);
             $prepCsv = str_replace("\"", "", $prepCsv);
             $csv .= "$prepCsv" . "\r\n";
@@ -1657,8 +1662,8 @@ HTML;
             $x |= 1 << 18;//autopar
             $x |= 1 << 23;//tax
             $x |= 1 << 24;//dept
-            $x |= 1 << 33;//notes
-            $x |= 1 << 34;//reviewed
+            $x |= 1 << 34;//notes
+            $x |= 1 << 35;//reviewed
             $_SESSION['columnBitSet'] = $x;
         }
 
