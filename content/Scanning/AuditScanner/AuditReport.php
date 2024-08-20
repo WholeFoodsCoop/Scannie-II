@@ -17,7 +17,7 @@ class AuditReport extends PageLayoutA
     public $columns = array('check', 'upc', 'sku', 'alias', 'likeCode', 'brand', 'sign-brand', 'description', 
         'sign-description', 'size', 'uom', 'units', 'netcost', 'cost', 'vcost', 'recentPurchase',
         'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'prt', 'tax', 'dept', 'subdept',
-        'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 'scalePLU', 'mnote', 'notes', 'reviewed', 
+        'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 'scalePLU', 'tare', 'mnote', 'notes', 'reviewed', 
         'costChange', 'floorSections', 'comment', 'PRN', 'caseCost'); 
 
     public $taxes = array('None', 'Regular', 'Deli', 'Cannabis');
@@ -1157,7 +1157,8 @@ class AuditReport extends PageLayoutA
                 fslv.subSections AS floorSections,
                 pr.comment,
                 p.tax,
-                r.details AS prtDetails
+                r.details AS prtDetails,
+                si.tare
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON $vendorItemsJoinOn AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -1180,6 +1181,7 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN FloorSectionProductMap AS fspm ON fspm.upc=p.upc
                 LEFT JOIN FloorSubSections AS fss ON fss.upc=p.upc
                 LEFT JOIN FloorSections AS fs ON fs.floorSectionID=fspm.floorSectionID AND fs.storeID=p.store_id
+                LEFT JOIN scaleItems AS si ON si.plu=p.upc
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
                 AND p.store_id = ?
@@ -1264,6 +1266,7 @@ class AuditReport extends PageLayoutA
             <td title=\"last_sold\" data-column=\"last_sold\"class=\"last_sold column-filter\"></td>
             <td title=\"scaleItem\" data-column=\"scaleItem\"class=\"scaleItem column-filter\"></td>
             <td title=\"scalePLU\" data-column=\"scalePLU\"class=\"scalePLU column-filter\"></td>
+            <td title=\"tare\" data-column=\"tare\"class=\"tare column-filter\"></td>
             <td title=\"reviewed\" data-column=\"reviewed\"class=\"reviewed column-filter\"></td>
             <td title=\"costChange\" data-column=\"costChange\"class=\"costChange column-filter\"></td>
             <td title=\"floorSections\" data-column=\"floorSections\"class=\"floorSections column-filter\"></td>
@@ -1313,6 +1316,7 @@ class AuditReport extends PageLayoutA
             <th class=\"last_sold\">last_sold</th>
             <th class=\"scaleItem\">scale</th>
             <th class=\"scalePLU\">scalePLU</th>
+            <th class=\"tare\">tare</th>
             <th class=\"reviewed\">reviewed</th>
             <th class=\"costChange\">last cost change</th>
             <th class=\"floorSections\">floor sections</th>
@@ -1453,6 +1457,7 @@ class AuditReport extends PageLayoutA
             $reviewComments = $row['comment'];
             $prn = $row['PRN'];
             $scalePLU = ($bycount == null) ? '' : substr($upc, 3, 4);
+            $tare = $row['tare'];
             $caseCost = $row['caseCost'];
             $ubid = uniqid();
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
@@ -1501,6 +1506,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"last_sold\">$lastSold</td>";
             $td .= "<td class=\"scaleItem\">$bycount</td>";
             $td .= "<td class=\"scalePLU\">$scalePLU</td>";
+            $td .= "<td class=\"tare\">$tare</td>";
             $td .= "<td class=\"reviewed\">$reviewed</td>";
             $oper = ($costChange > 0) ? '+' : '-';
             $td .= "<td class=\"costChange\">$oper$costChange - $costChangeDate</td>";
@@ -1530,7 +1536,7 @@ class AuditReport extends PageLayoutA
             $brand = str_replace(',', '', $brand);
             $autoPar = str_replace("&#9608;", " | ", $autoPar);
 
-            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $uom, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $prt, $tax, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes\"");
+            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $uom, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $prt, $tax, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$tare\" \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes\"");
             $prepCsv = str_replace("&nbsp;", "", $prepCsv);
             $prepCsv = str_replace("\"", "", $prepCsv);
             $csv .= "$prepCsv" . "\r\n";
@@ -1662,8 +1668,8 @@ HTML;
             $x |= 1 << 18;//autopar
             $x |= 1 << 24;//tax
             $x |= 1 << 25;//dept
-            $x |= 1 << 34;//notes
-            $x |= 1 << 35;//reviewed
+            $x |= 1 << 35;//notes
+            $x |= 1 << 36;//reviewed
             $_SESSION['columnBitSet'] = $x;
         }
 
@@ -3739,6 +3745,7 @@ const PrepCSV = function() {
             download.style.padding = '5px';
             download.style.borderRadius = '3px';
             download.style.background = 'lightgrey';
+            download.style.background = 'linear-gradient(45deg, lightgrey, #FAFAFA, lightgrey)';
             download.style.width = '100px';
             download.style.textAlign = 'center';
             download.addEventListener('click', function(){
