@@ -59,8 +59,197 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<visrpnotes>';
         $this->__routes[] = 'post<viclearnotes>';
         $this->__routes[] = 'post<roundPriceNotes>';
+        $this->__routes[] = 'post<genericupc>';
+        $this->__routes[] = 'post<genericsku>';
+        $this->__routes[] = 'post<genericnewsrp>';
+        $this->__routes[] = 'post<updatefuturecosts>';
+        $this->__routes[] = 'post<updateResetSrps>';
+        $this->__routes[] = 'post<clearItemData>';
 
         return parent::preprocess();
+    }
+
+    public function postClearItemDataHandler()
+    {
+        $items = array();
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+
+        $args = array($username, $storeID);
+        $prep = $dbc->prepare("
+            UPDATE products p 
+                INNER JOIN woodshed_no_replicate.AuditScan a
+                    ON a.upc=p.upc
+            SET p.brand = NULL, p.description = NULL, p.cost = NULL, p.normal_price = NULL,
+                p.default_vendor_id = NULL, p.department = NULL, p.subdept = NULL, p.tax = 0,
+                p.numflag = 0, p.auto_par = 0, p.price_rule_id = 0
+            WHERE a.username=?
+                AND a.storeID=?
+                AND a.savedAs='default'
+        ");
+        $res = $dbc->execute($prep, $args);
+
+        $prep = $dbc->prepare("SELECT upc FROM woodshed_no_replicate.AuditScan
+            WHERE username=? AND storeID=? AND savedAs='default'");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $items[] = $row['upc'];
+        }
+
+        list($args, $inStr) = $dbc->safeInClause($items);
+        $prep = $dbc->prepare("DELETE FROM vendorItems WHERE upc IN ($inStr)");
+        $res = $dbc->execute($prep, $args);
+
+        $args = array($username, $storeID);
+        $prep = $dbc->prepare("
+            UPDATE productUser p 
+                INNER JOIN woodshed_no_replicate.AuditScan a
+                    ON a.upc=p.upc
+            SET p.brand = NULL, p.description = NULL
+            WHERE a.username=?
+                AND a.storeID=?
+                AND a.savedAs='default'
+        ");
+        $res = $dbc->execute($prep, $args);
+
+        $args = array($username, $storeID);
+        $prep = $dbc->prepare("
+            UPDATE scaleItems p 
+                INNER JOIN woodshed_no_replicate.AuditScan a
+                    ON a.upc=p.plu
+            SET p.itemdesc = NULL, p.exceptionprice = NULL, p.weight = NULL, p.bycount = NULL, p.tare = NULL,
+                p.shelflife = NULL, p.netWeight = NULL, p.text = NULL, p.reportingClass = NULL, p.label = NULL,
+                p.graphics = NULL, p.modified = NULL, p.linkedPLU = NULL, p.mosaStatement = NULL, p.originText = NULL,
+                p.reheat = NULL
+            WHERE a.username=?
+                AND a.storeID=?
+                AND a.savedAs='default'
+        ");
+        $res = $dbc->execute($prep, $args);
+
+
+        echo $dbc->error();
+
+        echo "the correct method is being called";
+
+        return false;
+    }
+
+    public function postUpdateResetSrpsHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+        $vendorID = FormLib::get('vendorID');
+
+        $args = array($username, $storeID, $vendorID);
+        $prep = $dbc->prepare("UPDATE vendorItems v
+                INNER JOIN products p ON p.upc=v.upc
+                INNER JOIN woodshed_no_replicate.AuditScan a ON a.upc=p.upc
+            SET v.srp = p.normal_price
+            WHERE a.username=?
+                AND a.storeID=?
+                AND a.savedAs='default'
+                AND v.vendorID=?");
+        $res = $dbc->execute($prep, $args);
+
+        echo $dbc->error();
+
+        echo "the correct method is being called";
+
+        return false;
+    }
+
+    /*
+        post update future costs handler
+        insert future costs = notes for vendorID
+        cost column must be named cost,
+        futureReview will review all items where
+        notes is NOT NULL
+    */
+    public function postUpdatefuturecostsHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+        $vendorID = FormLib::get('vendorID');
+        $startDate = FormLib::get('startDate');
+
+        $args = array($vendorID, $startDate, $vendorID, $username);
+        $prep = $dbc->prepare("INSERT INTO FutureVendorItems (upc, sku, vendorID, futureCost, startDate, srp) 
+            SELECT c.upc, v.sku, ?, REPLACE(c.notes, \"$\", \"\"), ?, 0 
+            FROM woodshed_no_replicate.AuditScan AS c 
+                INNER JOIN products p ON p.upc=c.upc
+                LEFT JOIN vendorItems v ON v.upc=p.upc AND v.vendorID=?
+            WHERE p.cost <> c.notes
+                AND c.username=?
+                AND c.savedAs='default'
+            GROUP BY c.upc;");
+        $res = $dbc->execute($prep, $args);
+
+        echo $dbc->error();
+
+        $args = array($vendorID, $startDate, $username);
+        $prep = $dbc->prepare("INSERT INTO woodshed_2.futureReview (upc, vendorID, reviewDate)
+            SELECT upc, ?, ? FROM woodshed_no_replicate.AuditScan 
+            WHERE username=? AND savedAs='default' AND notes IS NOT NULL");
+        $res = $dbc->execute($prep, $args);
+
+        echo $dbc->error();
+
+        return false;
+    }
+
+    public function postGenericnewsrpHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+
+        $args = array($username);
+        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a INNER JOIN GenericUpload g ON g.upc=a.upc SET a.notes=REPLACE(g.NewSRP, '$', '') WHERE a.username=? AND a.savedAs='default';");
+        $res = $dbc->execute($prep, $args);
+
+        // catch items if not padded 
+        $args = array($username);
+        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a INNER JOIN GenericUpload g ON LPAD(SUBSTR(g.upc,1,12),13,'0')=a.upc SET a.notes=REPLACE(g.NewSRP, '$', '') WHERE a.username=? AND a.savedAs='default';");
+        $res = $dbc->execute($prep, $args);
+
+        return false;
+    }
+
+    public function postGenericupcHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+
+        $args = array($username);
+        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a INNER JOIN GenericUpload g ON g.upc=a.upc SET a.notes=REPLACE(g.cost, '$', '') WHERE a.username=? AND a.savedAs='default';");
+        $res = $dbc->execute($prep, $args);
+
+        // catch items if not padded 
+        $args = array($username);
+        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a INNER JOIN GenericUpload g ON LPAD(SUBSTR(g.upc,1,12),13,'0')=a.upc SET a.notes=REPLACE(g.cost, '$', '') WHERE a.username=? AND a.savedAs='default';");
+        $res = $dbc->execute($prep, $args);
+
+        return false;
+    }
+
+    public function postGenericskuHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+        $vendorID = FormLib::get('vendorID');
+
+        $args = array($vendorID, $username);
+        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a INNER JOIN vendorItems v ON v.upc=a.upc INNER JOIN GenericUpload g ON g.sku=v.sku AND v.vendorID=? SET a.notes=REPLACE(g.cost, '$', '') WHERE a.username=? AND a.savedAs='default';");
+        $res = $dbc->execute($prep, $args);
+
+        // catch items where sku padding may not match
+        $args = array($vendorID, $username);
+        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a INNER JOIN vendorItems v ON v.upc=a.upc INNER JOIN GenericUpload g ON CAST(g.sku AS UNSIGNED)=CAST(v.sku AS UNSIGNED) AND v.vendorID=? SET a.notes=REPLACE(g.cost, '$', '') WHERE a.username=? AND a.savedAs='default';");
+        $res = $dbc->execute($prep, $args);
+
+        return false;
     }
 
     public function postRoundPriceNotesHandler()
@@ -1701,7 +1890,8 @@ HTML;
 
         $this->addScript('http://'.$FANNIE_ROOTDIR . '/src/javascript/chosen/chosen.jquery.min.js');
         $this->addCssFile('http://'.$FANNIE_ROOTDIR. '/src/javascript/chosen/bootstrap-chosen.css');
-        $this->add_onload_command('$(\'.chosen-select:visible\').chosen();');
+        // chosen breaks the select scroll feature
+        //$this->add_onload_command('$(\'.chosen-select:visible\').chosen();');
         //$this->add_onload_command('$(\'#store-tabs a\').on(\'shown.bs.tab\', function(){$(\'.chosen-select:visible\').chosen();});');
 
         $this->vendors = array();
@@ -1862,10 +2052,11 @@ HTML;
             $noteStr .= "<option value=\"".$k."\">".$option."</option>";
         }
         $noteStr .= "</select>";
-        $nFilter = "<div style=\"font-size: 12px;\"><b>Note Filter</b>:$noteStr</div>";
+        //$nFilter = "<div style=\"font-size: 12px;\"><b>Note Filter</b>:$noteStr</div>";
+        $nFilter = '';
 
         $columns = $this->columns;
-        $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Show/Hide Columns: </b>";
+        $columnCheckboxes = "<div style=\"font-size: 12px; padding: 10px;\"><b>Table Columns: </b>";
         $i = count($columns) - 1;
         foreach ($columns as $column) {
             $columnCheckboxes .= "<span class=\"column-checkbox\"><label for=\"check-$column\">$column</label> <input type=\"checkbox\" name=\"column-checkboxes\" id=\"check-$column\" data-colnum=\"$i\" value=\"$column\" class=\"column-checkbox\" checked></span>";
@@ -1935,15 +2126,41 @@ HTML;
             header("Content-Disposition: attachment; filename=$file");
         }
 
+        $itBug = "<span> [IT] </span>";
         $adminFxOpts = ($admin) ? "
             <option value=\"hideNOF\">Hide Rows With 'NOF' entered as notes</option>
-            <option value=\"pullReviewListToPrn\">[ IT ] Review List () => PRN</option>
-            <option value=\"exportJSONbatch\">[ IT ] JSON Export Batch </option>
-            <option value=\"updateViSrps\">[ IT ] SRP () => Notes (also updates vendorItems.srp(s))</option>
-            <option value=\"ViClearNotes\">[ IT ] Clear Notes</option>
-            <option value=\"jsUnitsDivision\">[ IT ] Divide Notes / Units</option>
-            <option value=\"jsPrnDivision\">[ IT ] Divide Notes / PRN</option>
-            <option value=\"roundPriceNotes\">[ IT ] Price Round Notes</option>
+            <option value=\"pullReviewListToPrn\">$itBug Review List () => PRN</option>
+            <option value=\"exportJSONbatch\">$itBug JSON Export Batch </option>
+            <option value=\"updateViSrps\">$itBug SRP () => Notes (also updates vendorItems.srp(s))</option>
+            <option value=\"ViClearNotes\">$itBug Clear Notes</option>
+            <option value=\"jsUnitsDivision\">$itBug Divide Notes / Units</option>
+            <option value=\"jsPrnDivision\">$itBug Divide Notes / PRN</option>
+            <option value=\"roundPriceNotes\">$itBug Price Round Notes</option>
+            <option value=\"genericUploadCostsPr\">$itBug Generic UpL cost => Notes (on upcs)</option>
+            <option value=\"genericUploadCostsVi\">$itBug Generic UpL cost => Notes (on skus)</option>
+            <option value=\"genericUploadNewSRPVi\">$itBug Generic UpL NewSRP => Notes</option>
+            <option value=\"futureCostFromNotes\">$itBug Notes => Future Costs</option>
+            <option value=\"vendorItemSrpReset\">$itBug Reset Vendor Item SRPs (to normal_price)</option>
+            <option value=\"addColumnVcase\">$itBug Add Column VCASE </option>
+            <option value=\"clearTableData\">$itBug Clear Table Data</option>
+        " : "";
+
+        $adminFxOptsNew = ($admin) ? "
+            <div class=\"fxExtOption\" data-value=\"hideNOF\">Hide Rows With 'NOF' entered as notes</div>
+            <div class=\"fxExtOption\" data-value=\"pullReviewListToPrn\">$itBug Review List () => PRN</div>
+            <div class=\"fxExtOption\" data-value=\"exportJSONbatch\">$itBug JSON Export Batch </div>
+            <div class=\"fxExtOption\" data-value=\"updateViSrps\">$itBug SRP () => Notes (also updates vendorItems.srp(s))</div>
+            <div class=\"fxExtOption\" data-value=\"ViClearNotes\">$itBug Clear Notes</div>
+            <div class=\"fxExtOption\" data-value=\"jsUnitsDivision\">$itBug Divide Notes / Units</div>
+            <div class=\"fxExtOption\" data-value=\"jsPrnDivision\">$itBug Divide Notes / PRN</div>
+            <div class=\"fxExtOption\" data-value=\"roundPriceNotes\">$itBug Price Round Notes</div>
+            <div class=\"fxExtOption\" data-value=\"genericUploadCostsPr\">$itBug Generic UpL cost => Notes (on upcs)</div>
+            <div class=\"fxExtOption\" data-value=\"genericUploadCostsVi\">$itBug Generic UpL cost => Notes (on skus)</div>
+            <div class=\"fxExtOption\" data-value=\"genericUploadNewSRPVi\">$itBug Generic UpL NewSRP => Notes</div>
+            <div class=\"fxExtOption\" data-value=\"futureCostFromNotes\">$itBug Notes => Future Costs</div>
+            <div class=\"fxExtOption\" data-value=\"vendorItemSrpReset\">$itBug Reset Vendor Item SRPs (to normal_price)</div>
+            <div class=\"fxExtOption\" data-value=\"addColumnVcase\">$itBug Add Column VCASE </div>
+            <div class=\"fxExtOption\" data-value=\"clearTableData\">$itBug Clear Table Data</div>
         " : "";
 
         $newExcelFilename = "AuditReport_" . uniqid() . ".csv";
@@ -1985,9 +2202,9 @@ $modal
     $saveReviewBtn
 </div>
 $reviewForm
-<div class="form-group dummy-form">
+<!--<div class="form-group dummy-form">
     <a class="btn btn-info btn-sm page-control" href="ProductScanner.php ">Scanner</a>
-</div>
+</div>-->
 $costModeSwitch
 <div class="form-group dummy-form" style="float: right;">
     {$this->StoreSelector('storeID')}
@@ -2072,10 +2289,12 @@ $costModeSwitch
         </div>
     </div>
     <div class="col-lg-2">
+        <!--
         <div style="font-size: 12px;">
             <label for="check-pos-descript"><b>Switch POS/SIGN Descriptors</b>:&nbsp;</label>
             <input type="checkbox" name="check-pos-descript" id="check-pos-descript" class="" checked>
         </div>
+        -->
     </div>
     <div class="col-lg-2">
     </div>
@@ -2111,13 +2330,30 @@ $columnCheckboxes
             </div>
             $checkPriceBtn
             $vncBtn
-            <select id="extHideFx" class="form-control form-control-sm">
+            <select id="extHideFx" class="form-control form-control-sm" style="display: none;">
                 <option value=null>More Filter/IT Methods</option>
                 <option value="hideNoPar">Hide Rows With 0 AutoPar for both stores</option>
+                <option value="hideXsPar">Hide Rows With < 0.3 AutoPar for both stores</option>
                 <option value="hideHillNoPar">Hide Rows With 0 AutoPar for Hillside</option>
                 <option value="hideDenNoPar">Hide Rows With 0 AutoPar for Denfeld</option>
                 $adminFxOpts
             </select>
+
+            <br/>
+            <div class="form-group">
+                <button id="fxBtnNew" class="btn btn-default btn-sm">More Filters & Methods</button>
+            </div>
+            <div id="fxExtMenu" tabindex=0>
+                <div class="fxExtHeader"><span style="background: white; padding: 2px; padding-right: 10px;padding-left: 10px;border-radius: 2px;">More Filters & Methods</span></div>
+                <div class="fxExtOptionContainer">
+                    <div class="fxExtOption" data-value="hideNoPar">Hide Rows With 0 AutoPar for both stores</div>
+                    <div class="fxExtOption" data-value="hideXsPar">Hide Rows With < 0.3 AutoPar for both stores</div>
+                    <div class="fxExtOption" data-value="hideHillNoPar">Hide Rows With 0 AutoPar for Hillside</div>
+                    <div class="fxExtOption" data-value="hideDenNoPar">Hide Rows With 0 AutoPar for Denfeld</div>
+                    $adminFxOptsNew
+                </div>
+            </div>
+
         </div>
     </div>
     <div class="col-lg-3" >
@@ -3213,7 +3449,15 @@ $('#validate-notes-cost-two').click(function(){
             col1 = parseFloat(col1);
             var col2 = $(this).find('td.notes').text();
             col2 = parseFloat(col2);
-            if (col1 == col2) {
+            let range = [];
+            range.push(col2);
+            range.push(col2+0.01);
+            range.push(col2+0.02);
+            range.push(col2+0.03);
+            range.push(col2-0.01);
+            range.push(col2-0.02);
+            range.push(col2-0.03);
+            if (range.includes(col1)) {
                 $(this).css('background-color', 'tomato')
                     .addClass('validated');
             }
@@ -3293,6 +3537,7 @@ $('#extHideFx').change(function(){
     let storeID = $('#storeID').val();
     let username = $('#username').val();
     let chosen = $(this).find(':selected').val();
+    let vendorID = $('#currentVendor').val();
     console.log(chosen);
     switch (chosen) {
         case 'hideNoPar':
@@ -3301,6 +3546,19 @@ $('#extHideFx').change(function(){
                 x = v.substring(2,5);
                 y = v.substring(7,10);
                 if (x == '0.0' && y == '0.0') {
+                    $(this).hide();
+                }
+            });
+            break;
+        case 'hideXsPar':
+            $('tr').each(function(){
+                v = $(this).find('td.autoPar').text();
+                x = v.substring(2,5);
+                x = parseFloat(x);
+                y = v.substring(7,10);
+                y = parseFloat(y);
+                if (x < 0.3 && y < 0.3) {
+                    console.log('x: '+x+', y: '+y);
                     $(this).hide();
                 }
             });
@@ -3369,11 +3627,133 @@ $('#extHideFx').change(function(){
             $('#fw-text').val(tmpRet);
             break;
         case 'updateViSrps':
-            let vendorID = $('#currentVendor').val();
             ScanConfirm("<br/><br/>Update vendor item SRPs for items in list?", 'update_vi_srps', function() {
                 $.ajax({
                     type: 'post',
                     data: 'username='+username+'&storeID='+storeID+'&vendorID='+vendorID+'&updatesrps=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'genericUploadCostsPr':
+            ScanConfirm("<br/><br/>Get costs from Generic Upload <br/>(on upcs)?", 'get_generic_upload_costs_p', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&genericupc=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'genericUploadNewSRPVi':
+            ScanConfirm("<br/><br/>Get NewSRP from Generic Upload?", 'get_generic_upload_newsrp_v', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&vendorID='+vendorID+'&genericnewsrp=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'genericUploadCostsVi':
+            ScanConfirm("<br/><br/>Get costs from Generic Upload (on skus)?", 'get_generic_upload_costs_v', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&vendorID='+vendorID+'&genericsku=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'vendorItemSrpReset':
+            ScanConfirm("<br/>Reset Vendor Item SRPs<br/>to match Products normal prices?<br/>!Important!: VENDOR ID<br/> MUST BE ENTERED<br/>", 'update_reset_srps', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&vendorID='+vendorID+'&updateResetSrps=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'addColumnVcase':
+            $("#mytable th").each(function() {
+                let newth = document.createElement('th');
+                newth.innerHTML = 'vcase';
+                let text = $(this).text();
+                if (text == 'vcost') {
+                    $(this).after(newth);
+                }
+            });
+            $("#mytable tr").each(function() {
+                let vcost = $(this).find('td.vcost').text();
+                let units = $(this).find('td.units').text();
+                let vcase = parseFloat(vcost) * parseFloat(units);
+                vcase = vcase.toFixed(2);
+                let newtd = document.createElement('td');
+                newtd.innerHTML = vcase;
+                $(this).find('td.vcost').after(newtd);
+            });
+            break;
+        case 'clearTableData':
+            let textConfirm = prompt('Warning: this function clears table data from products, vendorItems, productUser, & scaleItems. To continue, type I WANT TO CLEAR ITEM DATA');
+            if (textConfirm == 'I WANT TO CLEAR ITEM DATA') {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&clearItemData=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            }
+            break;
+        case 'futureCostFromNotes':
+            let startDate = prompt('Enter future cost START DATE');
+            ScanConfirm("<br/><br/>Create Future Vendor Item<br/>costs from notes?", 'update_future_costs', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&vendorID='+vendorID+'&startDate='+startDate+'&updatefuturecosts=true',
                     url: 'AuditReport.php',
                     success: function(response) {
                         console.log('success');
@@ -3772,6 +4152,31 @@ $('.description').on('keydown', function(e) {
     }
 });
 
+$("#fxBtnNew").click(function() {
+    $("#fxExtMenu").css("display", "inline-block");
+    $("#fxExtMenu").focus();
+});
+
+$("#fxExtMenu").focusout(function() {
+    $("#fxExtMenu").css("display", "none");
+});
+
+let i=0;
+$(".fxExtOption").each(function() {
+    let o = '';
+    i++;
+    if (i < 10)
+        o = '0';
+    let text = $(this).text();
+    $(this).text(o + i + ': ' + text);
+});
+
+$(".fxExtOption").on("click", function() {
+    $("#fxExtMenu").css("display", "none");
+    let chosen = $(this).attr("data-value");
+    console.log(chosen);
+    $("#extHideFx").val(chosen).trigger('change');
+});
 
 JAVASCRIPT;
     }
@@ -3941,6 +4346,50 @@ thead {
 }
 tr.prod-row:hover {
 }
+#fxExtMenu {
+    display: none;
+    width: 600px;
+    height: 300px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 9999;
+    margin: -150px 0px 0px -300px;
+}
+.fxExtOptionContainer {
+    border: 1px solid lightgrey;
+    background: white;
+    padding: 25px;
+    overflow: auto;
+    height: 300px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+.fxExtHeader {
+    padding: 5px;
+    padding-left: 30px;
+    //background: linear-gradient(white 90%, lightblue);
+    //background: lightblue;
+    background: repeating-linear-gradient(#343A40,  #565E66, #343A40 5px);
+    color: plum;
+    //text-shadow: 1px 1px lightgrey;
+    font-size: 16px;
+    margin-top: -22;
+    border-top-right-radius: 4px;
+    border-top-left-radius: 4px;
+    font-weight: bold;
+}
+.fxExtOption {
+    font-size: 16px;
+    cursor: pointer;
+    margin-bottom: 5px;
+    padding: 5px;
+}
+.fxExtOption:hover {
+    //background: #FFC8BF;
+    background: lightgrey;
+    background: linear-gradient(45deg, lightgrey, white);
+}
 HTML;
     }
 
@@ -3961,20 +4410,37 @@ HTML;
             them in the operational database cost change table (productCostChanges).
             <b>Only one user can use the Review function at a time</b></li>
     </ul>
+
+    <li>Tables</li>
+    <ul>
+        <li><strong>Products Table</strong> This is the default table view. In this view, the client will see information
+            as it applies to the default vendor IDs of items.</li>
+        <li><strong>Vendor Items Table</strong> Parameter: a vendor ID must be entered for this view to work properly (start by
+            loading a Vendor List). With this parameter entered, the client will see SKUs as they pertain to that vendor ID
+            regardless of the current products default vendor ID. The client will also see the <strong>vcost</strong> column
+            populated with data. This is the cost of the item according to the selected vendor ID.</li>
+    </ul>
+
+    <li>Current Vendor</li>
+    <p>By default the Current Vendor is left blank. To set the current vendor, load that vendor's list (more items may be loaded after if needed).</p>
+
     <li>Definition of Columns</li>
     <p>Each checkbox in the <strong>Show/Hide Columns</strong> correlates with a column to show or hide in the Audit Report table.</p>
     <ul>
         <li><strong>Check</strong> Show checkboxes for each row.</li>
         <li><strong>UPC</strong> Numerical barcode for each item.</li>
         <li><strong>SKU</strong> Current SKU for each item in respect to the default vendor ID.</li>
+        <li><strong>Alias</strong> Vendor alias, if any. Used for break-down and bulk items (assign one or more items to another item).</li>
+        <li><strong>Like Code</strong> POS like code. Items grouped together as one item.</li>
         <li><strong>Brand*</strong> POS brand that shows up on shelf tags.</li>
         <li><strong>Sign-Brand*</strong> Brand that shows up on Sale/special signage.</li>
         <li><strong>Description*</strong> POS description on shelf tags.</li>
         <li><strong>Sign-Description*</strong> Special sign description.</li>
         <li><strong>Size</strong> Size of 1 unit of products.</li>
         <li><strong>Units</strong> Case size from vendor.</li>
-        <li><strong>NetCost</strong> POS cost before adjustments for shipping or discounts.</li>
-        <li><strong>Cost</strong> POS cost <i>after</i> adjustments.</li>
+        <li><strong>NetCost</strong> POS product cost before adjustments for shipping or discounts.</li>
+        <li><strong>Cost</strong> POS product cost <i>after</i> adjustments.</li>
+        <li><strong>VCost</strong> vendor item cost (Current Vendor must be set).</li>
         <li><strong>Recent Purchase / PO-Cost</strong> Most recent cost found in Purchase Order Items.</li>
         <li><strong>Price</strong> Current normal price in POS.</li>
         <li><strong>Sale</strong> Current sale price of item, if any. <b>Note </b>that this column will show only the sale price
@@ -3990,16 +4456,30 @@ HTML;
             </ul>
         </li>
         <li><strong>Margin Target Diff</strong> Lists current margin, then target margin based on vendor and department, then the difference between the two.</li>
-        <li><strong>RSRP</strong> Our WFC calculated SRP before applying rounding rules.</li>
-        <li><strong>SRP</strong> SRP after rounding.</li>
+        <li><strong>RSRP</strong> WFC calculated SRP before applying rounding rules.</li>
+        <li><strong>SRP</strong> SRP as read from vendorItems table.</li>
         <li><strong>PRID</strong> Price rule ID.</li>
+        <li><strong>PRT</strong> Price rule description [sic].</li>
+        <li><strong>Tax</strong> Current tax status of item.</li>
         <li><strong>Dept</strong> Department.</li>
+        <li><strong>Subdept</strong> Sub Department.</li>
+        <li><strong>Local</strong> Local setting.</li>
+        <li><strong>Flags</strong> Lists all current flags for item.</li>
+        <li><strong>Subdept</strong> Sub Department.</li>
         <li><strong>Vendor</strong> Default vendor.</li>
         <li><strong>Last Sold</strong> Show the date each item was last sold at each store.</li>
         <li><strong>Scale Item</strong> Scale item type.</li>
-        <li><strong>Notes*</strong> Notes can be entered for each product from the Audit Scanner, or from this page.</li>
+        <li><strong>Scale PLUS</strong> Lists only the PLU as it should be entered into the scale.</li>
+        <li><strong>Tare</strong> Current scale tare weight.</li>
+        <li><strong>mnote</strong> For IT use. If a valid float is entered into the Notes column,
+            clicking the mnote button will move that float to and update the cost of the item.</li>
+        <li><strong>Notes</strong> A freely editable field.</li>
         <li><strong>Reviewed</strong> Shows the last time each product was reviewed, in respect to Fannie Product Review.</li>
         <li><strong>Cost Change</strong> Most recent cost change, taken only from when the <i>Review</i> button option is used.</li>
+        <li><strong>Floor Sections</strong> Product physical locations.</li>
+        <li><strong>Comment</strong> Any review comments entered for an item.</li>
+        <li><strong>PRN</strong> A blank,  uneditable field. For IT use (it's just a second field to use for plugging in and comparing data).</li>
+        <li><strong>Case Cost</strong> Shows the Cost column multiplied by the Units column.</li>
         <li><strong>*</strong> Columns with an asterisk in this list are editable fields.</li>
     </ul>
     <li>Forms & Functions (Grey Boxes)</li>
@@ -4031,6 +4511,8 @@ HTML;
     <li>Column Filters</li>
     <p>Underneath the column header row is a row of blank cells. Enter search criteria in these cells to filter the corresponding
         column by the string entered.</p>
+    <li>More Filters & Methods (Button & Menu)</li>
+    <p>Opens a growing list of additional filters & methods. Most methods will only show up for staff with Admin privileges.</p>
 </ul>
 HTML;
     }
