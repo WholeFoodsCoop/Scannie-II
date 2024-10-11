@@ -2150,7 +2150,7 @@ HTML;
             <div class=\"fxExtOption\" data-value=\"hideNOF\">Hide Rows With 'NOF' entered as notes</div>
             <div class=\"fxExtOption\" data-value=\"pullReviewListToPrn\">$itBug Review List () => PRN</div>
             <div class=\"fxExtOption\" data-value=\"exportJSONbatch\">$itBug JSON Export Batch </div>
-            <div class=\"fxExtOption\" data-value=\"updateViSrps\">$itBug SRP () => Notes (also updates vendorItems.srp(s))</div>
+            <div class=\"fxExtOption\" data-value=\"updateViSrps\">$itBug SRP () => Notes</div>
             <div class=\"fxExtOption\" data-value=\"ViClearNotes\">$itBug Clear Notes</div>
             <div class=\"fxExtOption\" data-value=\"jsUnitsDivision\">$itBug Divide Notes / Units</div>
             <div class=\"fxExtOption\" data-value=\"jsPrnDivision\">$itBug Divide Notes / PRN</div>
