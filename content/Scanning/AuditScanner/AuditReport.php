@@ -353,7 +353,8 @@ class AuditReport extends PageLayoutA
                 AND a.storeID=?
                 AND a.savedAs='default' 
         ");
-        $vendorItemsP = $dbc->prepare("UPDATE vendorItems SET srp = ?, modified = NOW() WHERE upc = ? AND vendorID = ?");
+        // Vendor Items srps should be updated when the price actually changes, not before
+        //$vendorItemsP = $dbc->prepare("UPDATE vendorItems SET srp = ?, modified = NOW() WHERE upc = ? AND vendorID = ?");
 
         $dbc->startTransaction();
         foreach ($items as $upc => $row) {
@@ -368,13 +369,13 @@ class AuditReport extends PageLayoutA
                 $ret .= $dbc->error();
             }
 
-            $vendorItemsA = array(
-                $row['srp'],
-                $upc,
-                $vendorID
-            );
-            $dbc->execute($vendorItemsP, $vendorItemsA);
-            $ret .= $dbc->error();
+            //$vendorItemsA = array(
+            //    $row['srp'],
+            //    $upc,
+            //    $vendorID
+            //);
+            //$dbc->execute($vendorItemsP, $vendorItemsA);
+            //$ret .= $dbc->error();
 
         }
         $dbc->commitTransaction();
@@ -2131,7 +2132,7 @@ HTML;
             <option value=\"hideNOF\">Hide Rows With 'NOF' entered as notes</option>
             <option value=\"pullReviewListToPrn\">$itBug Review List () => PRN</option>
             <option value=\"exportJSONbatch\">$itBug JSON Export Batch </option>
-            <option value=\"updateViSrps\">$itBug SRP () => Notes (also updates vendorItems.srp(s))</option>
+            <option value=\"updateViSrps\">$itBug SRP () => Notes</option>
             <option value=\"ViClearNotes\">$itBug Clear Notes</option>
             <option value=\"jsUnitsDivision\">$itBug Divide Notes / Units</option>
             <option value=\"jsPrnDivision\">$itBug Divide Notes / PRN</option>
@@ -2873,10 +2874,13 @@ $(document).keydown(function(e){
             $(this).trigger('click');
         });
     }
-    if (e.keyCode == 27) {
+    if (e.keyCode == 27) { // keyCode 27 => ESC
         $('.confirm-no').each(function(){
             $(this).trigger('click');
         });
+        if ($('#fxExtMenu').is(':visible')) {
+            $('#fxExtMenu').css('display', 'none');
+        }
     }
 
     let hlElm = document.getElementsByClassName("highlight")[0];
