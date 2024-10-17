@@ -134,6 +134,14 @@ ORDER BY COUNT(p.upc) DESC");
 
         $reports = array(
             array(
+                'handler' => self::getOwnerSoOam($dbc), 
+                'ranges' => array(10, 100, 999),
+            ),
+            array(
+                'handler' => self::getOffSrps($dbc), 
+                'ranges' => array(10, 100, 999),
+            ),
+            array(
                 'handler' => self::getGenericPRIDItems($dbc), 
                 'ranges' => array(10, 100, 999),
             ),
@@ -228,6 +236,10 @@ ORDER BY COUNT(p.upc) DESC");
                 'ranges' => array(1, 10, 999),
             ),
             array(
+                'handler' => self::getBadBogoDeals($dbc),
+                'ranges' => array(1, 10, 999),
+            ),
+            array(
                 'handler' => self::getProdMissingSale($dbc),
                 'ranges' => array(1, 10, 999),
             ),
@@ -255,8 +267,9 @@ ORDER BY COUNT(p.upc) DESC");
             $table .= self::getTable($data);
         }
 
-        $edlpMonths = $this->getEdlpMonths($curEdlpSet);
+        //$edlpMonths = $this->getEdlpMonths($curEdlpSet);
         //$dealSetSelector = $this->getDealSetSelector($dealSets);
+        $futureVendorItemsT = $this->getFutureVendorItems();
         
         $this->addScript('http://'.$MY_ROOTDIR.'/common/javascript/tablesorter/js/jquery.tablesorter.min.js');
         $this->addScript('http://'.$MY_ROOTDIR.'/common/javascript/tablesorter/js/jquery.metadata.js');
@@ -269,17 +282,20 @@ ORDER BY COUNT(p.upc) DESC");
         <div class="card-content">
             <div class="card-body">
                 <div class="card-title">
-                    <h4>Scanning Department Dashboard <span class="smh4"><strong>Page last updated:</strong> $datetime</span></h4>
+                    <h2>Scannie Dashboard</h2>
                 </div>
                 <div class="row">
-                    <div class="col-lg-4">
-                        $edlpMonths
-                        $dealSetSelector</div>
-                    <div class="col-lg-4"></div>
-                    <div class="col-lg-4"></div>
+                    <div class="col-lg-6">
+                        $table 
+                        $multi
+                    </div>
+                    <div class="col-lg-6">
+                        <label style="border: 1px solid #E9ECEF; background-color: #F2F4F7; 
+                            margin-bottom: -2px; border-top-right-radius: 3px; 
+                            border-top-left-radius: 3px; padding: 5px;">Uploaded & Pending Future Costs</label>
+                        $futureVendorItemsT
+                    </div>
                 </div>
-                $table 
-                $multi
             </div>
         </div>
     </div>
@@ -760,6 +776,7 @@ HTML;
             SELECT upc, brand, description, normal_price 
             FROM products 
             WHERE upc < 1000 
+                AND upc > 99
                 AND scale = 0 
                 AND upc NOT IN (
                     SELECT upc FROM {$this->ALTDB}.doNotTrack 
@@ -1028,6 +1045,36 @@ HTML;
             'desc'=>$desc);
     }
 
+    public function getBadBogoDeals($dbc)
+    {
+        $count = 0;
+        $desc = "Items with bad BOGO deals";
+        $cols = array('upc', 'brand', 'description', 'normal_price', 'salePrice');
+        $data = array();
+        
+        $prep = $dbc->prepare("
+            SELECT
+                p.upc, p.brand, p.description, p.normal_price,
+                    l.salePrice
+            FROM batchList l
+                INNER JOIN batches b ON b.batchID=l.batchID
+                INNER JOIN products p ON p.upc=l.upc
+            WHERE l.signMultiplier = -3
+                AND p.normal_price <> l.salePrice
+                AND b.startDate <= NOW()
+                AND b.endDate >= NOW()
+            GROUP BY p.upc
+        ");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+                foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+                $count++;
+            }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
     public function getProdMissingEDLP($dbc)
     {
         $count = 0;
@@ -1113,7 +1160,7 @@ HTML;
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
                 // temp(1) - don't show October A anymore. Add any sets to skip here
-                if ($row['dealSet'] != 'April2024' && $row['ABT'] != 'A') {
+                if ($row['dealSet'] != 'September2024' && $row['ABT'] != 'A') {
                     foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
                     $count++;
                 }
@@ -1303,6 +1350,82 @@ HTML;
         return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
             'desc'=>$desc);
     }
+    public function getOwnerSoOam($dbc)
+    {
+        $desc = "Owner SOs Missing 10% on Coop Deals";
+        $data = array();
+        $pre = $dbc->prepare("
+            SELECT order_id, c.CardNo, datetime, o.description, o.upc, o.total, p.normal_price,
+                ROUND(((p.special_price - (p.special_price * 0.10)) * o.quantity) * o.ItemQtty, 2) AS CDPrice,
+                p.special_price ,
+                CASE WHEN s.memtype2 IS NOT NULL THEN s.memtype2 ELSE c.Type END AS memberStatus,
+                CASE WHEN s.memtype2 IS NOT NULL THEN c.Type ELSE null END AS activeStatus,
+            GROUP_CONCAT(distinct b.batchName ORDER BY b.batchName),
+                ABS(ABS(o.total) - ABS(ROUND(((p.special_price - (p.special_price * 0.10)) * o.quantity) * o.ItemQtty, 2))) AS diff
+            FROM is4c_trans.PendingSpecialOrder AS o
+                INNER JOIN is4c_op.products p on p.upc=o.upc
+                INNER JOIN is4c_op.vendorItems v on v.upc=p.upc and v.vendorID=p.default_vendor_id
+                INNER JOIN is4c_op.MasterSuperDepts ma ON ma.dept_ID=p.department
+
+                INNER JOIN is4c_op.batchList AS l ON l.upc=o.upc
+                INNER JOIN is4c_op.batches AS b ON b.batchID=l.batchID
+
+                LEFT JOIN is4c_op.custdata AS c ON c.CardNo=o.card_no
+                LEFT JOIN is4c_op.meminfo AS mi ON c.CardNo=mi.card_no
+                LEFT JOIN is4c_op.suspensions AS s ON c.CardNo=s.cardno
+            WHERE p.special_price <> 0
+                AND ABS(ABS(o.total) - ABS(ROUND(((p.special_price - (p.special_price * 0.10)) * o.quantity) * o.ItemQtty, 2))) > 0.01
+                AND ma.super_name != \"WELLNESS\"
+                AND o.deleted = 0
+                #AND o.voided = 0
+                AND b.startDate <= DATE(NOW()) AND b.endDate >= DATE(NOW())
+                AND b.startDate <= datetime AND b.endDate >= datetime
+                AND b.batchName LIKE \"%Co-op Deals%\"
+                  AND b.batchName NOT LIKE \"%BOGO%\"
+                AND CASE WHEN s.memtype2 IS NOT NULL THEN s.memtype2 ELSE c.Type END IS NOT NULL
+                AND CASE WHEN s.memtype2 IS NOT NULL THEN s.memtype2 ELSE c.Type END != \"REG\"
+            GROUP BY o.upc, total
+        ");
+        $res = $dbc->execute($pre);
+        $count = $dbc->numRows($res);
+        $cols = array('order_id', 'CardNo', 'datetime', 'description', 'upc', 'total', 'normal_price', 'special_price');
+        while ($row = $dbc->fetchRow($res)) {
+            foreach ($cols as $col) {
+                $data[$row['upc']][$col] = $row[$col];
+            }
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
+    public function getOffSrps($dbc)
+    {
+        $desc = "SRPs that do not match normal prices";
+        $data = array();
+        $pre = $dbc->prepare("SELECT
+            v.upc, p.brand, p.description, p.normal_price, v.srp, e.vendorName,
+                e.vendorID
+            FROM vendorItems v
+                INNER JOIN products p ON p.upc=v.upc AND p.default_vendor_id=v.vendorID
+                INNER JOIN MasterSuperDepts m ON m.dept_ID=p.department
+                INNER JOIN vendors e ON e.vendorID=v.vendorID
+            WHERE v.srp <> p.normal_price
+                AND m.super_name != \"PRODUCE\"
+            ORDER BY e.vendorName
+            ");
+        $res = $dbc->execute($pre);
+        $count = $dbc->numRows($res);
+        $cols = array('upc', 'brand', 'description', 'normal_price', 'srp', 'vendorID', 'vendorName');
+        while ($row = $dbc->fetchRow($res)) {
+            foreach ($cols as $col) {
+                $data[$row['upc']][$col] = $row[$col];
+            }
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
 
     public function getGenericPRIDItems($dbc)
     {
@@ -1444,6 +1567,29 @@ HTML;
 
         return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
             'desc'=>$desc);
+    }
+
+    private function getFutureVendorItems()
+    {
+        $ret = '<table class="table table-bordered">
+            <thead>
+                <th>Vendor Name</th><th>VendorID</th><th>Number of Items</th><th>Start Date</th>
+            </thead>
+            <tbody>';
+        $dbc = scanLib::getConObj();
+        $prep = $dbc->prepare("SELECT COUNT(upc) AS count, f.vendorID, vendorName, startDate FROM FutureVendorItems AS f
+            INNER JOIN vendors AS v ON v.vendorID=f.vendorID  WHERE startDate >= DATE(NOW())
+            GROUP BY f.vendorID, f.startDate
+            ORDER BY f.startDate, f.vendorID ");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            $ret .= "<tr>";
+            $ret .= "<td>{$row['vendorName']}</td><td>{$row['vendorID']}</td><td>{$row['count']}</td><td>{$row['startDate']}</td>";
+            $ret .= "</tr>";
+        }
+        $ret .= '</tbody></table>';
+
+        return $ret;
     }
 
     public function javascriptContent()
