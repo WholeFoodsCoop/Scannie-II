@@ -138,6 +138,10 @@ ORDER BY COUNT(p.upc) DESC");
                 'ranges' => array(10, 100, 999),
             ),
             array(
+                'handler' => self::getBreakdownBadPrice($dbc), 
+                'ranges' => array(2, 10, 9999),
+            ),
+            array(
                 'handler' => self::getOffSrps($dbc), 
                 'ranges' => array(10, 100, 999),
             ),
@@ -292,7 +296,7 @@ ORDER BY COUNT(p.upc) DESC");
                     <div class="col-lg-6">
                         <label style="border: 1px solid #E9ECEF; background-color: #F2F4F7; 
                             margin-bottom: -2px; border-top-right-radius: 3px; 
-                            border-top-left-radius: 3px; padding: 5px;">Uploaded & Pending Future Costs</label>
+                            border-top-left-radius: 3px; padding: 5px;">Staged Pending Future Costs</label>
                         $futureVendorItemsT
                     </div>
                 </div>
@@ -1160,7 +1164,7 @@ HTML;
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
                 // temp(1) - don't show October A anymore. Add any sets to skip here
-                if ($row['dealSet'] != 'September2024' && $row['ABT'] != 'A') {
+                if ($row['dealSet'] != 'October2024' && $row['ABT'] != 'A') {
                     foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
                     $count++;
                 }
@@ -1350,6 +1354,141 @@ HTML;
         return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
             'desc'=>$desc);
     }
+
+    public function getBreakdownBadPrice($dbc)
+    {
+        $desc = "Breakdown Items w/ Bad Prices";
+        $cols = array('sku', 'upc', 'brand', 'description', 'vendorID', 'onSale');
+        $data = array();
+        $count = 0;
+        $pre = $dbc->prepare("
+            SELECT
+            p.upc, p.brand, p.description, 
+            REPLACE(REPLACE(REPLACE(p.size, ' CT', ''), ' OZ', ''), ' FZ', '') AS count,
+
+            ROUND(p.normal_price / REPLACE(p.size, ' CT', ''), 2) AS breakDownPrice,
+            ROUND(p.normal_price / FLOOR(1/multiplier)) AS breakUpPrice,
+            CASE WHEN CEIL(REPLACE(p.size, ' CT', '')) = p.size THEN 'multiple units' ELSE 'single unit' END AS UnitType,
+
+            v.sku, v.isPrimary, v.multiplier,
+            p.normal_price,
+            ROUND(p.normal_price * v.multiplier , 2) as completePrice,
+            vi.units,
+            p.auto_par,
+            p2.auto_par AS auto_par2,
+            p.special_price,
+            p2.special_price AS special_price_2,
+            p.inUse,
+            p2.inUse AS p2inUse,
+            v.vendorID
+            FROM products p
+                LEFT JOIN VendorAliases v ON v.upc=p.upc
+                    AND v.vendorID=p.default_vendor_id
+                LEFT JOIN vendorItems vi ON vi.upc=p.upc
+                LEFT JOIN products p2 ON p2.upc=p.upc AND p2.store_id=2
+            WHERE p.store_id=1
+                AND p.department != 110
+                AND v.sku NOT IN ('01514652')
+            GROUP by p.upc
+            ORDER BY v.vendorID, p.brand
+        ");
+        $res = $dbc->execute($pre);
+        //$count = $dbc->numRows($res);
+        while ($row = $dbc->fetchRow($res)) {
+            $par1 = $row['auto_par'];
+            $par2 = $row['auto_par2'];
+            $inUse = $row['inUse'];
+            $inUse2 = $row['p2inUse'];
+            /*
+                Show only items that have an auto_par > 0 at either store
+                    && are in-use at either store
+            */
+            if (($par1 > 0 || $par2 > 0) && ($inUse == 1 || $inUse2 == 1)) {
+                $sku = $row['sku'];
+                $upc = $row['upc'];
+                $brand = $row['brand'];
+                $description = $row['description'];
+                $special_price = $row['special_price'];
+                $case_size = $row['units'];
+                $vendorID = $row['vendorID'];
+                if ($special_price == 0) {
+                    $special_price = $row['special_price_2'];
+                }
+                $normal_price = $row['normal_price'];
+                $multiplier = $row['multiplier'];
+                $skus[$sku][$upc]['normal_price'] = $normal_price;
+                $skus[$sku][$upc]['multiplier'] = $multiplier;
+                $skus[$sku][$upc]['special_price'] = $special_price;
+                $skus[$sku][$upc]['brand'] = $brand;
+                $skus[$sku][$upc]['description'] = $description;
+                $skus[$sku][$upc]['case_size'] = $case_size;
+                $skus[$sku][$upc]['vendorID'] = $vendorID;
+            }
+        }
+
+        foreach ($skus as $sku => $arr) {
+            $a = 0;
+            $lastUpc = '';
+            foreach ($arr as $upc => $row) {
+                /*
+                    Set Parent & Child Status 
+                */
+                if ($row['normal_price'] > $a && $a == 0) {
+                    $skus[$sku][$upc]['type'] = 'parent';
+                } else if ($row['normal_price'] > $a) {
+                    $skus[$sku][$upc]['type'] = 'parent';
+                    $skus[$sku][$lastUpc]['type'] = 'child';
+                } else if ($row['normal_price'] == $a) {
+                    $skus[$sku][$upc]['type'] = 'n/a';
+                    $skus[$sku][$lastUpc]['type'] = 'n/a';
+                } else {
+                    $skus[$sku][$lastUpc]['type'] = 'parent';
+                    $skus[$sku][$upc]['type'] = 'child';
+                }
+
+                $a = $row['normal_price'];
+                $lastUpc = $upc;
+            }
+        }
+
+        $td = "";
+        $alt = 0;
+        foreach ($skus as $sku => $arr) {
+            $alt = ($alt == 0) ? 1 : 0;
+            foreach ($arr as $upc => $row) {
+                if (count($arr) > 1 && $row['type'] != 'n/a') {
+                    $units = 0;
+                    $multiplier = $row['multiplier'];
+                    if ($multiplier < 0.99 && $multiplier != 1.0) {
+                        $units = round(100 / (100 * $row['multiplier']));
+                    } else if ($multiplier != 1.0) {
+                        $units = 1;
+                    } else {
+                        $units = $row['case_size'];
+                    }
+                    $total = $units * $row['normal_price'];
+                    $tdClass = ($alt == 1) ? 'altRow' : '';
+                    $tdWarn = '';
+
+                    if ($row['type'] == 'child' && $total < $this->getParentPrice($skus, $sku)) {
+                        $tdWarn = 'danger';
+                        foreach ($cols as $col) {
+                            $data[$sku]['sku'] = $sku;
+                            $data[$sku]['upc'] = $upc;
+                            $data[$sku]['brand'] = $row['brand'];
+                            $data[$sku]['description'] = $row['description'];
+                            $data[$sku]['vendorID'] = $row['vendorID'];
+                            $data[$sku]['onSale'] = ($row['special_price'] == 0) ? 'no' : 'yes';
+                        }
+                    }
+                }
+            }
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
     public function getOwnerSoOam($dbc)
     {
         $desc = "Owner SOs Missing 10% on Coop Deals";
@@ -1590,6 +1729,21 @@ HTML;
         $ret .= '</tbody></table>';
 
         return $ret;
+    }
+
+    private function getParentPrice($skus, $sku) {
+
+        foreach ($skus[$sku] as $upc => $row) {
+            if ($row['type'] == 'parent') {
+                if ($row['special_price'] == 0) {
+                    return $row['normal_price'];
+                } else {
+                    return $row['special_price'];
+                }
+            }
+        }
+
+        return false;
     }
 
     public function javascriptContent()
