@@ -138,10 +138,6 @@ ORDER BY COUNT(p.upc) DESC");
                 'ranges' => array(10, 100, 999),
             ),
             array(
-                'handler' => self::getBreakdownBadPrice($dbc), 
-                'ranges' => array(2, 10, 9999),
-            ),
-            array(
                 'handler' => self::getOffSrps($dbc), 
                 'ranges' => array(10, 100, 999),
             ),
@@ -196,6 +192,10 @@ ORDER BY COUNT(p.upc) DESC");
             array(
                 'handler' => self::badPriceCheck($dbc),
                 'ranges' => array(1, 2, 999),
+            ),
+            array(
+                'handler' => self::getBreakdownBadPrice($dbc), 
+                'ranges' => array(2, 10, 9999),
             ),
             array(
                 'handler' => self::limboPcBatch($dbc),
@@ -615,7 +615,7 @@ HTML;
     {
         $count = 0;
         $desc = 'Forgotten Price-Change Batches';
-        $p = $dbc->prepare("SELECT batchID, batchName, batchType 
+        $p = $dbc->prepare("SELECT batchID, batchName, batchType, owner
             FROM batches 
             WHERE batchID NOT IN 
                 (SELECT bid AS batchID FROM batchReviewLog) 
@@ -731,37 +731,35 @@ HTML;
         $count = 0;
         $desc = "Products with bad prices";
         $p = $dbc->prepare("
-            SELECT
-                p.upc,
-                p.normal_price AS price,
-                p.brand,
-                p.description,
-                p.store_id,
-                p.last_sold,
-                p.cost,
-                m.super_name
-            FROM products AS p
-                RIGHT JOIN MasterSuperDepts AS m ON p.department = m.dept_ID
-                LEFT JOIN PriceRules pr ON pr.priceRuleID=p.price_rule_id
-                LEFT JOIN PriceRuleTypes prt ON prt.priceRuleTypeID=pr.priceRuleTypeID
-            WHERE inUse=1
-                AND upc NOT IN (
-                    SELECT upc FROM {$this->ALTDB}.doNotTrack 
-                    WHERE method = 'badPriceCheck'   
-                        AND page = 'Dashboard'
-                )
-                AND (
-                    normal_price = 0 AND cost <> 0
-                    OR normal_price > 129.99 OR normal_price < cost)
-                AND last_sold is not NULL
-                AND wicable = 0
-                AND m.superID IN (1,3,13,9,4,8,17,5,18) 
-                AND prt.description != 'OTHER'
-            GROUP BY upc
-        "
-        );
+            SELECT upc,
+                CONCAT(SUBSTRING(brand, 1, 8), '~') AS brand,
+                CONCAT(SUBSTRING(description, 1, 16), '~') AS description,
+                cost, normal_price AS price,
+                CONCAT(p.department, ': ', d.dept_name, ' - ',  m.super_name) AS department
+            FROM products p
+                INNER JOIN MasterSuperDepts m ON m.dept_ID=p.department
+                INNER JOIN departments d ON d.dept_no=p.department
+            WHERE (
+            inUse = 1
+            AND cost <> 0
+            AND m.super_name NOT IN ('PRODUCE')
+            AND upc NOT IN (
+              SELECT upc FROM {$this->ALTDB}.doNotTrack
+              WHERE method = 'badPriceCheck'
+                  AND page = 'Dashboard'
+              )
+            AND p.upc NOT IN ('0000000112212')
+            AND p.description NOT LIKE '%OPEN PLU%'
+            ) AND
+            (
+              normal_price = 0
+              OR normal_price > 134.99
+              OR normal_price < cost
+            )
+            GROUP BY p.upc
+        ");
         $r = $dbc->execute($p);
-        $cols = array('upc', 'brand', 'description', 'cost', 'price');
+        $cols = array('upc', 'brand', 'description', 'cost', 'price', 'department');
         $data = array();
         while ($row = $dbc->fetchRow($r)) {
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
@@ -1010,6 +1008,7 @@ HTML;
         $data = array();
         $desc = "Deli: Should be default_vendor_id 70, WFC DELI";
         $cols = array('upc', 'brand', 'description', 'created', 'department', 'default_vendor_id');
+        $count = 0;
         $prep = $dbc->prepare("SELECT upc, brand, description, created, default_vendor_id, department FROM products WHERE department IN (63,65,66,78,223,225,226,228,229) AND (default_vendor_id <> 70 || brand != 'WFC DELI') AND description != 'OPEN PLU';");
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
@@ -1036,6 +1035,7 @@ HTML;
             WHERE upc > 999999999999
             AND m.super_name != 'PRODUCE'");
         $res = $dbc->execute($prep);
+        $count = 0;
         while ($row = $dbc->fetchRow($res)) {
             foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
             $count++;
@@ -1069,7 +1069,7 @@ HTML;
                 AND b.endDate >= NOW()
             GROUP BY p.upc
         ");
-        $res = $dbc->execute($prep, $args);
+        $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
                 foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
                 $count++;
@@ -1186,12 +1186,12 @@ HTML;
         $desc = "Items In Vendor Items With UPC 000000000000";
         $cols = array('count');
         $data = array();
-        $prep = $dbc->prepare("SELECT COUNT(upc) FROM vendorItems WHERE upc = 0");
+        $prep = $dbc->prepare("SELECT COUNT(upc) AS count FROM vendorItems WHERE upc = 0");
         //$res = $dbc->execute($prep);
         $val = $dbc->getValue($prep);
         $count = $val;        
         if ($count > 0) {
-            $data['count'] = $count;
+            $data[0]['count'] = $count;
         }
 
         return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
@@ -1363,7 +1363,12 @@ HTML;
         $count = 0;
         $pre = $dbc->prepare("
             SELECT
-            p.upc, p.brand, p.description, 
+            p.upc,
+
+            p.brand,
+            CONCAT(SUBSTRING(p.brand, 1, 8), '~') AS brand,
+            p.description, 
+
             REPLACE(REPLACE(REPLACE(p.size, ' CT', ''), ' OZ', ''), ' FZ', '') AS count,
 
             ROUND(p.normal_price / REPLACE(p.size, ' CT', ''), 2) AS breakDownPrice,
@@ -1710,7 +1715,7 @@ HTML;
 
     private function getFutureVendorItems()
     {
-        $ret = '<table class="table table-bordered">
+        $ret = '<table class="table table-bordered table-sm">
             <thead>
                 <th>Vendor Name</th><th>VendorID</th><th>Number of Items</th><th>Start Date</th>
             </thead>
