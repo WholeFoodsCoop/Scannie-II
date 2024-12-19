@@ -17,6 +17,7 @@ class AuditReport extends PageLayoutA
     public $columns = array('check', 'upc', 'sku', 'alias', 'likeCode', 'brand', 'sign-brand', 'description', 
         'sign-description', 'size', 'uom', 'units', 'netcost', 'cost', 'vcost', 'recentPurchase',
         'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'prt', 'tax', 'dept', 'subdept',
+        'superdept', 
         'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 'scalePLU', 'tare', 'mnote', 'notes', 'reviewed', 
         'costChange', 'floorSections', 'comment', 'PRN', 'caseCost'); 
 
@@ -65,8 +66,108 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<updatefuturecosts>';
         $this->__routes[] = 'post<updateResetSrps>';
         $this->__routes[] = 'post<clearItemData>';
+        $this->__routes[] = 'post<setPriceRuleDetails>';
+        $this->__routes[] = 'post<setProductCosts>';
+        $this->__routes[] = 'post<setVendorID>';
+        $this->__routes[] = 'post<getFamilyItems>';
 
         return parent::preprocess();
+    }
+
+    public function postSetVendorIDHandler()
+    {
+        $vendorID = FormLib::get('vendorID');
+        $_SESSION['currentVendor'] = $vendorID;
+
+        return false;
+    }
+
+    public function postGetFamilyItemsHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $upc = FormLib::get('upc');
+        $family = substr($upc, 3, 5);
+
+        $args = array($upc);
+        $prep = $dbc->prepare("SELECT brand, size FROM products WHERE upc = ? GROUP BY upc");
+        $res = $dbc->execute($prep, $args);
+        $row = $dbc->fetchRow($res);
+
+        $td = "<table class=\"table table-bordered table-sm small\">
+            <thead style=\"background: linear-gradient(lightgrey, #DCDCDC, lightgrey)\"><th>UPC</th><th>Brand</th><th>Description</th><th>Size</th><th>Cost</th><th>Price</th></thead><tbody>";
+        $args = array($row['brand'], $row['size']);
+        $prep = $dbc->prepare("
+            SELECT upc, brand, description, size, cost, normal_price
+            FROM products
+            WHERE brand = ? 
+                AND upc LIKE '%$family%'
+                AND size LIKE ? 
+            GROUP BY upc;
+        ");
+        $res = $dbc->execute($prep, $args);
+        $i=0;
+        while ($r = $dbc->fetchRow($res)) {
+            $stripe = ($i % 2 == 0) ? 'stripe2' : '';
+            $td .= sprintf("<tr class=\"$stripe\"><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></td>",
+                $r['upc'],
+                $r['brand'],
+                $r['description'],
+                $r['size'],
+                $r['cost'],
+                $r['normal_price']
+            );
+            $i++;
+        }
+        $td .= "</tbody></table>";
+
+        echo $dbc->error();
+        echo $td;
+        //echo "yeehaw!";
+
+        return false;
+    }
+
+    public function postSetPriceRuleDetailsHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+
+        $args = array($username);
+        $prep = $dbc->prepare("
+            UPDATE PriceRules r
+                INNER JOIN products p ON p.price_rule_id=r.priceRuleID
+                INNER JOIN woodshed_no_replicate.AuditScan a ON a.upc=p.upc
+            SET r.details = a.notes
+            WHERE a.username=?
+                AND a.savedAs='default'
+                AND LENGTH(a.notes) > 0
+        ");
+        $res = $dbc->execute($prep, $args);
+
+        echo $dbc->error();
+
+        return false;
+    }
+
+    public function postSetProductCostsHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+
+        $args = array($username);
+        $prep = $dbc->prepare("
+            UPDATE products p
+                INNER JOIN woodshed_no_replicate.AuditScan a ON a.upc=p.upc
+            SET p.cost = a.notes
+            WHERE a.username=?
+                AND a.savedAs='default'
+                AND notes > 0
+        ");
+        $res = $dbc->execute($prep, $args);
+
+        echo $dbc->error();
+
+        return false;
     }
 
     public function postClearItemDataHandler()
@@ -128,6 +229,16 @@ class AuditReport extends PageLayoutA
         ");
         $res = $dbc->execute($prep, $args);
 
+        $args = array($username, $storeID);
+        $prep = $dbc->prepare("
+            DELETE FROM VendorAliases va
+            INNER JOIN woodshed_no_replicate.AuditScan a
+                ON a.upc=va.upc
+            WHERE a.username=?
+                AND a.storeID=?
+                AND a.savedAs='default'
+        ");
+        $res = $dbc->execute($prep, $args);
 
         echo $dbc->error();
 
@@ -163,7 +274,7 @@ class AuditReport extends PageLayoutA
 
     /*
         post update future costs handler
-        insert future costs = notes for vendorID
+        insert future costs < notes for vendorID
         cost column must be named cost,
         futureReview will review all items where
         notes is NOT NULL
@@ -1061,12 +1172,19 @@ class AuditReport extends PageLayoutA
     {
         $upc = FormLib::get('upc');
         $description = FormLib::get('description');
+        $description = urldecode($description);
+        $description = trim($description);
+        //$description = str_replace('Â', '', $description);
+        $description = trim($description, 'Â');
+        $description = trim($description, ' ');
+        $description = trim($description);
         $table = FormLib::get('table');
         $json = array();
 
         $dbc = ScanLib::getConObj();
         $mod = new DataModel($dbc);
         $json['saved'] = $mod->setDescription($upc, $description, $table);
+        $json['str'] = 'str: '.$description;
         echo json_encode($json);
 
         return false;
@@ -1348,7 +1466,8 @@ class AuditReport extends PageLayoutA
                 pr.comment,
                 p.tax,
                 r.details AS prtDetails,
-                si.tare
+                si.tare,
+                m.super_name
             FROM products AS p
                 LEFT JOIN vendorItems AS v ON $vendorItemsJoinOn AND p.upc=v.upc
                 LEFT JOIN productUser AS u ON p.upc=u.upc
@@ -1372,6 +1491,7 @@ class AuditReport extends PageLayoutA
                 LEFT JOIN FloorSubSections AS fss ON fss.upc=p.upc
                 LEFT JOIN FloorSections AS fs ON fs.floorSectionID=fspm.floorSectionID AND fs.storeID=p.store_id
                 LEFT JOIN scaleItems AS si ON si.plu=p.upc
+                LEFT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
             WHERE p.upc != '0000000000000'
                 AND a.username = ?
                 AND p.store_id = ?
@@ -1414,7 +1534,7 @@ class AuditReport extends PageLayoutA
         }
 
         $td = "";
-        $csv = "UPC, SKU, ALIAS, LIKECODE, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UOM, UNITS, NETCOST, COST, VCOST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, TAX, DEPT, SUBDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CASE COST, NOTES\r\n";
+        $csv = "UPC, SKU, ALIAS, LIKECODE, BRAND, SIGNBRAND, DESC, SIGNDESC, SIZE, UOM, UNITS, NETCOST, COST, VCOST, RECENT PURCHASE, PRICE, CUR SALE, AUTOPAR, CUR MARGIN, TARGET MARGIN, DIFF, RAW SRP, SRP, PRICE RULE, TAX, DEPT, SUBDEPT, SUPERDEPT, LOCAL, FLAGS, VENDOR, LAST TIME SOLD, SCALE, SCALE PLU, LAST REVIEWED, FLOOR SECTIONS, REVIEW COMMENTS, PRN, CASE COST, NOTES\r\n";
 
             //$prepCsv = strip_tags("\"$upc\", \"$sku\", \"$brand\", \"$signBrand\", \"$description\", \"$signDesecription\", $size, $units, $netCost, $cost, $recentPurchase, $price, $sale, $autoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes");
         $textarea = "<div style=\"position: relative\">
@@ -1449,7 +1569,8 @@ class AuditReport extends PageLayoutA
             <td title=\"prt\" data-column=\"prt\"class=\"prt column-filter\"></td>
             <td title=\"tax\" data-column=\"tax\"class=\"tax column-filter\"></td>
             <td title=\"dept\" data-column=\"dept\"class=\"dept column-filter\"></td>
-            <td title=\"subdebt\" data-column=\"subdept\"class=\"subdept column-filter\"></td>
+            <td title=\"subdept\" data-column=\"subdept\"class=\"subdept column-filter\"></td>
+            <td title=\"superdept\" data-column=\"superdept\"class=\"superdept column-filter\"></td>
             <td title=\"local\" data-column=\"local\"class=\"local column-filter\"></td>
             <td title=\"flags\" data-column=\"flags\"class=\"flags column-filter\"></td>
             <td title=\"vendor\" data-column=\"vendor\"class=\"vendor column-filter\"></td>
@@ -1500,6 +1621,7 @@ class AuditReport extends PageLayoutA
             <th class=\"tax\">tax</th>
             <th class=\"dept\">dept</th>
             <th class=\"subdept\">subdept</th>
+            <th class=\"superdept\">superdept</th>
             <th class=\"local\">local</th>
             <th class=\"flags\">flags</th>
             <th class=\"vendor\">vendor</th>
@@ -1576,7 +1698,7 @@ class AuditReport extends PageLayoutA
                     $par = "<span style=\"color: transparent\">_</span>".$par;
                 //$autoPar .= "<span style=\"border: 1px solid $woSalesText;\"><span style=\"color: $woSalesText; \">&#9608;</span> $par</span> ";
                 //$autoPar .= "<td style=\"width: 25px\"><span style=\"color: $woSalesText; \">&#9608;</span> $par</td>";
-                $autoPar .= "<td style=\"width: 25px; border-left: 5px solid $woSalesText; \" class=\"autoPar\"> $par</td>";
+                $autoPar .= "<td style=\"width: 25px; border-left: 5px solid $woSalesText; \" class=\"autoPar noauto\"> $par</td>";
                 $csvAutoPar .= "[$storeID] $par ";
             }
             $autoPar .= "</table></div>";
@@ -1625,6 +1747,7 @@ class AuditReport extends PageLayoutA
             $tax = $this->taxes[$row['tax']];
             $dept = $row['dept'];
             $subdept = $row['subdept'];
+            $superdept = $row['super_name'];
             $local = $row['local'];
             $storeID = $row['store_id'];
             //$flags = $flagData[$upc][$storeID];
@@ -1690,6 +1813,7 @@ class AuditReport extends PageLayoutA
             //    </td>";
             $td .= "<td class=\"dept\">$dept</td>";
             $td .= "<td class=\"subdept\">$subdept</td>";
+            $td .= "<td class=\"superdept\">$superdept</td>";
             $td .= "<td class=\"local\">$local</td>";
             $td .= "<td class=\"flags\">$flags</td>";
             $td .= "<td class=\"vendor\" data-vendorID=\"$vendorID\">$vendor</td>";
@@ -1726,7 +1850,7 @@ class AuditReport extends PageLayoutA
             $brand = str_replace(',', '', $brand);
             $autoPar = str_replace("&#9608;", " | ", $autoPar);
 
-            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $uom, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $prt, $tax, $dept, $subdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$tare\" \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes\"");
+            $prepCsv = strip_tags("\"$upc\", \"$sku\", \"$alias\", \"$likeCode\", \"$brand\", \"$signBrand\", \"$description\", \"$signDescription\", $size, $uom, $units, $netCost, $cost, $vcost, $recentPurchase, $price, $sale, $csvAutoPar, $curMargin, $margin, $diff, $rsrp, $srp, $prid, $prt, $tax, $dept, $subdept, $superdept, $local, \"$flags\", \"$vendor\", $lastSold, $bycount, \"$scalePLU\", \"$tare\" \"$reviewed\", \"$floorSections\", \"$reviewComments\", \"$prn\", $caseCost, \"$notes\"");
             $prepCsv = str_replace("&nbsp;", "", $prepCsv);
             $prepCsv = str_replace("\"", "", $prepCsv);
             $csv .= "$prepCsv" . "\r\n";
@@ -1742,7 +1866,7 @@ class AuditReport extends PageLayoutA
     $pth
     <tbody id="mytablebody">
         $td
-        <tr><td>$textarea</td></tr>
+        <tr><td class="noauto">$textarea</td></tr>
     </tbody>
     </table>
 </div>
@@ -1858,8 +1982,8 @@ HTML;
             $x |= 1 << 18;//autopar
             $x |= 1 << 24;//tax
             $x |= 1 << 25;//dept
-            $x |= 1 << 35;//notes
-            $x |= 1 << 36;//reviewed
+            $x |= 1 << 36;//notes
+            $x |= 1 << 37;//reviewed
             $_SESSION['columnBitSet'] = $x;
         }
 
@@ -2144,6 +2268,8 @@ HTML;
             <option value=\"vendorItemSrpReset\">$itBug Reset Vendor Item SRPs (to normal_price)</option>
             <option value=\"addColumnVcase\">$itBug Add Column VCASE </option>
             <option value=\"clearTableData\">$itBug Clear Table Data</option>
+            <option value=\"setPriceRuleDetails\">$itBug Set PriceRules.details = notes</option>
+            <option value=\"setProductCosts\">$itBug Set products.cost = notes</option>
         " : "";
 
         $adminFxOptsNew = ($admin) ? "
@@ -2161,7 +2287,9 @@ HTML;
             <div class=\"fxExtOption\" data-value=\"futureCostFromNotes\">$itBug Notes => Future Costs</div>
             <div class=\"fxExtOption\" data-value=\"vendorItemSrpReset\">$itBug Reset Vendor Item SRPs (to normal_price)</div>
             <div class=\"fxExtOption\" data-value=\"addColumnVcase\">$itBug Add Column VCASE </div>
-            <div class=\"fxExtOption\" data-value=\"clearTableData\">$itBug Clear Table Data</div>
+            <div class=\"fxExtOption\" data-value=\"clearTableData\">$itBug WIPE DB INFO FOR ITEMS IN LIST</div>
+            <div class=\"fxExtOption\" data-value=\"setPriceRuleDetails\">$itBug Set PriceRules.details = notes</div>
+            <div class=\"fxExtOption\" data-value=\"setProductCosts\">$itBug Set products.cost = notes</div>
         " : "";
 
         $newExcelFilename = "AuditReport_" . uniqid() . ".csv";
@@ -2170,6 +2298,7 @@ HTML;
             echo $this->postFetchHandler($demo);
         } else {
             return <<<HTML
+<div id="tmpTableContainer"></div>
 <div id="floating-window">
     <div id="fw-border">
         <!--<span style="position: absolute; top: 0px; right: 0px; background-color: white; width: 19px; height: 19px; margin: 0px; text-align: center; padding: 0px; cursor: pointer;">x</span>-->
@@ -2852,6 +2981,7 @@ $('.editable-description').focusout(function(){
             url: 'AuditReport.php',
             success: function(response)
             {
+                console.log(response);
                 if (response.saved == 'true') {
                     ajaxRespPopOnElm(element, 1);
                 } else {
@@ -2903,8 +3033,8 @@ $(document).keyup(function(e){
     $('#keydown').val(0);
 });
 $(document).mousedown(function(e){
-    if (e.which == 1 && $('#keydown').val() == 16) {
-        // SHIFT + LEFT CLICK
+    if (e.which == 1 && e.shiftKey) {
+    //if (e.which == 1 && e.ctrlKey) {
         e.preventDefault();
         var target = $(e.target);
         if (target.closest('tr').hasClass('highlight')) {
@@ -3479,14 +3609,17 @@ $('#hide-validated').click(function(){
 $( function() {
     $('#simpleInputCalc').draggable();
 });
+$( function() {
+    $('#tmpTableContainer').draggable();
+});
 
 if (storeID == 1) {
     $('#storeSelector-storeID').css('border', '1px solid darkgreen')
-        .css('background', 'linear-gradient(45deg, lightgreen, yellowgreen')
+        .css('background', 'linear-gradient(45deg, #ECFFDC, #C1E1C1')
         .css('font-weight', 'bold');
 } else {
     $('#storeSelector-storeID').css('border', '1px solid darkgreen')
-        .css('background', 'linear-gradient(45deg, yellow, orange')
+        .css('background', 'linear-gradient(45deg, #FBCEB1, #FBCEB1')
         .css('font-weight', 'bold');
 }
 $('#storeSelector-storeID').change(function(){
@@ -3700,6 +3833,7 @@ $('#extHideFx').change(function(){
             break;
         case 'vendorItemSrpReset':
             ScanConfirm("<br/>Reset Vendor Item SRPs<br/>to match Products normal prices?<br/>!Important!: VENDOR ID<br/> MUST BE ENTERED<br/>", 'update_reset_srps', function() {
+                let vendorID = $('#currentVendor').val();
                 $.ajax({
                     type: 'post',
                     data: 'username='+username+'&storeID='+storeID+'&vendorID='+vendorID+'&updateResetSrps=true',
@@ -3735,8 +3869,8 @@ $('#extHideFx').change(function(){
             });
             break;
         case 'clearTableData':
-            let textConfirm = prompt('Warning: this function clears table data from products, vendorItems, productUser, & scaleItems. To continue, type I WANT TO CLEAR ITEM DATA');
-            if (textConfirm == 'I WANT TO CLEAR ITEM DATA') {
+            let textConfirm = prompt('Warning: this function clears table data from products, vendorItems, productUser, VendorAliases, & scaleItems. To continue, type I WANT TO WIPE ITEM DATA');
+            if (textConfirm == 'I WANT TO WIPE ITEM DATA') {
                 $.ajax({
                     type: 'post',
                     data: 'username='+username+'&storeID='+storeID+'&clearItemData=true',
@@ -3751,6 +3885,40 @@ $('#extHideFx').change(function(){
                     },
                 });
             }
+            break;
+        case 'setPriceRuleDetails':
+            ScanConfirm("<br/><br/>Set Price Rule Details<br/>to equal Notes Column?", 'update_price_rule_details', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&setPriceRuleDetails=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'setProductCosts':
+            ScanConfirm("<br/><br/>Set Product Costs<br/>equal to Notes Column?", 'update_product_costs', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&setProductCosts=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
             break;
         case 'futureCostFromNotes':
             let startDate = prompt('Enter future cost START DATE');
@@ -4182,6 +4350,90 @@ $(".fxExtOption").on("click", function() {
     $("#extHideFx").val(chosen).trigger('change');
 });
 
+
+$('#currentVendor').on('change', function() {
+    let vendorID = $('#currentVendor').val();
+
+    $.ajax({
+        type: 'post',
+        data: 'setVendorID=1&vendorID='+vendorID,
+        dataType: 'json',
+        url: 'AuditReport.php',
+        success: function(response) {
+            //location.reload();
+        },
+        error: function(response) {
+        },
+    });
+});
+
+var RcResponse = '';
+var RcAjax = function(x, y, upc) {
+    $.ajax({
+        type: 'post',
+        data: 'getFamilyItems=1&upc='+upc,
+        url: 'AuditReport.php',
+        success: function(response) {
+            //location.reload();
+            console.log(response);
+            RcResponse = response;
+
+            y -= 200;
+
+            let menu = document.createElement("div");
+            menu.innerHTML = RcResponse;
+            //menu.style.position = "fixed";
+            menu.style.position = "relative";
+            //menu.style.top = y + "px";
+            //menu.style.left = x + "px"; 
+            menu.style.width = "600px";
+            menu.style.border = "1px solid lightgrey";
+            menu.style.background = "white";
+            //menu.style.maxHeight = "600px";
+            menu.classList.add('tmpTable');
+
+            close = document.createElement("span");
+            close.innerText = "x";
+            close.style.position = "absolute";
+            close.style.bottom = "10px";
+            close.style.right = "5px"; 
+            close.style.width = "10px";
+            close.style.height = "10px";
+            close.style.cursor = "pointer";
+            close.onclick = function() {
+                $(this).parent().remove();
+            }
+
+            menu.append(close);
+
+            //document.body.append(menu);
+            $('#tmpTableContainer').css('top', y + "px")
+                .css('left', x + "px")
+                .append(menu);
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.log('ERROR');
+            console.error('AJAX Error:', textStatus, errorThrown);
+            //console.log(response);
+            //table = response;
+        },
+    });
+}
+$('.upc').mousedown(function(e) {
+    if (e.which == 3) {
+        if (window.getSelection() == "" && e.altKey) {
+            e.preventDefault();
+
+            let upc = $(this).text();
+            var x = event.clientX;
+            var y = event.clientY;
+
+            RcAjax(x, y, upc);
+
+        }
+    }
+});
+
 JAVASCRIPT;
     }
 
@@ -4190,12 +4442,14 @@ JAVASCRIPT;
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
         $dbc = ScanLib::getConObj();
 
-        $prep = $dbc->prepare("SELECT altHLColor FROM woodshed_no_replicate.ScannieAuth 
+        $prep = $dbc->prepare("SELECT altHLColor, altHLColorB FROM woodshed_no_replicate.ScannieAuth 
             WHERE name = ?"); 
         $res = $dbc->execute($prep, array($username));
         $row = $dbc->fetchRow($res);
         $altHLColor = $row['altHLColor'];
+        $altHLColorB = $row['altHLColorB'];
         $stripeColor = ($altHLColor) ? $altHLColor : "FFFFCC";
+        $highlightColor = ($altHLColorB) ? $altHLColorB : "FFB4D9";
         
         $cursor = '';
         if ($username=='csather') {
@@ -4259,7 +4513,8 @@ tr, td {
 }
 tr.highlight {
     background-color: plum;
-    background: linear-gradient(#FFCCE5, #FF99CC);
+    //background: linear-gradient(#FFCCE5, #FF99CC);
+    background: #$highlightColor;
 }
 .currentEdit {
     color: purple;
@@ -4267,6 +4522,12 @@ tr.highlight {
 }
 .stripe {
     background: #$stripeColor;
+}
+.stripe2 {
+    background: #FFF9F9;
+}
+.graystripe {
+    background: #F5F5F5;
 }
 thead {
     background-color: lightgrey;
@@ -4394,6 +4655,21 @@ tr.prod-row:hover {
     background: lightgrey;
     background: linear-gradient(45deg, lightgrey, white);
 }
+//#simpleInputCalc {
+//    -webkit-transform: perspective(600px) rotateX(10deg);
+//    -moz-transform: perspective(600px) rotateX(10deg);
+//    -ms-transform: perspective(600px) rotateX(10deg);
+//    -o-transform: perspective(600px) rotateX(10deg);
+//    transform: perspective(600px) rotateX(10deg);
+//}
+#tmpTableContainer {
+    width: 600px;
+    z-index: 9999;
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    background: lightgrey;
+}
 HTML;
     }
 
@@ -4517,6 +4793,11 @@ HTML;
         column by the string entered.</p>
     <li>More Filters & Methods (Button & Menu)</li>
     <p>Opens a growing list of additional filters & methods. Most methods will only show up for staff with Admin privileges.</p>
+    <li>Special Hotkeys</li>
+    <ul>
+        <li>ALT + Right Click (on a UPC) - will open a separate table of all related items (by family code, brand, and size)</li>
+        <li> ~ - Will return the focus to the last table header filter that was used</li>
+    </ul>
 </ul>
 HTML;
     }
