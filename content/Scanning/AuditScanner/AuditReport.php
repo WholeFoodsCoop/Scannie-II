@@ -70,8 +70,21 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<setProductCosts>';
         $this->__routes[] = 'post<setVendorID>';
         $this->__routes[] = 'post<getFamilyItems>';
+        $this->__routes[] = 'post<lpad>';
 
         return parent::preprocess();
+    }
+
+    public function postLpadHandler()
+    {
+        $dbc = ScanLib::getConObj();
+
+        $prep = $dbc->prepare("UPDATE GenericUpload SET upc = LPAD(SUBSTR(upc,1,12),13,'0');");
+        $res = $dbc->execute($prep);
+
+        echo $dbc->error();
+
+        return false;
     }
 
     public function postSetVendorIDHandler()
@@ -274,10 +287,8 @@ class AuditReport extends PageLayoutA
 
     /*
         post update future costs handler
-        insert future costs < notes for vendorID
-        cost column must be named cost,
-        futureReview will review all items where
-        notes is NOT NULL
+        notes > AFVI.futureCosts ON vendorID, startDate
+        update futureReview
     */
     public function postUpdatefuturecostsHandler()
     {
@@ -291,8 +302,11 @@ class AuditReport extends PageLayoutA
             SELECT c.upc, v.sku, ?, REPLACE(c.notes, \"$\", \"\"), ?, 0 
             FROM woodshed_no_replicate.AuditScan AS c 
                 INNER JOIN products p ON p.upc=c.upc
-                LEFT JOIN vendorItems v ON v.upc=p.upc AND v.vendorID=?
+                LEFT JOIN vendorItems v ON v.upc=p.upc
+                    AND v.vendorID=?
             WHERE p.cost <> c.notes
+                AND c.notes <> 0
+                AND c.notes != ''
                 AND c.username=?
                 AND c.savedAs='default'
             GROUP BY c.upc;");
@@ -303,7 +317,11 @@ class AuditReport extends PageLayoutA
         $args = array($vendorID, $startDate, $username);
         $prep = $dbc->prepare("INSERT INTO woodshed_2.futureReview (upc, vendorID, reviewDate)
             SELECT upc, ?, ? FROM woodshed_no_replicate.AuditScan 
-            WHERE username=? AND savedAs='default' AND notes IS NOT NULL");
+            WHERE username=?
+                AND savedAs='default'
+                AND notes IS NOT NULL
+                AND notes != ''
+                AND notes <> 0");
         $res = $dbc->execute($prep, $args);
 
         echo $dbc->error();
@@ -1390,7 +1408,7 @@ class AuditReport extends PageLayoutA
                 //echo $row['upc'];
             }
         }
-        $andReviewVendorID = ($costMode == 1) ? ' AND pr.vendorID = ? ' : '';
+        $andReviewVendorID = ($_SESSION['currentVendor'] > 0) ? " AND pr.vendorID = {$_SESSION['currentVendor']} " : '';
         $vendorAliasJoinOn = ($costMode == 1) ? ' va.vendorID='.$_SESSION['currentVendor'] : ' va.vendorID=p.default_vendor_id ';
         $vendorItemsJoinOn = ($costMode == 1) ? ' v.vendorID='.$_SESSION['currentVendor'] : ' v.vendorID=p.default_vendor_id ';
 
@@ -1399,7 +1417,7 @@ class AuditReport extends PageLayoutA
         //$args = array($username, $storeID);
         $args = array();
         if ($costMode == 1) {
-            $args[] = $_SESSION['currentVendor'];
+            //$args[] = $_SESSION['currentVendor'];
         }
         $args[] = $username;
         $args[] = $storeID;
@@ -2270,6 +2288,7 @@ HTML;
             <option value=\"clearTableData\">$itBug Clear Table Data</option>
             <option value=\"setPriceRuleDetails\">$itBug Set PriceRules.details = notes</option>
             <option value=\"setProductCosts\">$itBug Set products.cost = notes</option>
+            <option value=\"lpadGeneric\" data-value=\"lpadGeneric\">$itBug LPAD GenericUpload upc column</option>
         " : "";
 
         $adminFxOptsNew = ($admin) ? "
@@ -2290,6 +2309,7 @@ HTML;
             <div class=\"fxExtOption\" data-value=\"clearTableData\">$itBug WIPE DB INFO FOR ITEMS IN LIST</div>
             <div class=\"fxExtOption\" data-value=\"setPriceRuleDetails\">$itBug Set PriceRules.details = notes</div>
             <div class=\"fxExtOption\" data-value=\"setProductCosts\">$itBug Set products.cost = notes</div>
+            <div class=\"fxExtOption\" data-value=\"lpadGeneric\">$itBug LPAD GenericUpload upc column</div>
         " : "";
 
         $newExcelFilename = "AuditReport_" . uniqid() . ".csv";
@@ -3675,7 +3695,7 @@ $('#extHideFx').change(function(){
     let username = $('#username').val();
     let chosen = $(this).find(':selected').val();
     let vendorID = $('#currentVendor').val();
-    console.log(chosen);
+    console.log('chosen: '+chosen);
     switch (chosen) {
         case 'hideNoPar':
             $('tr').each(function(){
@@ -3908,6 +3928,23 @@ $('#extHideFx').change(function(){
                 $.ajax({
                     type: 'post',
                     data: 'username='+username+'&storeID='+storeID+'&setProductCosts=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'lpadGeneric':
+            ScanConfirm("<br/><br/>LPAD upc column in<br/>GenericUpload?", 'lpad_generic', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'lpad=true',
                     url: 'AuditReport.php',
                     success: function(response) {
                         console.log('success');
