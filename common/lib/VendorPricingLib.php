@@ -31,33 +31,36 @@ class VendorPricingLib
         returns pre-prepared SQL statement to recalculate vendor SRPs
         prepared statement includes one argument (?) - vendorID INT
     */
-    public static function recalcVendorSrpsQ()
+    public static function recalcVendorSrpsQ($markup=0, $includePriceRules=0)
     {
+
+        $price_rule_and = ($includePriceRules == 0) ? "
+    AND p.price_rule_id = 0 " : "";
 
         return <<<SQL
 SELECT
-    p.upc, p.brand, p.description, p.cost,
+    p.upc, p.brand, p.description, (p.cost + (p.cost * $markup)) AS cost,
     CASE
-        WHEN f.futureCost IS NOT NULL AND f.futureCost <> p.cost THEN f.futureCost ELSE p.cost
+        WHEN f.futureCost IS NOT NULL AND f.futureCost <> (p.cost + (p.cost * $markup)) THEN f.futureCost ELSE (p.cost + (p.cost * $markup))
     END AS cost,
 
     CASE
-        WHEN f.futureCost IS NOT NULL AND f.futureCost <> p.cost THEN 'futureCost' ELSE 'p.cost'
+        WHEN f.futureCost IS NOT NULL AND f.futureCost <> (p.cost + (p.cost * $markup)) THEN 'futureCost' ELSE '(p.cost + (p.cost * $markup))'
     END AS costFrom,
 
     CASE
-        WHEN f.futureCost IS NOT NULL AND f.futureCost <> p.cost THEN f.startDate ELSE pcc.date
+        WHEN f.futureCost IS NOT NULL AND f.futureCost <> (p.cost + (p.cost * $markup)) THEN f.startDate ELSE pcc.date
     END AS costChangeDate,
 
     CASE
-        WHEN f.futureCost IS NOT NULL AND f.futureCost <> p.cost THEN f.futureCost - p.cost ELSE pcc.difference
+        WHEN f.futureCost IS NOT NULL AND f.futureCost <> (p.cost + (p.cost * $markup)) THEN f.futureCost - (p.cost + (p.cost * $markup)) ELSE pcc.difference
     END AS costChange,
     p.normal_price,
     vd.margin as vendorSpecificMargin,
     c.margin as vendorSpecificMargin2,
     b.margin as departmentMargin,
 
-    CASE WHEN f.futureCost IS NOT NULL AND f.futureCost <> p.cost
+    CASE WHEN f.futureCost IS NOT NULL AND f.futureCost <> (p.cost + (p.cost * $markup))
 
             THEN
                 CASE
@@ -69,9 +72,9 @@ SELECT
                 END
             ELSE
                 CASE
-                    WHEN c.margin IS NOT NULL AND c.margin > 0 THEN p.cost / (1 - c.margin) ELSE
-                        CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN p.cost / (1 - vd.margin) ELSE
-                            CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40)
+                    WHEN c.margin IS NOT NULL AND c.margin > 0 THEN (p.cost + (p.cost * $markup)) / (1 - c.margin) ELSE
+                        CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN (p.cost + (p.cost * $markup)) / (1 - vd.margin) ELSE
+                            CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * $markup)) / (1 - b.margin) ELSE (p.cost + (p.cost * $markup)) / (1 - 0.40)
                         END
                     END
                 END
@@ -79,7 +82,7 @@ SELECT
 
     CONCAT(FLOOR(ROUND(
     CASE
-        WHEN f.futureCost IS NOT NULL AND f.futureCost <> p.cost
+        WHEN f.futureCost IS NOT NULL AND f.futureCost <> (p.cost + (p.cost * $markup))
 
             THEN
                 CASE
@@ -91,9 +94,9 @@ SELECT
                 END
             ELSE
                 CASE
-                    WHEN c.margin IS NOT NULL AND c.margin > 0 THEN p.cost / (1 - c.margin) ELSE
-                        CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN p.cost / (1 - vd.margin) ELSE
-                            CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40)
+                    WHEN c.margin IS NOT NULL AND c.margin > 0 THEN (p.cost + (p.cost * $markup)) / (1 - c.margin) ELSE
+                        CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN (p.cost + (p.cost * $markup)) / (1 - vd.margin) ELSE
+                            CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * $markup)) / (1 - b.margin) ELSE (p.cost + (p.cost * $markup)) / (1 - 0.40)
                         END
                     END
                 END
@@ -117,7 +120,7 @@ FROM products AS p
 
     LEFT JOIN woodshed_no_replicate.PriceRoundingRules AS prr ON
         prr.floatMin <= CASE
-        WHEN f.futureCost IS NOT NULL AND f.futureCost <> p.cost
+        WHEN f.futureCost IS NOT NULL AND f.futureCost <> (p.cost + (p.cost * $markup))
 
             THEN
                 CASE
@@ -129,15 +132,15 @@ FROM products AS p
                 END
             ELSE
                 CASE
-                    WHEN c.margin IS NOT NULL AND c.margin > 0 THEN p.cost / (1 - c.margin) ELSE
-                        CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN p.cost / (1 - vd.margin) ELSE
-                            CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40)
+                    WHEN c.margin IS NOT NULL AND c.margin > 0 THEN (p.cost + (p.cost * $markup)) / (1 - c.margin) ELSE
+                        CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN (p.cost + (p.cost * $markup)) / (1 - vd.margin) ELSE
+                            CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * $markup)) / (1 - b.margin) ELSE (p.cost + (p.cost * $markup)) / (1 - 0.40)
                         END
                     END
                 END
     END
         AND prr.floatMax >= CASE
-        WHEN f.futureCost IS NOT NULL AND f.futureCost <> p.cost
+        WHEN f.futureCost IS NOT NULL AND f.futureCost <> (p.cost + (p.cost * $markup))
 
             THEN
                 CASE
@@ -149,16 +152,16 @@ FROM products AS p
                 END
             ELSE
                 CASE
-                    WHEN c.margin IS NOT NULL AND c.margin > 0 THEN p.cost / (1 - c.margin) ELSE
-                        CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN p.cost / (1 - vd.margin) ELSE
-                            CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40)
+                    WHEN c.margin IS NOT NULL AND c.margin > 0 THEN (p.cost + (p.cost * $markup)) / (1 - c.margin) ELSE
+                        CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN (p.cost + (p.cost * $markup)) / (1 - vd.margin) ELSE
+                            CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * $markup)) / (1 - b.margin) ELSE (p.cost + (p.cost * $markup)) / (1 - 0.40)
                         END
                     END
                 END
     END
         AND prr.rawTenth = SUBSTR(SUBSTR(ROUND(
     CASE
-        WHEN f.futureCost IS NOT NULL AND f.futureCost <> p.cost
+        WHEN f.futureCost IS NOT NULL AND f.futureCost <> (p.cost + (p.cost * $markup))
 
             THEN
                 CASE
@@ -170,9 +173,9 @@ FROM products AS p
                 END
             ELSE
                 CASE
-                    WHEN c.margin IS NOT NULL AND c.margin > 0 THEN p.cost / (1 - c.margin) ELSE
-                        CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN p.cost / (1 - vd.margin) ELSE
-                            CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40)
+                    WHEN c.margin IS NOT NULL AND c.margin > 0 THEN (p.cost + (p.cost * $markup)) / (1 - c.margin) ELSE
+                        CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN (p.cost + (p.cost * $markup)) / (1 - vd.margin) ELSE
+                            CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * $markup)) / (1 - b.margin) ELSE (p.cost + (p.cost * $markup)) / (1 - 0.40)
                         END
                     END
                 END
@@ -193,7 +196,7 @@ WHERE v.vendorID = ?
     # AND p.normal_price > srp.rounded
 #    AND p.normal_price <> CONCAT(FLOOR(ROUND(
 #    CASE
-#        WHEN f.futureCost IS NOT NULL AND f.futureCost <> p.cost
+#        WHEN f.futureCost IS NOT NULL AND f.futureCost <> (p.cost + (p.cost * $markup))
 #
 #            THEN
 #                CASE
@@ -205,16 +208,16 @@ WHERE v.vendorID = ?
 #                END
 #            ELSE
 #                CASE
-#                    WHEN c.margin IS NOT NULL AND c.margin > 0 THEN p.cost / (1 - c.margin) ELSE
-#                        CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN p.cost / (1 - vd.margin) ELSE
-#                            CASE WHEN b.margin IS NOT NULL THEN p.cost / (1 - b.margin) ELSE p.cost / (1 - 0.40)
+#                    WHEN c.margin IS NOT NULL AND c.margin > 0 THEN (p.cost + (p.cost * $markup)) / (1 - c.margin) ELSE
+#                        CASE WHEN vd.margin IS NOT NULL AND vd.margin <> 0 THEN (p.cost + (p.cost * $markup)) / (1 - vd.margin) ELSE
+#                            CASE WHEN b.margin IS NOT NULL THEN (p.cost + (p.cost * $markup)) / (1 - b.margin) ELSE (p.cost + (p.cost * $markup)) / (1 - 0.40)
 #                        END
 #                    END
 #                END
 #    END, 3)), '.', prr.validEnding)
 
 ## DONT LOOK AT ITEMS WITH PRICE RULES TO START
-    AND p.price_rule_id = 0
+    $price_rule_and
     # AND m.super_name = 'WELLNESS'
 GROUP BY p.upc
 ;

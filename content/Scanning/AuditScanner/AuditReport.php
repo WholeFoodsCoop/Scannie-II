@@ -431,13 +431,14 @@ class AuditReport extends PageLayoutA
         $username = FormLib::get('username');
         $vendorID = FormLib::get('vendorID');
         $storeID = FormLib::get('storeID');
+        $includePR = FormLib::get('includePR', 0);
         $items = array();
 
         $rounder = new PriceRounder();
         $dbc = ScanLib::getConObj();
         
         $shippingMarkup = $this->getShippingMarkup($vendorID);
-        $query = VendorPricingLib::recalcVendorSrpsQ($shippingMarkup);
+        $query = VendorPricingLib::recalcVendorSrpsQ($shippingMarkup, $includePR);
         //$query = VendorPricingLib::recalcVendorSrpsQ();
 
         $auditUpcs = array();
@@ -2275,6 +2276,7 @@ HTML;
             <option value=\"pullReviewListToPrn\">$itBug Review List () => PRN</option>
             <option value=\"exportJSONbatch\">$itBug JSON Export Batch </option>
             <option value=\"updateViSrps\">$itBug SRP () => Notes</option>
+            <option value=\"updateViSrps2\">$itBug SRP () => Notes II (include PR items)</option>
             <option value=\"ViClearNotes\">$itBug Clear Notes</option>
             <option value=\"jsUnitsDivision\">$itBug Divide Notes / Units</option>
             <option value=\"jsPrnDivision\">$itBug Divide Notes / PRN</option>
@@ -2296,6 +2298,7 @@ HTML;
             <div class=\"fxExtOption\" data-value=\"pullReviewListToPrn\">$itBug Review List () => PRN</div>
             <div class=\"fxExtOption\" data-value=\"exportJSONbatch\">$itBug JSON Export Batch </div>
             <div class=\"fxExtOption\" data-value=\"updateViSrps\">$itBug SRP () => Notes</div>
+            <div class=\"fxExtOption\" data-value=\"updateViSrps2\">$itBug SRP () => Notes II (include PR items)</div>
             <div class=\"fxExtOption\" data-value=\"ViClearNotes\">$itBug Clear Notes</div>
             <div class=\"fxExtOption\" data-value=\"jsUnitsDivision\">$itBug Divide Notes / Units</div>
             <div class=\"fxExtOption\" data-value=\"jsPrnDivision\">$itBug Divide Notes / PRN</div>
@@ -3788,6 +3791,23 @@ $('#extHideFx').change(function(){
                 $.ajax({
                     type: 'post',
                     data: 'username='+username+'&storeID='+storeID+'&vendorID='+vendorID+'&updatesrps=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'updateViSrps2':
+            ScanConfirm("<br/>Update vendor item SRPs<br/>for items in list<br/>(including items<br/>with price rules)?", 'update_vi_srps_2', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&vendorID='+vendorID+'&updatesrps=true&includePR=1',
                     url: 'AuditReport.php',
                     success: function(response) {
                         console.log('success');
