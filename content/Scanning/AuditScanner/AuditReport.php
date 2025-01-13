@@ -71,8 +71,19 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<setVendorID>';
         $this->__routes[] = 'post<getFamilyItems>';
         $this->__routes[] = 'post<lpad>';
+        $this->__routes[] = 'post<sessionNotepad>';
 
         return parent::preprocess();
+    }
+
+    public function postSessionNotepadHandler()
+    {
+        $text = FormLib::get('sessionNotepad', false);
+        $username = FormLib::get('username');
+
+        $_SESSION['notepad'.$username] = $text;
+
+        return true;
     }
 
     public function postLpadHandler()
@@ -1968,6 +1979,11 @@ HTML;
         $scrollMode = 'on';
         $admin = ($_COOKIE['user_type'] == 2) ? true : false;
 
+        if (!isset($_SESSION['notepad'.$username])) {
+            $_SESSION['notepad'.$username] = "";
+        }
+        //$_SESSION['notepad'.$username] .= "0000000001234\n";
+
         $costMode = FormLib::get('costModeSwitch', false);
         if ($costMode === false) {
             if (isset($_SESSION['costMode'])) {
@@ -2321,6 +2337,11 @@ HTML;
             echo $this->postFetchHandler($demo);
         } else {
             return <<<HTML
+<div id="sessionNotepad">
+    <div style="color: plum; font-weight: bold;  margin-bottom: 05px">Session Notepad <span style="font-size: 14px; color: grey">(Will not reset when you reload the page)</span></div>
+    <div style="position: absolute; top: 5px; right: 10px; cursor: pointer;" id="closeSessionNotepad">x</div>
+    <div><textarea id="sessionNotepadText" class="form-control" rows=15>{$_SESSION['notepad'.$username]}</textarea></div>
+</div>
 <div id="tmpTableContainer"></div>
 <div id="floating-window">
     <div id="fw-border">
@@ -2438,7 +2459,8 @@ $costModeSwitch
     <div class="col-lg-2">
         <div style="font-size: 12px;" id="GenerateExcelFileDiv">
             <li><a href="#" id="ExportCsvAnchor">Generate File (csv)</a></li>
-            <li><a href="../../../../git/fannie/batches/newbatch/BatchImportExportPage.php" target="_blank">Batch Import</a></li>
+            <li><a href="../../../../git/fannie/batches/newbatch/BatchImportExportPage.php" target="_blank">Batch Import</a> 
+                | <span style="cursor: pointer; color: purple" id="openSessionNotepad">Open Session Notepad</span> </li>
         </div>
     </div>
     <div class="col-lg-2">
@@ -4491,6 +4513,54 @@ $('.upc').mousedown(function(e) {
     }
 });
 
+$('#sessionNotepadText').on('change', function(){
+    let contents = $(this).val();
+    contents = encodeURIComponent(contents);
+    let username = $('#username').val();
+    console.log(contents);
+    $.ajax({
+        type: 'post',
+        data: 'sessionNotepad='+contents+'&username='+username,
+        url: 'AuditReport.php',
+        success: function(response) {
+            //location.reload();
+            console.log('success');
+            console.log('response: '+response);
+        },
+        error: function(response) {
+        },
+    });
+
+});
+$("#closeSessionNotepad").on('click', function() {
+    $("#sessionNotepad").hide();
+});
+
+$("#openSessionNotepad").on('click', function() {
+    let visible = $("#sessionNotepad").is(":visible");
+    if (visible == true) {
+        $("#sessionNotepad").hide();
+    } else {
+        $("#sessionNotepad").show();
+    }
+});
+
+var navSearchText = [];
+$("#nav-search").on('keyup', function() {
+    let text = $(this).val();
+    navSearchText.push(text);
+    console.log('navSearchText: '+navSearchText);
+});
+$("#nav-search").on('focusout', function() {
+    console.log('navSearchText: '+navSearchText);
+    let prev = $("#sessionNotepadText").val();
+    let cur = navSearchText[navSearchText.length - 1];
+    console.log('prev: '+prev);
+    console.log('cur: '+cur);
+    $("#sessionNotepadText").val(prev + "\\n" + cur);
+    $("#sessionNotepadText").trigger('change');
+});
+
 JAVASCRIPT;
     }
 
@@ -4726,6 +4796,22 @@ tr.prod-row:hover {
     top: 0px;
     left: 0px;
     background: lightgrey;
+}
+#sessionNotepad {
+    display: none;
+    border: 2px solid plum;
+    background: rgba(255, 255, 255, 0.9);
+
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 500px;
+    z-index: 9999;
+    padding: 25px;
+}
+#sessionNotepadText {
+    border: 1px solid lightgrey;
 }
 HTML;
     }
