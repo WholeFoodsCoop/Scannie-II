@@ -2489,6 +2489,8 @@ $columnCheckboxes
             <span id="checkedCount"></span> <b>/
             <span id="itemCount"></span></b> ->
             <span id="percentComplete"></span>
+            <div id="percentComplete"></div>
+            <div id="percentComplete2"></div>
         </div>
         <div style="font-size: 12px; padding: 10px;">
             <div class="form-group dummy-form">
@@ -3107,6 +3109,37 @@ $(document).mousedown(function(e){
     }
 });
 
+var setPercentComplete = function() {
+    let items = 0;
+    let checked = 0;
+    $('.row-check').each(function(){
+        items++;
+        if ($(this).prop('checked') == true) {
+            checked++;
+        }
+    });
+    console.log('items: '+items+', checked: '+checked);
+
+    let width = 190;
+    let part = width / items;
+    console.log('part: '+part);
+
+    $('#percentComplete2').text('');
+    let j=0;
+    for (let i=0; i<=190; i+=part) {
+        let color = (j <= checked && checked != 0) ? 'lightgreen' : 'lightgrey';
+        let elm = document.createElement('div');
+        elm.style.display = "inline-block";
+        elm.style.width = part + "px";
+        elm.style.background = color;
+        elm.style.height = '10px';
+        j++;
+        
+        $('#percentComplete2').append(elm);
+    }
+
+};
+
 $('.row-check').click(function(){
     if (!$('#countDisplay').is(':visible')) {
         $('#countDisplay').show();
@@ -3124,14 +3157,16 @@ $('.row-check').click(function(){
     var percent = 100 * (count / rows);
     var strpercent = '';
     var i = 0
-    for (i; i < percent; i += 10) {
-        strpercent += '<span style="color: lightgreen; border: 1px solid grey;">&#9608;</span>';
-    }
-    for (i; i < 100; i += 10) {
-        strpercent += '<span style="color: grey; border: 1px solid grey;">&#9608;</span>';
-    }
+    //for (i; i < percent; i += 10) {
+    //    strpercent += '<span style="color: lightgreen; border: 1px solid grey;">&#9608;</span>';
+    //}
+    //for (i; i < 100; i += 10) {
+    //    strpercent += '<span style="color: grey; border: 1px solid grey;">&#9608;</span>';
+    //}
     $('#percentComplete').html(Math.round(percent, 4) + '% Complete ' + strpercent);
+    setPercentComplete();
 });
+
 
 $('.column-checkbox').change(function(){
 
@@ -4812,6 +4847,9 @@ tr.prod-row:hover {
 }
 #sessionNotepadText {
     border: 1px solid lightgrey;
+}
+#percentComplete2 {
+    width: 250px;
 }
 HTML;
     }
