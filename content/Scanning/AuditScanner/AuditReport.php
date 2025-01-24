@@ -72,6 +72,7 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<getFamilyItems>';
         $this->__routes[] = 'post<lpad>';
         $this->__routes[] = 'post<sessionNotepad>';
+        $this->__routes[] = 'post<createdprn>';
 
         return parent::preprocess();
     }
@@ -84,6 +85,26 @@ class AuditReport extends PageLayoutA
         $_SESSION['notepad'.$username] = $text;
 
         return true;
+    }
+
+    public function postCreatedprnHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+
+        $args = array($username);
+        $prep = $dbc->prepare("
+            UPDATE products p
+                INNER JOIN woodshed_no_replicate.AuditScan a ON a.upc=p.upc
+            SET a.PRN = DATE(p.created)
+            WHERE a.username=?
+                AND a.savedAs='default'
+        ");
+        $res = $dbc->execute($prep, $args);
+
+        echo $dbc->error();
+
+        return false;
     }
 
     public function postLpadHandler()
@@ -2307,6 +2328,7 @@ HTML;
             <option value=\"setPriceRuleDetails\">$itBug Set PriceRules.details = notes</option>
             <option value=\"setProductCosts\">$itBug Set products.cost = notes</option>
             <option value=\"lpadGeneric\" data-value=\"lpadGeneric\">$itBug LPAD GenericUpload upc column</option>
+            <option value=\"created2prn\" data-value=\"created2prn\">$itBug set created => PRN</option>
         " : "";
 
         $adminFxOptsNew = ($admin) ? "
@@ -2329,6 +2351,7 @@ HTML;
             <div class=\"fxExtOption\" data-value=\"setPriceRuleDetails\">$itBug Set PriceRules.details = notes</div>
             <div class=\"fxExtOption\" data-value=\"setProductCosts\">$itBug Set products.cost = notes</div>
             <div class=\"fxExtOption\" data-value=\"lpadGeneric\">$itBug LPAD GenericUpload upc column</div>
+            <div class=\"fxExtOption\" data-value=\"created2prn\">$itBug  set created => PRN</div>
         " : "";
 
         $newExcelFilename = "AuditReport_" . uniqid() . ".csv";
@@ -4005,6 +4028,23 @@ $('#extHideFx').change(function(){
                 $.ajax({
                     type: 'post',
                     data: 'username='+username+'&storeID='+storeID+'&setProductCosts=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'created2prn':
+            ScanConfirm("<br/><br/>Show created date<br/>in PRN?", 'created_prn', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'createdprn=true&username='+username,
                     url: 'AuditReport.php',
                     success: function(response) {
                         console.log('success');
