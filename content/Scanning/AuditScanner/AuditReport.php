@@ -73,8 +73,46 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<lpad>';
         $this->__routes[] = 'post<sessionNotepad>';
         $this->__routes[] = 'post<createdprn>';
+        $this->__routes[] = 'post<udc>';
 
         return parent::preprocess();
+    }
+
+    public function postUdcHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+        $newCost = FormLib::get('newCost');
+        $upc = FormLib::get('upc');
+        $json = array();
+        $json['errors'] = '';
+         
+        $args = array($newCost, $newCost, $upc);
+        $prep = $dbc->prepare("
+            UPDATE products p
+                INNER JOIN vendorItems v ON v.upc=p.upc
+                    AND v.vendorID=p.default_vendor_id
+            SET p.cost = ?, v.cost = ?, p.modified = NOW(), v.modified = NOW()
+            WHERE p.upc = ?
+        ");
+        $res = $dbc->execute($prep, $args);
+        $json['errors'] .= $dbc->error();
+
+        $args = array($upc, $username);
+        $prep = $dbc->prepare("
+            UPDATE woodshed_no_replicate.AuditScan
+            SET notes = null
+            WHERE upc = ?
+                AND username = ?
+                AND savedAs = 'default'
+        ");
+        $res = $dbc->execute($prep, $args);
+        $json['errors'] .= $dbc->error();
+
+        $json['test'] = "$username $newCost $upc";
+        echo json_encode($json);
+
+        return false;
     }
 
     public function postSessionNotepadHandler()
@@ -3102,6 +3140,19 @@ $(document).keyup(function(e){
     var key = e.keyCode;
     $('#keydown').val(0);
 });
+
+var currentItem = {
+    "upc": "null",
+    "netCost": "null",
+    "notes": "null",
+}
+var setCurrentItem = function(target) {
+    currentItem.upc = target.closest('tr').find('.upc').attr('data-upc');
+    currentItem.netCost = target.closest('tr').find('.netCost').text();
+    currentItem.notes = target.closest('tr').find('.notes').text();
+    console.log(currentItem);
+}
+
 $(document).mousedown(function(e){
     if (e.which == 1 && e.shiftKey) {
     //if (e.which == 1 && e.ctrlKey) {
@@ -3116,6 +3167,7 @@ $(document).mousedown(function(e){
                 };
             });
             target.closest('tr').addClass('highlight');
+            setCurrentItem(target);
         }
         $('#keydown').val(0);
     }
@@ -4259,7 +4311,7 @@ btnsdiv.setAttribute("id", "btnsDiv");
 btnsdiv.style.background = "rgba(155,155,155,0.2)";
 btnsdiv.innerHTML = "&nbsp;";
 btnsdiv.border = "2px solid grey";
-btnsdiv.style.width = "75px";
+btnsdiv.style.width = "120px";
 $('#BtnFx1').find('.col-lg-6').append(btnsdiv);
 
 let btnUp = document.createElement('button');
@@ -4278,8 +4330,31 @@ btnDown.classList.add('btn-default');
 btnDown.classList.add('btn-sm');
 btnDown.style.margin = '5px';
 
+let btnUdc = document.createElement('button');
+btnUdc.innerText = 'udc';
+btnUdc.setAttribute("id", "udc-btn");
+btnUdc.classList.add('btn');
+btnUdc.classList.add('btn-default');
+btnUdc.classList.add('btn-sm');
+btnUdc.style.margin = '5px';
+
+let processing = document.createElement('div');
+processing.innerHTML = '&nbsp;';
+processing.setAttribute("id", "udc-animation");
+processing.style.border = '4px solid lightblue';
+processing.style.borderRadius = '100%';
+processing.style.position = 'absolute';
+processing.style.height = '10px';
+processing.style.width = '10px';
+processing.style.top = '0px';
+processing.style.right = '0px';
+processing.style.display = 'none';
+
+
 $('#btnsDiv').append(btnUp);
 $('#btnsDiv').append(btnDown);
+$('#btnsDiv').append(btnUdc);
+$('#btnsDiv').append(processing);
 
 /*
     Detect Viewport Visibility
@@ -4336,6 +4411,9 @@ $('#up-btn').on('click', function(){
         if (ans.y <= ScreenMiddle) {
             window.scrollBy(0, -25);
         }
+
+        let target = $(elm);
+        setCurrentItem(target);
     }
 });
 
@@ -4365,6 +4443,9 @@ $('#down-btn').on('click', function(){
         if (ans.y >= ScreenMiddle) {
             window.scrollBy(0, 25);
         }
+
+        let target = $(elm);
+        setCurrentItem(target);
     }
 });
 
@@ -4636,6 +4717,54 @@ $("#nav-search").on('focusout', function() {
     $("#sessionNotepadText").trigger('change');
 });
 
+$('#udc-btn').on('click', function() {
+    /*
+        what happens here
+        1. update cost & clear note - through ajax request only
+        2. update the text of netCost & notes, no need to trigger
+        update, as this has already been handled
+        3. don't forget to include an error if something goes wrong
+    */
+    $('#udc-animation').show();
+    $.ajax({
+        type: 'post',
+        data: 'udc=1&upc='+currentItem.upc+'&newCost='+currentItem.notes+'&username='+username,
+        dataType: 'json',
+        url: 'AuditReport.php',
+        success: function(response)
+        {
+            console.log("RESP: " + response.errors);
+            // once we verify that the change was successfull, we can 
+            // also soft-unset the value of the notes element
+            if (response.errors == '') {
+                $('.highlight').find('td.notes').text('');
+                $('.highlight').find('td.netCost').text(currentItem.notes);
+            }
+        },
+        error: function(response, errorThrown)
+        {
+            console.log(errorThrown);
+            console.log("there was an error with your ajax request!");
+        },
+        complete: function()
+        {
+            $('#udc-animation').hide();
+        },
+    });
+});
+
+
+$(document).ready(function() {
+    function colorCycle() {
+    $("#udc-animation").animate({
+        borderColor: "blue" 
+    }, 1000).animate({
+        borderColor: "#00FF00" // Green
+    }, 1000, colorCycle); // Call colorCycle again
+}
+
+colorCycle(); // Start the animation
+});
 JAVASCRIPT;
     }
 
@@ -4763,6 +4892,9 @@ thead {
     background: grey;
     background-color: grey;
     color: white;
+}
+.highlight.highlight-checked {
+    color: black;
 }
 
 #floating-window {
