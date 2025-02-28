@@ -86,22 +86,15 @@ class AuditReport extends PageLayoutA
         $upc = FormLib::get('upc');
         $json = array();
         $json['errors'] = '';
-         
-        $args = array($newCost, $newCost, $upc);
-        $prep = $dbc->prepare("
-            UPDATE products p
-                INNER JOIN vendorItems v ON v.upc=p.upc
-                    AND v.vendorID=p.default_vendor_id
-            SET p.cost = ?, v.cost = ?, p.modified = NOW(), v.modified = NOW()
-            WHERE p.upc = ?
-        ");
-        $res = $dbc->execute($prep, $args);
-        $json['errors'] .= $dbc->error();
+
+        $mod = new DataModel($dbc);
+        //$userID = $mod->name2id($username);
+        $json['saved'] = $mod->setCost($upc, $newCost, $vendorID);
 
         $args = array($upc, $username);
         $prep = $dbc->prepare("
             UPDATE woodshed_no_replicate.AuditScan
-            SET notes = null
+            SET notes = null, checked = 1
             WHERE upc = ?
                 AND username = ?
                 AND savedAs = 'default'
@@ -3126,13 +3119,24 @@ $(document).keydown(function(e){
     if (hlElm != 'undefined') {
         switch (e.keyCode) {
             case 40:
-                e.preventDefault();
-                $('#down-btn').trigger('click');
+                if (!$('#udc-animation').is(":visible")) {
+                    e.preventDefault();
+                    $('#down-btn').trigger('click');
+                }
                 break;
             case 38:
-                e.preventDefault();
-                $('#up-btn').trigger('click');
+                if (!$('#udc-animation').is(":visible")) {
+                    e.preventDefault();
+                    $('#up-btn').trigger('click');
+                }
                 break; 
+            case 39: // right arrow key
+                if (e.ctrlKey) { // && ctrl key
+                    $('#udc-btn').trigger('click'); 
+                }
+                break;
+            default:
+                break;
         }
     }
 });
@@ -3901,9 +3905,15 @@ $('#extHideFx').change(function(){
             let owner = prompt('Enter owner (super department)');
             owner = owner.toUpperCase();
             let batchName = prompt('Enter batch name');
+            let forcesuper = prompt('Use strict super dept (opt. if entered, will only include items under provided super dept.');
             let discountType = (batchType == 4) ? 0 : 1;
             tmpRet = '{ "startDate":"'+start+' 00:00:00", "endDate":"'+end+' 00:00:00", "batchName":"'+batchName+'", "batchType":"'+batchType+'", "discountType":"'+discountType+'", "priority":"0", "owner":"'+owner+'", "transLimit":"0", "items":[ ';
             $('tr.prod-row').each(function(){
+                if (forcesuper.length > 0) {
+                    if ($(this).find('.superdept').text() != forcesuper) {
+                        return true;
+                    }
+                }
                 let upc = $(this).find('td:eq(0)').text();
                 let salePrice = $(this).find('td.notes').text();
                 if (salePrice != null && salePrice != '' && salePrice > 0) {
@@ -4341,20 +4351,22 @@ btnUdc.style.margin = '5px';
 let processing = document.createElement('div');
 processing.innerHTML = '&nbsp;';
 processing.setAttribute("id", "udc-animation");
-processing.style.border = '4px solid lightblue';
+processing.style.border = '14px solid lightblue';
 processing.style.borderRadius = '100%';
-processing.style.position = 'absolute';
-processing.style.height = '10px';
-processing.style.width = '10px';
-processing.style.top = '0px';
-processing.style.right = '0px';
+processing.style.position = 'fixed';
+processing.style.height = '50px';
+processing.style.width = '50px';
+processing.style.top = '50%';
+processing.style.left = '50%';
+processing.style.marginTop = '-25px';
+processing.style.marginLeft = '-25px';
 processing.style.display = 'none';
 
 
 $('#btnsDiv').append(btnUp);
 $('#btnsDiv').append(btnDown);
 $('#btnsDiv').append(btnUdc);
-$('#btnsDiv').append(processing);
+$('body').append(processing);
 
 /*
     Detect Viewport Visibility
@@ -4718,6 +4730,7 @@ $("#nav-search").on('focusout', function() {
 });
 
 $('#udc-btn').on('click', function() {
+    let vendorID = $('#currentVendor').val(); 
     /*
         what happens here
         1. update cost & clear note - through ajax request only
@@ -4728,7 +4741,7 @@ $('#udc-btn').on('click', function() {
     $('#udc-animation').show();
     $.ajax({
         type: 'post',
-        data: 'udc=1&upc='+currentItem.upc+'&newCost='+currentItem.notes+'&username='+username,
+        data: 'udc=1&upc='+currentItem.upc+'&newCost='+currentItem.notes+'&username='+username+'&vendorID='+vendorID,
         dataType: 'json',
         url: 'AuditReport.php',
         success: function(response)
@@ -4739,6 +4752,8 @@ $('#udc-btn').on('click', function() {
             if (response.errors == '') {
                 $('.highlight').find('td.notes').text('');
                 $('.highlight').find('td.netCost').text(currentItem.notes);
+                $('.highlight').find('td.check').find('.row-check').prop('checked', true);
+                $('.highlight').addClass('highlight-checked');
             }
         },
         error: function(response, errorThrown)
