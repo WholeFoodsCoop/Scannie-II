@@ -74,8 +74,31 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<sessionNotepad>';
         $this->__routes[] = 'post<createdprn>';
         $this->__routes[] = 'post<udc>';
+        $this->__routes[] = 'post<uncheckall>';
 
         return parent::preprocess();
+    }
+
+    public function postUncheckallHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+        $json = array();
+        $json['errors'] = '';
+
+        $prep = $dbc->prepare("
+            UPDATE woodshed_no_replicate.AuditScan
+            SET checked = NULL
+            WHERE username = ?
+                AND savedAs = 'default'
+        ");
+        $res = $dbc->execute($prep, array($username));
+        $json['errors'] .= $dbc->error();
+
+        $json['test'] = "$username";
+        echo json_encode($json);
+
+        return false;
     }
 
     public function postUdcHandler()
@@ -2360,6 +2383,7 @@ HTML;
             <option value=\"setProductCosts\">$itBug Set products.cost = notes</option>
             <option value=\"lpadGeneric\" data-value=\"lpadGeneric\">$itBug LPAD GenericUpload upc column</option>
             <option value=\"created2prn\" data-value=\"created2prn\">$itBug set created => PRN</option>
+            <option value=\"uncheckall\" data-value=\"uncheckall\">$itBug Uncheck All</option>
         " : "";
 
         $adminFxOptsNew = ($admin) ? "
@@ -2382,7 +2406,7 @@ HTML;
             <div class=\"fxExtOption\" data-value=\"setPriceRuleDetails\">$itBug Set PriceRules.details = notes</div>
             <div class=\"fxExtOption\" data-value=\"setProductCosts\">$itBug Set products.cost = notes</div>
             <div class=\"fxExtOption\" data-value=\"lpadGeneric\">$itBug LPAD GenericUpload upc column</div>
-            <div class=\"fxExtOption\" data-value=\"created2prn\">$itBug  set created => PRN</div>
+            <div class=\"fxExtOption\" data-value=\"uncheckall\">$itBug Uncheck All</div>
         " : "";
 
         $newExcelFilename = "AuditReport_" . uniqid() . ".csv";
@@ -4124,6 +4148,23 @@ $('#extHideFx').change(function(){
                 $.ajax({
                     type: 'post',
                     data: 'lpad=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'uncheckall':
+            ScanConfirm("<br/><br/>Uncheck all<br/>rows?", 'uncheck_all_rows', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'uncheckall=true&username='+username,
                     url: 'AuditReport.php',
                     success: function(response) {
                         console.log('success');
