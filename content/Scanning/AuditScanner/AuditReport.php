@@ -75,8 +75,41 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<createdprn>';
         $this->__routes[] = 'post<udc>';
         $this->__routes[] = 'post<uncheckall>';
+        $this->__routes[] = 'post<savenotes>';
 
         return parent::preprocess();
+    }
+
+    public function postSavenotesHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+        $data = FormLib::get('notes');
+        $data = json_decode($data);
+        $json = array();
+        $json['errors'] = '';
+
+        $prep = $dbc->prepare("
+            UPDATE woodshed_no_replicate.AuditScan
+            SET notes = ? 
+            WHERE upc = ?
+                AND username = ?
+                AND savedAs = 'default'
+        ");
+
+        $dbc->startTransaction();
+        foreach ($data as $upc => $note) {
+            $res = $dbc->execute($prep, array($note, $upc, $username));
+            if ($dbc->error()) {
+                $json['errors'][] = $dbc->error();
+            }
+        }
+        $dbc->commitTransaction();
+
+        $json['test'] = "$username";
+        echo json_encode($json);
+
+        return false;
     }
 
     public function postUncheckallHandler()
@@ -2384,6 +2417,7 @@ HTML;
             <option value=\"lpadGeneric\" data-value=\"lpadGeneric\">$itBug LPAD GenericUpload upc column</option>
             <option value=\"created2prn\" data-value=\"created2prn\">$itBug set created => PRN</option>
             <option value=\"uncheckall\" data-value=\"uncheckall\">$itBug Uncheck All</option>
+            <option value=\"notes2notes\" data-value=\"notes2notes\">$itBug notes 2 notes</option>
         " : "";
 
         $adminFxOptsNew = ($admin) ? "
@@ -2407,6 +2441,7 @@ HTML;
             <div class=\"fxExtOption\" data-value=\"setProductCosts\">$itBug Set products.cost = notes</div>
             <div class=\"fxExtOption\" data-value=\"lpadGeneric\">$itBug LPAD GenericUpload upc column</div>
             <div class=\"fxExtOption\" data-value=\"uncheckall\">$itBug Uncheck All</div>
+            <div class=\"fxExtOption\" data-value=\"notes2notes\">$itBug Reset Notes to Current Values</div>
         " : "";
 
         $newExcelFilename = "AuditReport_" . uniqid() . ".csv";
@@ -4160,8 +4195,39 @@ $('#extHideFx').change(function(){
                 });
             });
             break;
+        case 'notes2notes':
+            ScanConfirm("<br/><br/>Re-save all notes<br/>to current values?", 'resave_notes', function() {
+                let upcs = '';
+                let json = {};
+                $('.notes').each(function(){
+                    let text = $(this).text();
+                    let upc = $(this).parent().find('.upc').attr('data-upc');
+                    upcs += upc + ', ' + text + "\\n";
+                    if (!json.hasOwnProperty(upc)) {
+                        json[upc] = '';
+                    }
+                    json[upc] = text;
+                });
+                console.log(upcs);
+                console.log(json);
+                json = JSON.stringify(json);
+                $.ajax({
+                    type: 'post',
+                    data: 'savenotes=true&username='+username+'&notes='+json,
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
         case 'uncheckall':
-            ScanConfirm("<br/><br/>Uncheck all<br/>rows?", 'uncheck_all_rows', function() {
+            ScanConfirm("<br/><br/>Uncheck all rows?", 'uncheck_all_rows', function() {
                 $.ajax({
                     type: 'post',
                     data: 'uncheckall=true&username='+username,
