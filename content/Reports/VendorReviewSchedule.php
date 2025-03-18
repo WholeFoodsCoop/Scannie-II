@@ -137,9 +137,13 @@ class VendorReviewSchedule extends PageLayoutA
                 LEFT JOIN is4c_op.MasterSuperDepts AS m ON m.dept_ID=p.department
                 LEFT JOIN is4c_op.prodReview AS pr ON pr.upc=p.upc
             WHERE p.inUse = 1
-                AND p.last_sold > DATE_SUB(NOW(), INTERVAL 2 MONTH)
                 AND v.vendorID NOT IN ( 1, 2, 70, 7, 22, 23, 25, 28, 30, 35, 38, 42, 61, 65,127,143,146,147,171,191,196,228,230,232,263,264,358,374,401,414 )
                 AND v.vendorID NOT IN (SELECT vid FROM woodshed_no_replicate.top25)
+                AND (
+                    p.last_sold > DATE_SUB(NOW(), INTERVAL 2 MONTH)
+                        OR p.last_sold IS NULL
+
+                )
             GROUP BY sch.vendorID, sch.month
             ORDER BY sch.month ASC, count(p.upc) DESC
         ");
