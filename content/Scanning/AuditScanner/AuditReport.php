@@ -77,8 +77,26 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<uncheckall>';
         $this->__routes[] = 'post<savenotes>';
         $this->__routes[] = 'post<lastKnownPrice>';
+        $this->__routes[] = 'post<setprndiff>';
 
         return parent::preprocess();
+    }
+
+    public function postSetprndiffHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+
+        $prep = $dbc->prepare("
+            UPDATE woodshed_no_replicate.AuditScan AS a
+                INNER JOIN products AS p ON p.upc=a.upc
+            SET a.PRN = ROUND(a.notes - p.normal_price, 2)
+            WHERE username = ? 
+                AND savedAs = 'default'
+        ");
+        $res = $dbc->execute($prep, array($username));
+
+        return false;
     }
 
     public function postLastKnownPriceHandler()
@@ -2481,7 +2499,8 @@ HTML;
             <option value=\"created2prn\" data-value=\"created2prn\">$itBug set created => PRN</option>
             <option value=\"uncheckall\" data-value=\"uncheckall\">$itBug Uncheck All</option>
             <option value=\"notes2notes\" data-value=\"notes2notes\">$itBug notes 2 notes</option>
-            <option value=\"getLastPrice\" data-value=\"getLastPrice\">$itBug notes 2 notes</option>
+            <option value=\"getLastPrice\" data-value=\"getLastPrice\">$itBug get last price</option>
+            <option value=\"setPrnDiff\" data-value=\"setPrnDiff\">$itBug Set PRN < DIFF: Notes (NewSRP) - Price</option>
         " : "";
             //<option value=\"clearTableData\">$itBug Clear Table Data</option>
 
@@ -2507,6 +2526,7 @@ HTML;
             <div class=\"fxExtOption\" data-value=\"uncheckall\">$itBug Uncheck All</div>
             <div class=\"fxExtOption\" data-value=\"notes2notes\">$itBug Reset Notes to Current Values</div>
             <div class=\"fxExtOption\" data-value=\"getLastPrice\">$itBug Reset Notes to Last Known Price</div>
+            <div class=\"fxExtOption\" data-value=\"setPrnDiff\">$itBug Set PRN < DIFF: Notes (NewSRP) - Price</div>
         " : "";
             //<div class=\"fxExtOption\" data-value=\"clearTableData\">$itBug WIPE DB INFO FOR ITEMS IN LIST</div>
 
@@ -4302,6 +4322,23 @@ $('#extHideFx').change(function(){
                 $.ajax({
                     type: 'post',
                     data: 'lastKnownPrice=true&username='+username,
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'setPrnDiff':
+            ScanConfirm("<br/><br/>Set PRN < Notes - Price?", 'set_prn_diff', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'setprndiff=true&username='+username,
                     url: 'AuditReport.php',
                     success: function(response) {
                         console.log('success');
