@@ -76,8 +76,59 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<udc>';
         $this->__routes[] = 'post<uncheckall>';
         $this->__routes[] = 'post<savenotes>';
+        $this->__routes[] = 'post<lastKnownPrice>';
 
         return parent::preprocess();
+    }
+
+    public function postLastKnownPriceHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+        $json = array();
+        $json['errors'] = '';
+        $upcs = array();
+
+        $prep = $dbc->prepare("
+            SELECT upc
+            FROM woodshed_no_replicate.AuditScan
+            WHERE username = ? 
+                AND savedAs = 'default'
+        ");
+        $res = $dbc->execute($prep, array($username));
+        while ($row = $dbc->fetchRow($res)) {
+            $upcs[$row['upc']] = 0; 
+        }
+        if ($dbc->error()) {
+            $json['errors'] .= "Error: ".$dbc->error();
+        }
+
+        $prep = $dbc->prepare("SELECT upc, price
+            FROM prodUpdate 
+            WHERE upc = ?
+                AND  price > 0 
+            ORDER BY modified DESC
+            LIMIT 1;");
+
+        $updateP = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan
+            SET notes = ?
+            WHERE upc = ?
+                AND username = ?
+                AND savedAs = 'default'
+            ");
+
+        foreach ($upcs as $upc => $na) {
+            $res = $dbc->execute($prep, array($upc));
+            $row = $dbc->fetchRow($res);
+            $price = $row['price'];
+
+            $updateR = $dbc->execute($updateP, array($price, $upc, $username));
+        }
+
+        $json['test'] = "plew plew plew";
+        echo json_encode($json);
+
+        return false;
     }
 
     public function postSavenotesHandler()
@@ -1250,9 +1301,22 @@ class AuditReport extends PageLayoutA
         $upc = FormLib::get('upc');
         $cost = FormLib::get('cost');
         $vendorID = FormLib::get('vendorID');
+        $username = FormLib::get('username');
         $json = array();
 
         $dbc = ScanLib::getConObj();
+
+        $args = array($upc, $username);
+        $prep = $dbc->prepare("
+            UPDATE woodshed_no_replicate.AuditScan
+            SET notes = null, checked = 1
+            WHERE upc = ?
+                AND username = ?
+                AND savedAs = 'default'
+        ");
+        $res = $dbc->execute($prep, $args);
+        $json['errors'] .= $dbc->error();
+
         $mod = new DataModel($dbc);
         $json['saved'] = $mod->setCost($upc, $cost, $vendorID);
         echo json_encode($json);
@@ -1813,7 +1877,7 @@ class AuditReport extends PageLayoutA
             $brand = $row['brand'];
             //$autoPar = '';
             $autoPar = '<div style="height: 12px;"><table class="table table-small small" style="margin-top: -4.5px;
-                background-color: rgba(0,0,0,0); border: 0px solid transparent;">';
+                background-color: rgba(0,0,0,0); border: 0px solid transparent;"><tr class="autoPar">';
             $csvAutoPar = '';
             foreach ($pars[$upc] as $storeID => $par) {
                 $woSalesText = '';
@@ -1839,7 +1903,7 @@ class AuditReport extends PageLayoutA
                 $autoPar .= "<td style=\"width: 25px; border-left: 5px solid $woSalesText; \" class=\"autoPar noauto\"> $par</td>";
                 $csvAutoPar .= "[$storeID] $par ";
             }
-            $autoPar .= "</table></div>";
+            $autoPar .= "</tr></table></div>";
             $signBrand = $row['signBrand'];
             $description = $row['description'];
             $signDescription = $row['signDescription'];
@@ -2411,14 +2475,15 @@ HTML;
             <option value=\"futureCostFromNotes\">$itBug Notes => Future Costs</option>
             <option value=\"vendorItemSrpReset\">$itBug Reset Vendor Item SRPs (to normal_price)</option>
             <option value=\"addColumnVcase\">$itBug Add Column VCASE </option>
-            <option value=\"clearTableData\">$itBug Clear Table Data</option>
             <option value=\"setPriceRuleDetails\">$itBug Set PriceRules.details = notes</option>
             <option value=\"setProductCosts\">$itBug Set products.cost = notes</option>
             <option value=\"lpadGeneric\" data-value=\"lpadGeneric\">$itBug LPAD GenericUpload upc column</option>
             <option value=\"created2prn\" data-value=\"created2prn\">$itBug set created => PRN</option>
             <option value=\"uncheckall\" data-value=\"uncheckall\">$itBug Uncheck All</option>
             <option value=\"notes2notes\" data-value=\"notes2notes\">$itBug notes 2 notes</option>
+            <option value=\"getLastPrice\" data-value=\"getLastPrice\">$itBug notes 2 notes</option>
         " : "";
+            //<option value=\"clearTableData\">$itBug Clear Table Data</option>
 
         $adminFxOptsNew = ($admin) ? "
             <div class=\"fxExtOption\" data-value=\"hideNOF\">Hide Rows With 'NOF' entered as notes</div>
@@ -2436,13 +2501,14 @@ HTML;
             <div class=\"fxExtOption\" data-value=\"futureCostFromNotes\">$itBug Notes => Future Costs</div>
             <div class=\"fxExtOption\" data-value=\"vendorItemSrpReset\">$itBug Reset Vendor Item SRPs (to normal_price)</div>
             <div class=\"fxExtOption\" data-value=\"addColumnVcase\">$itBug Add Column VCASE </div>
-            <div class=\"fxExtOption\" data-value=\"clearTableData\">$itBug WIPE DB INFO FOR ITEMS IN LIST</div>
             <div class=\"fxExtOption\" data-value=\"setPriceRuleDetails\">$itBug Set PriceRules.details = notes</div>
             <div class=\"fxExtOption\" data-value=\"setProductCosts\">$itBug Set products.cost = notes</div>
             <div class=\"fxExtOption\" data-value=\"lpadGeneric\">$itBug LPAD GenericUpload upc column</div>
             <div class=\"fxExtOption\" data-value=\"uncheckall\">$itBug Uncheck All</div>
             <div class=\"fxExtOption\" data-value=\"notes2notes\">$itBug Reset Notes to Current Values</div>
+            <div class=\"fxExtOption\" data-value=\"getLastPrice\">$itBug Reset Notes to Last Known Price</div>
         " : "";
+            //<div class=\"fxExtOption\" data-value=\"clearTableData\">$itBug WIPE DB INFO FOR ITEMS IN LIST</div>
 
         $newExcelFilename = "AuditReport_" . uniqid() . ".csv";
 
@@ -2863,11 +2929,12 @@ var saveEditCost = function(elm) {
     var cost = elm.text();
     var upc = elm.parent().find('.upc').attr('data-upc');
     var vendorID = elm.attr('data-vid'); 
+    var username = $('#username').val();
     var element = elm;
     if (lastCost != cost) {
         $.ajax({
             type: 'post',
-            data: 'setCost=true&upc='+upc+'&cost='+cost+'&vendorID='+vendorID,
+            data: 'setCost=true&upc='+upc+'&cost='+cost+'&vendorID='+vendorID+'&username='+username,
             dataType: 'json',
             url: 'AuditReport.php',
             success: function(response)
@@ -2880,8 +2947,9 @@ var saveEditCost = function(elm) {
                     // check the associated checkbox 
                     let checkbox = element.parent().find('input[type=checkbox]');
                     console.log(checkbox.attr('name'));
-                    //checkbox.prop('checked', true);
-                    checkbox.trigger('click');
+                    checkbox.prop('checked', true);
+                    checkbox.closest('tr').addClass('highlight-checked');
+                    //checkbox.trigger('click');
                     ajaxRespPopOnElm(element);
                     syncItem(upc);
                 } else {
@@ -3489,11 +3557,14 @@ $('#view-checked').click(function(){
         $(this).show();
     });
     $('#mytablebody tr').each(function(){
+        var isAutoPar = $(this).hasClass('autoPar');
         var checked = $(this).find('.row-check').is(':checked');
         if (checked == true) {
             $(this).show();
         } else {
-            $(this).hide();
+            if (!isAutoPar) {
+                $(this).hide();
+            }
         }
     });
     restripe();
@@ -4214,6 +4285,23 @@ $('#extHideFx').change(function(){
                 $.ajax({
                     type: 'post',
                     data: 'savenotes=true&username='+username+'&notes='+json,
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'getLastPrice':
+            ScanConfirm("<br/><br/>Set Notes =<br/>Last Known Price?", 'last_known_price', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'lastKnownPrice=true&username='+username,
                     url: 'AuditReport.php',
                     success: function(response) {
                         console.log('success');
