@@ -899,15 +899,20 @@ class AuditReport extends PageLayoutA
         $username = FormLib::get('username');
         $storeID = FormLib::get('storeID');
 
-        $args = array($brand);
-        $prep = $dbc->prepare("SELECT upc FROM products WHERE TRIM(brand) = TRIM(?)");
-        $res = $dbc->execute($prep, $args);
-        $items = array();
-        while ($row = $dbc->fetchRow($res)) {
-            $items[] = $row['upc'];
+        if ($brand == -1 || $brand == "") {
+            // do nothing 
+        } else {
+            $args = array($brand);
+            $prep = $dbc->prepare("SELECT upc FROM products WHERE TRIM(brand) = TRIM(?)");
+            $res = $dbc->execute($prep, $args);
+            $items = array();
+            while ($row = $dbc->fetchRow($res)) {
+                $items[] = $row['upc'];
+            }
+
+            $this->loadVendorCatalogHandler($items, $username, $storeID);
         }
 
-        $this->loadVendorCatalogHandler($items, $username, $storeID);
 
         return header("location: AuditReport.php");
     }
@@ -923,29 +928,34 @@ class AuditReport extends PageLayoutA
         $inUse = ($full == 1) ? '' : ' AND inUse = 1 ';
         $_SESSION['currentVendor'] = $vid;
 
-        $args = array($vid);
-        if ($loadVendorItems == 1) {
-            // load all from vendor items regardless of default vendor
-            $prep = $dbc->prepare("SELECT upc FROM vendorItems WHERE vendorID = ? GROUP BY upc");
+        if ($vid <= 0) {
+            // do nothing
         } else {
-            // load only items with default vendor set to selected vid
-            $prep = $dbc->prepare("SELECT v.upc
-                FROM products AS p
-                    LEFT JOIN vendorItems AS v ON v.upc=p.upc AND v.vendorID=p.default_vendor_id
-                    RIGHT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
-                WHERE p.default_vendor_id = ?
-                    AND m.super_name != 'PRODUCE'
-                    $inUse
-                GROUP BY p.upc;
-            ");
-        }
-        $res = $dbc->execute($prep, $args);
-        $items = array();
-        while ($row = $dbc->fetchRow($res)) {
-            $items[] = $row['upc'];
+            $args = array($vid);
+            if ($loadVendorItems == 1) {
+                // load all from vendor items regardless of default vendor
+                $prep = $dbc->prepare("SELECT upc FROM vendorItems WHERE vendorID = ? GROUP BY upc");
+            } else {
+                // load only items with default vendor set to selected vid
+                $prep = $dbc->prepare("SELECT v.upc
+                    FROM products AS p
+                        LEFT JOIN vendorItems AS v ON v.upc=p.upc AND v.vendorID=p.default_vendor_id
+                        RIGHT JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
+                    WHERE p.default_vendor_id = ?
+                        AND m.super_name != 'PRODUCE'
+                        $inUse
+                    GROUP BY p.upc;
+                ");
+            }
+            $res = $dbc->execute($prep, $args);
+            $items = array();
+            while ($row = $dbc->fetchRow($res)) {
+                $items[] = $row['upc'];
+            }
+
+            $this->loadVendorCatalogHandler($items, $username, $storeID);
         }
 
-        $this->loadVendorCatalogHandler($items, $username, $storeID);
 
         return header("location: AuditReport.php?upc=$items[0]");
     }
@@ -2245,7 +2255,7 @@ HTML;
         //$this->add_onload_command('$(\'#store-tabs a\').on(\'shown.bs.tab\', function(){$(\'.chosen-select:visible\').chosen();});');
 
         $this->vendors = array();
-        $vselect = '<option value="">Select a Vendor</option>';
+        $vselect = '<option value="-1">Select a Vendor</option>';
         $curVendor = FormLib::get('vendor');
         $prep = $dbc->prepare("SELECT vendorName, vendorID FROM vendors 
             WHERE vendorID NOT IN (-2,-1,1,2)
@@ -2258,7 +2268,7 @@ HTML;
              $this->vendor[$vid] = $vname;
          }
 
-        $bselect = '<option value="">Select a Brand</option>';
+        $bselect = '<option value="-1">Select a Brand</option>';
         $prep = $dbc->prepare("
             SELECT brand FROM products AS p
                 INNER JOIN MasterSuperDepts AS m ON m.dept_ID=p.department
