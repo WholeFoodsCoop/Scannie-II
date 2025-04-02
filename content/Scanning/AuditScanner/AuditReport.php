@@ -3276,12 +3276,14 @@ $(document).keydown(function(e){
     if (hlElm != 'undefined') {
         switch (e.keyCode) {
             case 40:
+                // don't allow down while udc in progress
                 if (!$('#udc-animation').is(":visible")) {
                     e.preventDefault();
                     $('#down-btn').trigger('click');
                 }
                 break;
             case 38:
+                // don't allow up while udc in progress
                 if (!$('#udc-animation').is(":visible")) {
                     e.preventDefault();
                     $('#up-btn').trigger('click');
@@ -3289,7 +3291,12 @@ $(document).keydown(function(e){
                 break; 
             case 39: // right arrow key
                 if (e.ctrlKey) { // && ctrl key
-                    $('#udc-btn').trigger('click'); 
+                    let curFoc = document.activeElement;
+                    if ($(curFoc).hasClass('editable')) {
+                        // do nothing, user is editing data
+                    } else {
+                        $('#udc-btn').trigger('click'); 
+                    }
                 }
                 break;
             default:
