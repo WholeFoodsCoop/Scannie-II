@@ -1061,13 +1061,19 @@ class AuditReport extends PageLayoutA
             $notes[$row['upc']] = $row['notes'];
         }
 
+        $insertP = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs, notes)
+            VALUES (NOW(), ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE date = NOW(), notes=VALUES(notes)");
+        $delP = $dbc->prepare("DELETE FROM AuditScan WHERE upc = ? AND username = ? AND savedAs = ?");
         foreach($upcs as $upc) {
             $note = '';
             $note = $notes[$upc];
-            $args = array($upc, $username, $storeID, $saveAs, $note);
-            $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs, notes)
-                VALUES (NOW(), ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE date = NOW()");
-            $res = $dbc->execute($prep, $args);
+            if (strtoupper($note) != 'DEL') {
+                $insertA = array($upc, $username, $storeID, $saveAs, $note);
+                $res = $dbc->execute($insertP, $insertA);
+            } else {
+                $delA = array($upc, $username, $saveAs);
+                $res = $dbc->execute($delP, $delA);
+            }
         }
         $er = $dbc->error();
 
