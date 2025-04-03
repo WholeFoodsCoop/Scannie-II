@@ -214,7 +214,7 @@ class AuditReport extends PageLayoutA
 
         $mod = new DataModel($dbc);
         //$userID = $mod->name2id($username);
-        $json['saved'] = $mod->setCost($upc, $newCost, $vendorID);
+        $json['saved'] = $mod->setCost($upc, $newCost, $vendorID, $username);
 
         $args = array($upc, $username);
         $prep = $dbc->prepare("
@@ -4980,13 +4980,7 @@ $("#nav-search").on('focusout', function() {
 
 $('#udc-btn').on('click', function() {
     let vendorID = $('#currentVendor').val(); 
-    /*
-        what happens here
-        1. update cost & clear note - through ajax request only
-        2. update the text of netCost & notes, no need to trigger
-        update, as this has already been handled
-        3. don't forget to include an error if something goes wrong
-    */
+    let username = $('#username').val();
     $('#udc-animation').show();
     $.ajax({
         type: 'post',
@@ -4996,14 +4990,13 @@ $('#udc-btn').on('click', function() {
         success: function(response)
         {
             console.log("RESP: " + response.errors);
-            // once we verify that the change was successfull, we can 
-            // also soft-unset the value of the notes element
             if (response.errors == '') {
                 $('.highlight').find('td.notes').text('');
                 $('.highlight').find('td.netCost').text(currentItem.notes);
                 $('.highlight').find('td.check').find('.row-check').prop('checked', true);
                 $('.highlight').addClass('highlight-checked');
             }
+            syncItem(currentItem.upc);
         },
         error: function(response, errorThrown)
         {
