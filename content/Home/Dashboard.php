@@ -198,6 +198,10 @@ ORDER BY COUNT(p.upc) DESC");
                 'ranges' => array(2, 10, 9999),
             ),
             array(
+                'handler' => self::getBreakdownBadBatchPrice($dbc), 
+                'ranges' => array(2, 10, 9999),
+            ),
+            array(
                 'handler' => self::limboPcBatch($dbc),
                 'ranges' => array(1, 2, 999),
             ),
@@ -255,6 +259,10 @@ ORDER BY COUNT(p.upc) DESC");
                 'handler' => self::checkDeliProductionDepts($dbc),
                 'ranges' => array(1, 10, 999),
             ),
+            array(
+                'handler' => self::getWatchList($dbc),
+                'ranges' => array(1, 5, 9999),
+            ),
         );
 
         $muData = $this->multiStoreDiscrepCheck($dbc);
@@ -296,7 +304,7 @@ ORDER BY COUNT(p.upc) DESC");
                     <div class="col-lg-6">
                         <label style="border: 1px solid #E9ECEF; background-color: #F2F4F7; 
                             margin-bottom: -2px; border-top-right-radius: 3px; 
-                            border-top-left-radius: 3px; padding: 5px;">Staged Pending Future Costs</label>
+                            border-top-left-radius: 3px; padding: 5px;">Staged Future Costs</label>
                         $futureVendorItemsT
                     </div>
                 </div>
@@ -750,6 +758,7 @@ HTML;
               )
             AND p.upc NOT IN ('0000000112212')
             AND p.description NOT LIKE '%OPEN PLU%'
+            AND p.upc NOT LIKE '000000008999%'
             ) AND
             (
               normal_price = 0
@@ -1024,6 +1033,30 @@ HTML;
             'desc'=>$desc);
     }
 
+    public function getWatchList($dbc)
+    {
+        $data = array();
+        $desc = "Items in Watch List";
+        $cols = array('upc', 'brand', 'description', 'created', 'department', 'default_vendor_id');
+        $count = 0;
+        $prep = $dbc->prepare("SELECT a.upc, p.* FROM woodshed_no_replicate.AuditScan a
+            INNER JOIN products p ON p.upc=a.upc
+            WHERE a.username='csather'
+                AND a.savedAs = 'WATCH LIST'");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+            $count++;
+        }
+
+        if ($count > 0) {
+            $data['count'] = $count;
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
     public function getTooBigUPC($dbc)
     {
         $data = array();
@@ -1163,8 +1196,8 @@ HTML;
             ");
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
-                // temp(1) - don't show October A anymore. Add any sets to skip here
-                if ($row['dealSet'] != 'October2024' && $row['ABT'] != 'A') {
+                // temp(1) - don't show previous month cycle once A starts
+                if ($row['dealSet'] != 'March2025' && $row['ABT'] != 'A') {
                     foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
                     $count++;
                 }
@@ -1394,6 +1427,7 @@ HTML;
             WHERE p.store_id=1
                 AND p.department != 110
                 AND v.sku NOT IN ('01514652')
+                AND p.upc NOT IN ('0085177000306')
             GROUP by p.upc
             ORDER BY v.vendorID, p.brand
         ");
@@ -1494,18 +1528,78 @@ HTML;
             'desc'=>$desc);
     }
 
+    public function getBreakdownBadBatchPrice($dbc)
+    {
+        $desc = "Breakdown Items w/ Bad Staged PC Prices";
+        $cols = array('sku', 'upc', 'brand', 'description', 'vendorID', 'batchID');
+        $data = array();
+        $count = 0;
+        $pre = $dbc->prepare("
+            SELECT
+            p.upc,
+
+            p.brand,
+            CONCAT(SUBSTRING(p.brand, 1, 8), '~') AS brand,
+            p.description, 
+
+            REPLACE(REPLACE(REPLACE(p.size, ' CT', ''), ' OZ', ''), ' FZ', '') AS count,
+
+            ROUND(p.normal_price / REPLACE(p.size, ' CT', ''), 2) AS breakDownPrice,
+            ROUND(p.normal_price / FLOOR(1/multiplier)) AS breakUpPrice,
+            CASE WHEN CEIL(REPLACE(p.size, ' CT', '')) = p.size THEN 'multiple units' ELSE 'single unit' END AS UnitType,
+
+            v.sku, v.isPrimary, v.multiplier,
+            p.normal_price,
+            ROUND(p.normal_price * v.multiplier , 2) as completePrice,
+            vi.units,
+            p.auto_par,
+            p2.auto_par AS auto_par2,
+            p.special_price,
+            p2.special_price AS special_price_2,
+            p.inUse,
+            p2.inUse AS p2inUse,
+            v.vendorID,
+            l.bid AS batchID
+            FROM batchList bl
+                LEFT JOIN products p ON p.upc=bl.upc 
+                LEFT JOIN VendorAliases v ON v.upc=p.upc
+                    AND v.vendorID=p.default_vendor_id
+                LEFT JOIN vendorItems vi ON vi.upc=p.upc
+                LEFT JOIN products p2 ON p2.upc=p.upc AND p2.store_id=2
+                INNER JOIN batchReviewLog AS l ON l.bid=bl.batchID
+            WHERE p.store_id=1
+                AND p.department > 24
+                AND p.department NOT IN (110, 245, 253, 254, 255, 256, 257, 234, 230, 231, 150)
+                AND v.sku NOT IN ('01514652')
+                AND p.upc NOT IN ('0085177000306')
+                AND l.forced = '0000-00-00 00:00:00'
+            GROUP by p.upc
+            ORDER BY v.vendorID, p.brand
+        ");
+        $res = $dbc->execute($pre);
+        //$count = $dbc->numRows($res);
+        while ($row = $dbc->fetchRow($res)) {
+            foreach ($cols as $col) {
+                $data[$row['upc']][$col] = $row[$col];
+            }
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
     public function getOwnerSoOam($dbc)
     {
         $desc = "Owner SOs Missing 10% on Coop Deals";
         $data = array();
         $pre = $dbc->prepare("
             SELECT order_id, c.CardNo, datetime, o.description, o.upc, o.total, p.normal_price,
-                ROUND(((p.special_price - (p.special_price * 0.10)) * o.quantity) * o.ItemQtty, 2) AS CDPrice,
-                p.special_price ,
+                ROUND(((l.salePrice - (l.salePrice * 0.10)) * o.quantity) * o.ItemQtty, 2) AS CDPrice,
+                l.salePrice ,
                 CASE WHEN s.memtype2 IS NOT NULL THEN s.memtype2 ELSE c.Type END AS memberStatus,
                 CASE WHEN s.memtype2 IS NOT NULL THEN c.Type ELSE null END AS activeStatus,
             GROUP_CONCAT(distinct b.batchName ORDER BY b.batchName),
-                ABS(ABS(o.total) - ABS(ROUND(((p.special_price - (p.special_price * 0.10)) * o.quantity) * o.ItemQtty, 2))) AS diff
+                ABS(ABS(o.total) - ABS(ROUND(((l.salePrice - (l.salePrice * 0.10)) * o.quantity) * o.ItemQtty, 2))) AS diff
             FROM is4c_trans.PendingSpecialOrder AS o
                 INNER JOIN is4c_op.products p on p.upc=o.upc
                 INNER JOIN is4c_op.vendorItems v on v.upc=p.upc and v.vendorID=p.default_vendor_id
@@ -1517,15 +1611,16 @@ HTML;
                 LEFT JOIN is4c_op.custdata AS c ON c.CardNo=o.card_no
                 LEFT JOIN is4c_op.meminfo AS mi ON c.CardNo=mi.card_no
                 LEFT JOIN is4c_op.suspensions AS s ON c.CardNo=s.cardno
-            WHERE p.special_price <> 0
-                AND ABS(ABS(o.total) - ABS(ROUND(((p.special_price - (p.special_price * 0.10)) * o.quantity) * o.ItemQtty, 2))) > 0.01
+            WHERE l.salePrice <> 0
+                AND ABS(ABS(o.total) - ABS(ROUND(((l.salePrice - (l.salePrice * 0.10)) * o.quantity) * o.ItemQtty, 2))) > 0.01
                 AND ma.super_name != \"WELLNESS\"
                 AND o.deleted = 0
                 #AND o.voided = 0
                 AND b.startDate <= DATE(NOW()) AND b.endDate >= DATE(NOW())
                 AND b.startDate <= datetime AND b.endDate >= datetime
                 AND b.batchName LIKE \"%Co-op Deals%\"
-                  AND b.batchName NOT LIKE \"%BOGO%\"
+                AND b.batchName NOT LIKE \"%TPR%\"
+                AND b.batchName NOT LIKE \"%BOGO%\"
                 AND CASE WHEN s.memtype2 IS NOT NULL THEN s.memtype2 ELSE c.Type END IS NOT NULL
                 AND CASE WHEN s.memtype2 IS NOT NULL THEN s.memtype2 ELSE c.Type END != \"REG\"
             GROUP BY o.upc, total
@@ -1721,8 +1816,10 @@ HTML;
             </thead>
             <tbody>';
         $dbc = scanLib::getConObj();
-        $prep = $dbc->prepare("SELECT COUNT(upc) AS count, f.vendorID, vendorName, startDate FROM FutureVendorItems AS f
-            INNER JOIN vendors AS v ON v.vendorID=f.vendorID  WHERE startDate >= DATE(NOW())
+        $prep = $dbc->prepare("SELECT COUNT(upc) AS count, f.vendorID, vendorName, startDate
+            FROM FutureVendorItems AS f
+                INNER JOIN vendors AS v ON v.vendorID=f.vendorID
+            WHERE startDate >= DATE(NOW())
             GROUP BY f.vendorID, f.startDate
             ORDER BY f.startDate, f.vendorID ");
         $res = $dbc->execute($prep);
