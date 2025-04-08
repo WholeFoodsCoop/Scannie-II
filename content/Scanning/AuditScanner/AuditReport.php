@@ -3366,6 +3366,7 @@ var setPercentComplete = function() {
         if ($(this).prop('checked') == true) {
             checked++;
         }
+        console.log(items);
     });
     console.log('items: '+items+', checked: '+checked);
 
@@ -3375,8 +3376,8 @@ var setPercentComplete = function() {
 
     $('#percentComplete2').text('');
     let j=0;
-    for (let i=0; i<=190; i+=part) {
-        let color = (j <= checked && checked != 0) ? 'lightgreen' : 'lightgrey';
+    for (let i=0; i<items; i++) {
+        let color = (j < checked && checked != 0) ? 'lightgreen' : 'lightgrey';
         let elm = document.createElement('div');
         elm.style.display = "inline-block";
         elm.style.width = part + "px";
