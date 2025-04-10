@@ -2709,16 +2709,22 @@ $columnCheckboxes
         </div>
         <div style="font-size: 12px; padding: 10px;">
             <div class="form-group dummy-form">
-                <button class="btn btn-default btn-sm small" id="view-unchecked">View UnChecked</button>
+                <button class="btn btn-default btn-sm small" id="view-unchecked"><span style="background: white;">View * UnChecked</span></button>
             </div>
             <div class="form-group dummy-form">
-                <button class="btn btn-default btn-sm small" id="view-checked">View Checked</button>
+                <button class="btn btn-default btn-sm small" id="view-checked"><span style="background: lightgrey;">View * Checked</span></button>
             </div>
             <div class="form-group dummy-form">
-                <button class="btn btn-default btn-sm small" id="view-all">View All</button>
+                <button class="btn btn-default btn-sm small" id="view-all">View * All</button>
             </div>
             <div class="form-group dummy-form">
-                <button class="btn btn-default btn-sm small text-secondary" id="invert-show">Invert View</button>
+                <button class="btn btn-default btn-sm small" id="view-sel-unchecked"><span style="background: white;">View SelUn</span></button>
+            </div>
+            <div class="form-group dummy-form">
+                <button class="btn btn-default btn-sm small" id="view-sel-checked"><span style="background: lightgrey;">View SelCh</span></button>
+            </div>
+            <div class="form-group dummy-form">
+                <button class="btn btn-dark btn-sm small" id="invert-show">Invert View</button>
             </div>
             $checkPriceBtn
             $vncBtn
@@ -3613,6 +3619,20 @@ $('#view-checked').click(function(){
     });
     restripe();
 });
+$('#view-sel-checked').click(function(){
+    $('#mytablebody tr').each(function(){
+        var isAutoPar = $(this).hasClass('autoPar');
+        var checked = $(this).find('.row-check').is(':checked');
+        if (checked == true) {
+            // do nothing 
+        } else {
+            if (!isAutoPar) {
+                $(this).hide();
+            }
+        }
+    });
+    restripe();
+});
 $('#view-unchecked').click(function(){
     $('#mytablebody tr').each(function(){
         $(this).show();
@@ -3622,6 +3642,18 @@ $('#view-unchecked').click(function(){
         let note = $(this).find('.editable-notes').text();
         if (checked == false && !note.includes('NOF') && !note.includes('skip')) {
             $(this).show();
+        } else {
+            $(this).hide();
+        }
+    });
+    restripe();
+});
+$('#view-sel-unchecked').click(function(){
+    $('#mytablebody tr').each(function(){
+        let checked = $(this).find('.row-check').is(':checked');
+        let note = $(this).find('.editable-notes').text();
+        if (checked == false && !note.includes('NOF') && !note.includes('skip')) {
+            // do nothing
         } else {
             $(this).hide();
         }
