@@ -3638,24 +3638,30 @@ $('#view-unchecked').click(function(){
         $(this).show();
     });
     $('#mytablebody tr').each(function(){
+        var isAutoPar = $(this).hasClass('autoPar');
         let checked = $(this).find('.row-check').is(':checked');
         let note = $(this).find('.editable-notes').text();
         if (checked == false && !note.includes('NOF') && !note.includes('skip')) {
             $(this).show();
         } else {
-            $(this).hide();
+            if (!isAutoPar) {
+                $(this).hide();
+            }
         }
     });
     restripe();
 });
 $('#view-sel-unchecked').click(function(){
     $('#mytablebody tr').each(function(){
+        var isAutoPar = $(this).hasClass('autoPar');
         let checked = $(this).find('.row-check').is(':checked');
         let note = $(this).find('.editable-notes').text();
         if (checked == false && !note.includes('NOF') && !note.includes('skip')) {
             // do nothing
         } else {
-            $(this).hide();
+            if (!isAutoPar) {
+                $(this).hide();
+            }
         }
     });
     restripe();
