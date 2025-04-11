@@ -557,13 +557,27 @@ class AuditReport extends PageLayoutA
         $username = FormLib::get('username');
         $vendorID = FormLib::get('vendorID');
 
-        $args = array($vendorID, $username);
-        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a INNER JOIN vendorItems v ON v.upc=a.upc INNER JOIN GenericUpload g ON g.sku=v.sku AND v.vendorID=? SET a.notes=REPLACE(g.cost, '$', '') WHERE a.username=? AND a.savedAs='default';");
+        $args = array($username, $vendorID);
+        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a
+            INNER JOIN vendorItems v ON v.upc=a.upc
+            INNER JOIN GenericUpload g ON g.sku=v.sku
+            SET a.notes=REPLACE(g.cost, '$', '')
+            WHERE a.username=?
+                AND v.vendorID=?
+                AND a.savedAs='default';");
         $res = $dbc->execute($prep, $args);
 
-        // catch items where sku padding may not match
-        $args = array($vendorID, $username);
-        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a INNER JOIN vendorItems v ON v.upc=a.upc INNER JOIN GenericUpload g ON CAST(g.sku AS UNSIGNED)=CAST(v.sku AS UNSIGNED) AND v.vendorID=? SET a.notes=REPLACE(g.cost, '$', '') WHERE a.username=? AND a.savedAs='default';");
+        $args = array($username, $vendorID);
+        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a
+            INNER JOIN vendorItems v ON v.upc=a.upc
+            INNER JOIN GenericUpload g ON CAST(g.sku AS UNSIGNED)=CAST(v.sku AS UNSIGNED) 
+            SET a.notes=REPLACE(g.cost, '$', '')
+            WHERE a.username=?
+                AND v.vendorID=?
+                AND a.savedAs='default'
+                AND CAST(g.sku AS UNSIGNED) <> 0
+                AND CAST(v.sku AS UNSIGNED) <> 0
+            ");
         $res = $dbc->execute($prep, $args);
 
         return false;
