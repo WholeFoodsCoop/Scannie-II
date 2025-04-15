@@ -197,6 +197,8 @@ ORDER BY COUNT(p.upc) DESC");
                 'handler' => self::getBreakdownBadPrice($dbc), 
                 'ranges' => array(2, 10, 9999),
             ),
+            // class isn't currently comparing prices, it's just
+            // grabbing every aliased item that's in a batch
             array(
                 'handler' => self::getBreakdownBadBatchPrice($dbc), 
                 'ranges' => array(2, 10, 9999),
@@ -1531,9 +1533,10 @@ HTML;
     public function getBreakdownBadBatchPrice($dbc)
     {
         $desc = "Breakdown Items w/ Bad Staged PC Prices";
-        $cols = array('sku', 'upc', 'brand', 'description', 'vendorID', 'batchID');
+        $cols = array('sku', 'upc', 'brand', 'description', 'vendorID', 'batchID', 'relation');
         $data = array();
         $count = 0;
+        $items = array();
         $pre = $dbc->prepare("
             SELECT
             p.upc,
@@ -1559,7 +1562,8 @@ HTML;
             p.inUse,
             p2.inUse AS p2inUse,
             v.vendorID,
-            l.bid AS batchID
+            l.bid AS batchID,
+            bl.salePrice
             FROM batchList bl
                 LEFT JOIN products p ON p.upc=bl.upc 
                 LEFT JOIN VendorAliases v ON v.upc=p.upc
@@ -1577,10 +1581,90 @@ HTML;
             ORDER BY v.vendorID, p.brand
         ");
         $res = $dbc->execute($pre);
-        //$count = $dbc->numRows($res);
+        $count = $dbc->numRows($res);
+        $skus = array();
         while ($row = $dbc->fetchRow($res)) {
-            foreach ($cols as $col) {
-                $data[$row['upc']][$col] = $row[$col];
+            $sku = $row['sku'];
+            $skus[$sku] = array();
+        }
+
+        $normInfoP = $dbc->prepare("SELECT p.upc, p.brand, p.description, p.normal_price, a.multiplier, a.vendorID, a.sku, a.isPrimary FROM products AS p LEFT JOIN VendorAliases AS a ON a.upc=p.upc AND a.vendorID=p.default_vendor_id WHERE a.sku=? GROUP BY a.upc");
+        $saleInfoP = $dbc->prepare("SELECT p.upc, p.brand, p.description, p.normal_price, a.multiplier, a.vendorID, a.sku, l.salePrice, l.batchID, a.isPrimary  FROM products AS p LEFT JOIN VendorAliases AS a ON a.upc=p.upc AND a.vendorID=p.default_vendor_id LEFT JOIN batchList l ON l.upc=a.upc LEFT JOIN batchReviewLog AS log ON log.bid=l.batchID WHERE a.sku=? AND log.forced = \"0000-00-00 00:00:00\" GROUP BY a.upc");
+        foreach ($skus as $sku => $array) {
+            $normInfoA = array($sku);
+            $normInfoR = $dbc->execute($normInfoP, $normInfoA);
+            while ($row = $dbc->fetchRow($normInfoR)) {
+                $upc = $row['upc'];
+                $brand = $row['brand'];
+                $description = $row['description'];
+                $normal_price = $row['normal_price'];
+                $multiplier = $row['multiplier'];
+                $vendorID = $row['vendorID'];
+                $isPrimary = $row['isPrimary'];
+
+                $items[$upc]['sku'] = $sku;
+                $items[$upc]['upc'] = $upc;
+                $items[$upc]['brand'] = $brand;
+                $items[$upc]['description'] = $description;
+                $items[$upc]['normal_price'] = $normal_price;
+                $items[$upc]['multiplier'] = $multiplier;
+                $items[$upc]['vendorID'] = $vendorID;
+                $items[$upc]['isPrimary'] = $isPrimary;
+                $items[$upc]['salePrice'] = 0;
+            }
+            //echo $dbc->error();
+        }
+        //var_dump($items);
+        foreach ($skus as $sku => $array) {
+            $saleInfoA = array($sku);
+            $saleInfoR = $dbc->execute($saleInfoP, $saleInfoA);
+            while ($row = $dbc->fetchRow($saleInfoR)) {
+                $upc = $row['upc'];
+                $salePrice = $row['salePrice'];
+                $batchID = $row['batchID'];
+
+                $items[$upc]['salePrice'] = $salePrice;
+                $items[$upc]['batchID'] = $batchID;
+            }
+            //echo $dbc->error();
+        }
+        //var_dump($items);
+        
+        foreach ($items as $upc => $row) {
+            $skus[$row['sku']][] = $upc;
+        }
+        //var_dump($skus);
+        foreach ($skus as $sku => $upcs) {
+            if (count($upcs) > 1) {
+                //echo "SKU: $sku <br/>";
+                $parent = 0;
+                $child = 0;
+                $multi = 0;
+                $parentUpc = 0;
+                $childUpc = 0;
+                $alert = "";
+                foreach ($upcs as $upc) {
+                    if ($items[$upc]['isPrimary'] == 1) {
+                        $parent = ($items[$upc]['salePrice'] > 0) ? $items[$upc]['salePrice'] : $items[$upc]['normal_price'];
+                        $parentUpc = $upc;
+                    } else {
+                        $child = ($items[$upc]['salePrice'] > 0) ? $items[$upc]['salePrice'] : $items[$upc]['normal_price'];
+                        $multi = $items[$upc]['multiplier'];
+                        $childUpc = $upc;
+                    }
+                }
+                $alert = "<div>child: $child, multi: $multi, child/multi: ".$child / $multi." < parent: $parent</div>";
+                if ( ($child / $multi) < $parent ) {
+                    // bad price detected
+                    foreach ($cols as $col) {
+                        $data[$childUpc][$col] = $items[$childUpc][$col];
+                        $data[$parentUpc][$col] = $items[$parentUpc][$col];
+
+                        $data[$childUpc]['relation'] = "(*4) = " . ($child / $multi);
+                        $data[$parentUpc]['relation'] = $parent;
+                    }
+                } 
+                //echo "child: $childUpc, parent: $parentUpc<br/>";
             }
         }
 
@@ -1846,6 +1930,34 @@ HTML;
         }
 
         return false;
+    }
+
+    private function getVendorAliasPair($upc)
+    {
+        $dbc = scanLib::getConObj();
+        $items = array();
+        //echo "<div>$upc</div>";
+
+        $args = array($upc);
+        $prep = $dbc->prepare("SELECT sku FROM VendorAliases WHERE upc = ?");
+        $res = $dbc->execute($prep, $args);
+        while ($dbc->fetchRow($res)) {
+            $sku = $row['sku'];
+        }
+        echo $dbc->error();
+
+        $args = array($sku);
+        $prep = $dbc->prepare("SELECT * FROM VendorAliases WHERE sku = ?");
+        $res = $dbc->execute($prep, $args);
+        while ($dbc->fetchRow($res)) {
+            echo $upc = $row['upc'];
+            $multiplier = $row['multiplier'];
+            $isPrimary = $row['isPrimary'];
+            $items[$upc] = array('multiplier' => $multiplier,  'primary' => $isPrimary);
+        }
+        echo $dbc->error();
+
+        return $items;
     }
 
     public function javascriptContent()
