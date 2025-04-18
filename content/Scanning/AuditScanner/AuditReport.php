@@ -3567,10 +3567,13 @@ $('.row-check').click(function(event){
 styleChecked();
 
 $('#invert-show').click(function(){
-    $('tr.prod-row').each(function(){
+    $('#mytablebody tr').each(function(){
         var visible = $(this).is(':visible');
+        var isAutoPar = $(this).hasClass('autoPar');
         if (visible) {
-            $(this).hide();
+            if (!isAutoPar) {
+                $(this).hide();
+            }
         } else {
             $(this).show();
         }
