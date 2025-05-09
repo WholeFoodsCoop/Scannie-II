@@ -48,7 +48,7 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<review>';
         $this->__routes[] = 'post<columnSet>';
         $this->__routes[] = 'post<saveAs>';
-        $this->__routes[] = 'post<loadList>';
+        $this->__routes[] = 'get<loadList>';
         $this->__routes[] = 'post<deleteList>';
         $this->__routes[] = 'post<vendCat>';
         $this->__routes[] = 'post<brandList>';
@@ -1034,7 +1034,7 @@ class AuditReport extends PageLayoutA
         return false;
     }
 
-    public function postLoadListHandler()
+    public function getLoadListHandler()
     {
 
         $dbc = ScanLib::getConObj('SCANALTDB');
@@ -2257,6 +2257,7 @@ HTML;
             WHERE username = ? AND savedAs != 'default' GROUP BY savedAs ORDER BY date DESC");
         $res = $dbc->execute($prep, $args);
         $savedLists = "";
+        $newSavedLists = "";
         $datalist = "<datalist id=\"savedLists\">";
         while ($row = $dbc->fetchRow($res)) {
             $date = $row['date'];
@@ -2265,6 +2266,8 @@ HTML;
             $style = (strpos(strtolower($saved), 'review') !== false) ? "style=\"background-color: lightblue; border: 1px solid grey;\"" : "";
             $savedLists .= "<option value=\"$saved\" $style  $sel>[$date] $saved</option>";
             $datalist .= "<option value=\"$saved\">";
+            $href = "AuditReport.php?loadList=$saved&username=$username&storeID=$storeID";
+            $newSavedLists .= "<div class=\"saved-list-item\" $style><a href=\"$href\">[$date] $saved</a></div>";
         }
         $datalist .= "</datalist>";
 
@@ -2488,8 +2491,8 @@ HTML;
             $deleteList = "
                 <div class=\"form-group dummy-form\">
                     <span class=\"btn btn-danger btn-sm\"
-                        onclick=\"var c = confirm('Delete list?'); if (c == true) { document.forms['deleteListForm'].submit(); }\">Delete</span>
-                </div> |
+                        onclick=\"var c = confirm('Delete list?'); if (c == true) { document.forms['deleteListForm'].submit(); }\">Delete This List</span>
+                </div>
             ";
         }
 
@@ -2614,24 +2617,35 @@ $costModeSwitch
 </div>
 <div></div>
 
-<div class="gui-group">
+<div id="loadListGui">
+    <div id="showLoadLists">
+        <div><span class="btn btn-default btn-sm" id="btn-show-saved-lists">Load a List</span></div>
+    </div>
+    <div id="loadListContainer">
+        <input type="text" style="width: 100%; outline: none;" id="new-saved-list-filter" placeholder="search"/>
+        $newSavedLists
+    </div>
+</div>
+
+<div class="gui-group-2">
     <form name="load" id="loadList" method="post" action="AuditReport.php" style="display: inline-block">
         <input name="username" type="hidden" value="$username" />
         <input name="storeID" type="hidden" value="$storeID" />
         <div class="form-group dummy-form">
-            <select name="loadList" class="form-control form-control-sm chosen-select">
+            <select name="loadList" class="form-control form-control-sm chosen-select hidden">
                 <option val=0>Saved Lists</option>
                 <option val=0>&nbsp;</option>
                 $savedLists
             </select>
         </div>
         <div class="form-group dummy-form">
-            <button class="btn btn-default btn-sm" type="submit">Load</button>
+            <button class="btn btn-default btn-sm hidden" type="submit">Load</button>
         </div>
         $deleteList
         $datalist
     </form>
 </div>
+
 
 <form name="deleteListForm" method="post" action="AuditReport.php" style="display: inline-block">
     <input name="username" type="hidden" value="$username" />
@@ -5084,6 +5098,37 @@ $(document).ready(function() {
 
 colorCycle(); // Start the animation
 });
+
+$('#btn-show-saved-lists').on('click', function() {
+    console.log("OK");
+    let isshown = $('#loadListContainer').is(":visible");
+    if (isshown) {
+        $('#loadListContainer').hide();
+    } else {
+        $('#loadListContainer').show();
+    }
+    $('#new-saved-list-filter').focus();
+});
+
+$('#new-saved-list-filter').on('keyup', function(e) {
+    //console.log(e.key);
+    let searchText = $(this).val();
+    searchText = searchText.toLowerCase();
+    console.log(searchText);
+
+    $('.saved-list-item').each(function() {
+        $(this).show();
+    });
+
+    $('.saved-list-item').each(function() {
+
+        let itemText = $(this).text();
+        itemText = itemText.toLowerCase();
+        if (!itemText.includes(searchText)) {
+            $(this).hide();
+        }
+    });
+});
 JAVASCRIPT;
     }
 
@@ -5112,12 +5157,26 @@ HTML;
 body {
     $cursor
 }
+#loadListGui {
+    background-color: #F2F2F2;
+    display: inline-block;
+    border-radius: 3px;
+    margin: 5px;
+    padding: 3px;
+}
 div.gui-group {
     background-color: #F2F2F2;
     display: inline-block;
     height: 42px;
     border-radius: 3px;
     margin: 5px;
+}
+div.gui-group-2 {
+    //background-color: #F2F2F2;
+    display: inline-block;
+    //height: 42px;
+    border-radius: 3px;
+    //margin: 5px;
 }
 span.margin-container {
     width: 38px;
@@ -5341,6 +5400,17 @@ tr.prod-row:hover {
 }
 #percentComplete2 {
     width: 250px;
+}
+#loadListContainer {
+    display: none;
+    max-height: 500px;
+    overflow: auto;
+    background: white;
+    color: white;
+    position: absolute;
+    z-index: 9999;
+    border: 1px solid lightgrey;
+    padding: 4px;
 }
 HTML;
     }
