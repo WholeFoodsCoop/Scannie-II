@@ -78,8 +78,27 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<savenotes>';
         $this->__routes[] = 'post<lastKnownPrice>';
         $this->__routes[] = 'post<setprndiff>';
+        $this->__routes[] = 'post<setprnnar>';
 
         return parent::preprocess();
+    }
+
+    public function postSetprnnarHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+
+        $prep = $dbc->prepare("
+            UPDATE woodshed_no_replicate.AuditScan AS a
+                INNER JOIN SignProperties AS p ON p.upc=a.upc AND p.storeID=?
+            SET a.PRN = p.narrow
+            WHERE username = ? 
+                AND savedAs = 'default'
+        ");
+        $res = $dbc->execute($prep, array($storeID, $username));
+
+        return false;
     }
 
     public function postSetprndiffHandler()
@@ -2263,7 +2282,12 @@ HTML;
             $date = $row['date'];
             $saved = $row['savedAs'];
             $sel = ($saved == $loaded) ? ' selected ' : '';
-            $style = (strpos(strtolower($saved), 'review') !== false) ? "style=\"background-color: lightblue; border: 1px solid grey;\"" : "";
+            $style = "";
+            if (strpos(strtolower($saved), 'review') !== false) {
+                $style = "style=\"background-color: lightblue; border: 1px solid grey;\"";
+            } else if (strpos(strtolower($saved), 'super') !== false) {
+                $style = "style=\"background-color: #FFF3CD; border: 1px solid grey;\"";
+            }
             $savedLists .= "<option value=\"$saved\" $style  $sel>[$date] $saved</option>";
             $datalist .= "<option value=\"$saved\">";
             $href = "AuditReport.php?loadList=$saved&username=$username&storeID=$storeID";
@@ -2362,24 +2386,6 @@ HTML;
     </form>
 </div>';
 
-            $costModeHeader = array(0=>'Products', 1=>'Vendor Items');
-            $costModeOpts = '';
-            foreach ($costModeHeader as $v => $name) {
-                $sel = ($v == $costMode) ? ' selected ' : '';
-                $costModeOpts .= "<option value=\"$v\" $sel>$name Table</option>";
-            }
-
-            $costModeSwitch = '
-<label for="costModeSwitch" title="\$costMode"><b>Table</b>: </label>
-<div class="form-group dummy-form">
-    <form method="post" name="costModeForm" action="AuditReport.php">
-        <select name="costModeSwitch" id="costModeSwitch">
-            <option value="null"></option>
-            '.$costModeOpts.'
-        </select>
-    </form>
-</div>
-| Current Vendor: <input type="text" style="border: 0px solid transparent;" id="currentVendor" value="'.$_SESSION['currentVendor'].'" />';
 
             // don't show cost mode swith for other users at this time
             if ($_COOKIE['user_type'] != 2) {
@@ -2426,6 +2432,26 @@ HTML;
         } else {
             // user is not csather
         }
+        // for all users
+
+        $costModeHeader = array(0=>'Products', 1=>'Vendor Items');
+        $costModeOpts = '';
+        foreach ($costModeHeader as $v => $name) {
+            $sel = ($v == $costMode) ? ' selected ' : '';
+            $costModeOpts .= "<option value=\"$v\" $sel>$name Table</option>";
+        }
+
+        $costModeSwitch = '
+<label for="costModeSwitch" title="\$costMode"><b>Table</b>: </label>
+<div class="form-group dummy-form">
+    <form method="post" name="costModeForm" action="AuditReport.php">
+        <select name="costModeSwitch" id="costModeSwitch">
+            <option value="null"></option>
+        '.$costModeOpts.'
+        </select>
+    </form>
+</div>
+| Current Vendor: <input type="text" style="border: 0px solid transparent;" id="currentVendor" value="'.$_SESSION['currentVendor'].'" />';
 
         $options = $this->getNotesOpts($dbc,$username);
         $noteStr = "";
@@ -2534,6 +2560,7 @@ HTML;
             <option value=\"notes2notes\" data-value=\"notes2notes\">$itBug notes 2 notes</option>
             <option value=\"getLastPrice\" data-value=\"getLastPrice\">$itBug get last price</option>
             <option value=\"setPrnDiff\" data-value=\"setPrnDiff\">$itBug Set PRN < DIFF: Notes (NewSRP) - Price</option>
+            <option value=\"setPrnNar\" data-value=\"setPrnNar\">$itBug Set PRN = Narrow</option>
         " : "";
             //<option value=\"clearTableData\">$itBug Clear Table Data</option>
 
@@ -2560,6 +2587,7 @@ HTML;
             <div class=\"fxExtOption\" data-value=\"notes2notes\">$itBug Reset Notes to Current Values</div>
             <div class=\"fxExtOption\" data-value=\"getLastPrice\">$itBug Reset Notes to Last Known Price</div>
             <div class=\"fxExtOption\" data-value=\"setPrnDiff\">$itBug Set PRN < DIFF: Notes (NewSRP) - Price</div>
+            <div class=\"fxExtOption\" data-value=\"setPrnNar\">$itBug Set PRN = Narrow</div>
         " : "";
             //<div class=\"fxExtOption\" data-value=\"clearTableData\">$itBug WIPE DB INFO FOR ITEMS IN LIST</div>
 
@@ -2599,7 +2627,7 @@ $modal
 </div>
 -->
 <div class="form-group dummy-form">
-    <button id="clearAllInputB" class="btn btn-secondary btn-sm page-control">Clear Queue</button>
+    <button id="clearAllInputB" class="btn btn-secondary btn-sm page-control">Clear List</button>
 </div>
 <div class="form-group dummy-form">
     <button class="btn btn-secondary btn-sm page-control" data-toggle="modal" data-target="#upcs_modal">Add Items</button>
@@ -2659,7 +2687,8 @@ $costModeSwitch
         <input name="storeID" type="hidden" value="$storeID" />
         $list
         <div class="form-group dummy-form">
-            <input name="saveAs" class="form-control form-control-sm" list="savedLists" placeholder="Save List As" autocomplete="off"/>
+            <input name="saveAs" class="form-control form-control-sm" list="savedLists"
+                placeholder="Save List As" autocomplete="off" style="width: 350px;" />
         </div>
         <div class="form-group dummy-form">
             <button class="btn btn-default btn-sm" type="submit">Save</button>
@@ -4432,6 +4461,23 @@ $('#extHideFx').change(function(){
                 $.ajax({
                     type: 'post',
                     data: 'setprndiff=true&username='+username,
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
+        case 'setPrnNar':
+            ScanConfirm("<br/><br/>Set PRN <= Narrow", 'set_prn_nar', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'setprnnar=true&username='+username+'&storeID='+storeID,
                     url: 'AuditReport.php',
                     success: function(response) {
                         console.log('success');
