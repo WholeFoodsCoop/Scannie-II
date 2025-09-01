@@ -62,6 +62,7 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<roundPriceNotes>';
         $this->__routes[] = 'post<genericupc>';
         $this->__routes[] = 'post<genericsku>';
+        $this->__routes[] = 'post<genericalias>';
         $this->__routes[] = 'post<genericnewsrp>';
         $this->__routes[] = 'post<updatefuturecosts>';
         $this->__routes[] = 'post<updateResetSrps>';
@@ -357,7 +358,17 @@ class AuditReport extends PageLayoutA
             UPDATE PriceRules r
                 INNER JOIN products p ON p.price_rule_id=r.priceRuleID
                 INNER JOIN woodshed_no_replicate.AuditScan a ON a.upc=p.upc
-            SET r.details = a.notes
+            SET r.details = a.notes,
+                r.reviewDate = DATE_SUB(
+                    LAST_DAY(
+                        DATE_ADD(NOW(), INTERVAL 1 MONTH)
+                    ), 
+                    INTERVAL DAY(
+                        LAST_DAY(
+                            DATE_ADD(NOW(), INTERVAL 1 MONTH)
+                        )
+                    ) -1 DAY
+                )
             WHERE a.username=?
                 AND a.savedAs='default'
                 AND LENGTH(a.notes) > 0
@@ -565,6 +576,42 @@ class AuditReport extends PageLayoutA
         // catch items if not padded 
         $args = array($username);
         $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a INNER JOIN GenericUpload g ON LPAD(SUBSTR(g.upc,1,12),13,'0')=a.upc SET a.notes=REPLACE(g.cost, '$', '') WHERE a.username=? AND a.savedAs='default';");
+        $res = $dbc->execute($prep, $args);
+
+        return false;
+    }
+
+    public function postGenericaliasHandler()
+    {
+        $dbc = ScanLib::getConObj();
+        $username = FormLib::get('username');
+        $vendorID = FormLib::get('vendorID');
+
+        echo "YAY!";
+
+        $args = array($username, $vendorID);
+        $prep = $dbc->prepare("
+            UPDATE woodshed_no_replicate.AuditScan a
+                INNER JOIN vendorItems v ON v.upc=a.upc
+                INNER JOIN VendorAliases va ON va.vendorID=v.vendorID AND va.upc=a.upc
+                INNER JOIN GenericUpload g ON g.sku=va.sku
+            SET a.notes=REPLACE(g.cost, '$', '')
+            WHERE a.username=?
+                AND v.vendorID=?
+                AND a.savedAs='default';");
+        $res = $dbc->execute($prep, $args);
+
+        $args = array($username, $vendorID);
+        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a
+            INNER JOIN vendorItems v ON v.upc=a.upc
+            INNER JOIN GenericUpload g ON CAST(g.sku AS UNSIGNED)=CAST(v.sku AS UNSIGNED) 
+            SET a.notes=REPLACE(g.cost, '$', '')
+            WHERE a.username=?
+                AND v.vendorID=?
+                AND a.savedAs='default'
+                AND CAST(g.sku AS UNSIGNED) <> 0
+                AND CAST(v.sku AS UNSIGNED) <> 0
+            ");
         $res = $dbc->execute($prep, $args);
 
         return false;
@@ -2548,6 +2595,7 @@ HTML;
             <option value=\"roundPriceNotes\">$itBug Price Round Notes</option>
             <option value=\"genericUploadCostsPr\">$itBug Generic UpL cost => Notes (on upcs)</option>
             <option value=\"genericUploadCostsVi\">$itBug Generic UpL cost => Notes (on skus)</option>
+            <option value=\"genericUploadCostsAl\">$itBug Generic UpL cost => Notes (on aliases)</option>
             <option value=\"genericUploadNewSRPVi\">$itBug Generic UpL NewSRP => Notes</option>
             <option value=\"futureCostFromNotes\">$itBug Notes => Future Costs</option>
             <option value=\"vendorItemSrpReset\">$itBug Reset Vendor Item SRPs (to normal_price)</option>
@@ -2571,11 +2619,12 @@ HTML;
             <div class=\"fxExtOption\" data-value=\"updateViSrps\">$itBug SRP () => Notes</div>
             <div class=\"fxExtOption\" data-value=\"updateViSrps2\">$itBug SRP () => Notes II (include PR items)</div>
             <div class=\"fxExtOption\" data-value=\"ViClearNotes\">$itBug Clear Notes</div>
-            <div class=\"fxExtOption\" data-value=\"jsUnitsDivision\">$itBug Divide Notes / Units</div>
+            <div class=\"fxExtOption\" data-value=\"jsUnitsDivision\">$itBug Divide Notes / Units (shown)</div>
             <div class=\"fxExtOption\" data-value=\"jsPrnDivision\">$itBug Divide Notes / PRN</div>
             <div class=\"fxExtOption\" data-value=\"roundPriceNotes\">$itBug Price Round Notes</div>
             <div class=\"fxExtOption\" data-value=\"genericUploadCostsPr\">$itBug Generic UpL cost => Notes (on upcs)</div>
             <div class=\"fxExtOption\" data-value=\"genericUploadCostsVi\">$itBug Generic UpL cost => Notes (on skus)</div>
+            <div class=\"fxExtOption\" data-value=\"genericUploadCostsAl\">$itBug Generic UpL cost => Notes (on aliases)</div>
             <div class=\"fxExtOption\" data-value=\"genericUploadNewSRPVi\">$itBug Generic UpL NewSRP => Notes</div>
             <div class=\"fxExtOption\" data-value=\"futureCostFromNotes\">$itBug Notes => Future Costs</div>
             <div class=\"fxExtOption\" data-value=\"vendorItemSrpReset\">$itBug Reset Vendor Item SRPs (to normal_price)</div>
@@ -4285,6 +4334,23 @@ $('#extHideFx').change(function(){
                 });
             });
             break;
+        case 'genericUploadCostsAl':
+            ScanConfirm("<br/><br/>Get costs from Generic Upload (on aliases)?", 'get_generic_upload_costs_a', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&vendorID='+vendorID+'&genericalias=true',
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
         case 'vendorItemSrpReset':
             ScanConfirm("<br/>Reset Vendor Item SRPs<br/>to match Products normal prices?<br/>!Important!: VENDOR ID<br/> MUST BE ENTERED<br/>", 'update_reset_srps', function() {
                 let vendorID = $('#currentVendor').val();
@@ -4544,18 +4610,20 @@ $('#extHideFx').change(function(){
         case 'jsUnitsDivision':
             ScanConfirm("<br/><br/>Divide all notes (case prices) by units?", 'js_units_d_notes', function() {
                 $('tr').each(function() {
-                    let col1 = $(this).find('td.units').text();
-                    col1 = parseFloat(col1);
-                    let col2 = $(this).find('td.notes').text();
-                    col2 = parseFloat(col2);
+                    let isVis = $(this).is(":visible");
+                    if (isVis) {
+                        let col1 = $(this).find('td.units').text();
+                        col1 = parseFloat(col1);
+                        let col2 = $(this).find('td.notes').text();
+                        col2 = parseFloat(col2);
 
-                    let answer = col2 / col1;
-                    answer = Math.ceil(answer * 1000) / 1000;
-                    console.log('col2: '+ col2 + ',' + col2.length);
-                    if (answer > 0) {
-                        $(this).find('td.notes').text(answer);
+                        let answer = col2 / col1;
+                        answer = Math.ceil(answer * 1000) / 1000;
+                        console.log('col2: '+ col2 + ',' + col2.length);
+                        if (answer > 0) {
+                            $(this).find('td.notes').text(answer);
+                        }
                     }
-                    
                 });
             });
             break;
