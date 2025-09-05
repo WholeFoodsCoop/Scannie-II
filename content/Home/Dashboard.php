@@ -135,23 +135,35 @@ ORDER BY COUNT(p.upc) DESC");
         $reports = array(
             array(
                 'handler' => self::getOwnerSoOam($dbc), 
-                'ranges' => array(10, 100, 999),
+                'ranges' => array(0, 3, 999),
+            ),
+            array(
+                'handler' => self::getBogoSoBadPrice($dbc), 
+                'ranges' => array(0, 3, 999),
             ),
             array(
                 'handler' => self::getOffSrps($dbc), 
-                'ranges' => array(10, 100, 999),
+                'ranges' => array(0, 50, 999),
             ),
             array(
                 'handler' => self::getGenericPRIDItems($dbc), 
                 'ranges' => array(10, 100, 999),
             ),
             array(
+                'handler' => self::getSmsZeroPriceItems($dbc), 
+                'ranges' => array(0, 4, 999),
+            ),
+            array(
+                'handler' => self::getSmsRedundantPriceTabItems($dbc), 
+                'ranges' => array(50, 100, 999),
+            ),
+            array(
                 'handler' => self::getProdMissingCost($dbc), 
-                'ranges' => array(10, 20, 999),
+                'ranges' => array(0, 4, 999),
             ),
             array(
                 'handler' => self::getProdMissingVendor($dbc), 
-                'ranges' => array(10, 20, 999),
+                'ranges' => array(0, 4, 999),
             ),
             /*
             array(
@@ -183,15 +195,15 @@ ORDER BY COUNT(p.upc) DESC");
 
             array(
                 'handler' => self::getProdsMissingLocation($dbc),
-                'ranges' => array(50, 100, 99999),
+                'ranges' => array(0, 100, 99999),
             ),
             array(
                 'handler' => self::getMissingScaleItems($dbc),
-                'ranges' => array(1, 2, 999),
+                'ranges' => array(0, 5, 999),
             ),
             array(
                 'handler' => self::badPriceCheck($dbc),
-                'ranges' => array(1, 2, 999),
+                'ranges' => array(0, 5, 999),
             ),
             array(
                 'handler' => self::getBreakdownBadPrice($dbc), 
@@ -205,35 +217,35 @@ ORDER BY COUNT(p.upc) DESC");
             ),
             array(
                 'handler' => self::limboPcBatch($dbc),
-                'ranges' => array(1, 2, 999),
+                'ranges' => array(0, 2, 999),
             ),
             array(
                 'handler' => self::badDeliDepts($dbc),
-                'ranges' => array(1, 2, 999),
+                'ranges' => array(0, 2, 999),
             ),
             array(
                 'handler' => self::organicFlags($dbc),
-                'ranges' => array(1, 10, 999),
+                'ranges' => array(0, 10, 999),
             ),
             array(
                 'handler' => self::organicDesc($dbc),
-                'ranges' => array(1, 10, 9999),
+                'ranges' => array(0, 10, 9999),
             ),
             array(
                 'handler' => self::getZeroScaleItems($dbc),
-                'ranges' => array(1, 10, 9999),
+                'ranges' => array(0, 10, 9999),
             ),
             array(
                 'handler' => self::getOneScaleItems($dbc),
-                'ranges' => array(1, 10, 9999),
+                'ranges' => array(0, 10, 9999),
             ),
             array(
                 'handler' => self::getLocalDiscrepancies($dbc),
-                'ranges' => array(1, 10, 999),
+                'ranges' => array(0, 10, 999),
             ),
             array(
                 'handler' => self::getZeroVendorItems($dbc),
-                'ranges' => array(1, 10, 999),
+                'ranges' => array(5, 10, 999),
             ),
             /*
             array(
@@ -243,27 +255,31 @@ ORDER BY COUNT(p.upc) DESC");
             */
             array(
                 'handler' => self::getProdMissingEDLP($dbc),
-                'ranges' => array(1, 10, 999),
+                'ranges' => array(0, 10, 999),
             ),
             array(
                 'handler' => self::getBadBogoDeals($dbc),
-                'ranges' => array(1, 10, 999),
+                'ranges' => array(0, 10, 999),
             ),
             array(
                 'handler' => self::getProdMissingSale($dbc),
-                'ranges' => array(1, 10, 999),
+                'ranges' => array(0, 10, 999),
             ),
             array(
                 'handler' => self::getTooBigUPC($dbc),
-                'ranges' => array(1, 10, 999),
+                'ranges' => array(0, 10, 999),
             ),
             array(
                 'handler' => self::checkDeliProductionDepts($dbc),
-                'ranges' => array(1, 10, 999),
+                'ranges' => array(0, 10, 999),
+            ),
+            array(
+                'handler' => self::getBadSaleCost($dbc),
+                'ranges' => array(0, 5, 9999),
             ),
             array(
                 'handler' => self::getWatchList($dbc),
-                'ranges' => array(1, 5, 9999),
+                'ranges' => array(0, 5, 9999),
             ),
         );
 
@@ -826,7 +842,7 @@ HTML;
                         AND s.storeID=p.store_id
             )
                 AND inUse = 1
-                AND p.department NOT IN (240, 241, 250)
+                AND p.department NOT IN (240, 241, 250, 235)
                 AND m.superID IN (1,13,9,4,8,17,5,18) 
                 AND p.upc != '0000000000105'
                 AND p.default_vendor_id <> 200 #klean kanteen
@@ -1035,6 +1051,27 @@ HTML;
             'desc'=>$desc);
     }
 
+    public function getBadSaleCost($dbc)
+    {
+        $data = array();
+        $desc = "Items with bad vendorItems.saleCost";
+        $cols = array('upc', 'brand', 'description', 'vendorID', 'cost', 'saleCost');
+        $count = 0;
+        $prep = $dbc->prepare("SELECT upc, brand, description, vendorID, cost, saleCost FROM vendorItems WHERE saleCost > cost AND cost > 0;");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
+            $count++;
+        }
+
+        if ($count > 0) {
+            $data['count'] = $count;
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
     public function getWatchList($dbc)
     {
         $data = array();
@@ -1199,7 +1236,7 @@ HTML;
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
                 // temp(1) - don't show previous month cycle once A starts
-                if ($row['dealSet'] != 'March2025' && $row['ABT'] != 'A') {
+                if ($row['dealSet'] != 'July2025' && $row['ABT'] != 'A') {
                     foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
                     $count++;
                 }
@@ -1375,7 +1412,7 @@ HTML;
                 )
                 AND m.super_name NOT IN ('PRODUCE', 'BRAND', 'MISC')
                 AND p.numflag & (1<<19) = 0
-                AND p.department <> 240
+                AND p.department NOT IN  (235,240)
                 AND vendorID NOT IN (156)
             GROUP BY v.vendorID
         ");
@@ -1429,7 +1466,8 @@ HTML;
             WHERE p.store_id=1
                 AND p.department != 110
                 AND v.sku NOT IN ('01514652')
-                AND p.upc NOT IN ('0085177000306')
+                AND p.upc NOT IN ('0085177000306','0000000000436','0000000000940')
+                AND p.upc != '0000000000751' ## I have no idea why this one started coming up
             GROUP by p.upc
             ORDER BY v.vendorID, p.brand
         ");
@@ -1660,7 +1698,7 @@ HTML;
                         $data[$childUpc][$col] = $items[$childUpc][$col];
                         $data[$parentUpc][$col] = $items[$parentUpc][$col];
 
-                        $data[$childUpc]['relation'] = "(*4) = " . ($child / $multi);
+                        $data[$childUpc]['relation'] = "(*$multi) = " . ($child / $multi);
                         $data[$parentUpc]['relation'] = $parent;
                     }
                 } 
@@ -1722,6 +1760,60 @@ HTML;
             'desc'=>$desc);
     }
 
+    public function getBogoSoBadPrice($dbc)
+    {
+        $desc = "BOGO SOs with Bad Prices";
+        $data = array();
+        $pre = $dbc->prepare("
+            SELECT order_id, c.CardNo, datetime, o.description, o.upc, o.total, p.normal_price, v.units,
+                ROUND(p.normal_price * v.units, 2) AS CasePrice,
+                ROUND((p.normal_price * v.units)/2, 2) AS BogoPrice,
+                ROUND(((l.salePrice - (l.salePrice * 0.10)) * o.quantity) * o.ItemQtty, 2) AS CDPrice,
+                l.salePrice ,
+                CASE WHEN s.memtype2 IS NOT NULL THEN s.memtype2 ELSE c.Type END AS memberStatus,
+                CASE WHEN s.memtype2 IS NOT NULL THEN c.Type ELSE null END AS activeStatus,
+            GROUP_CONCAT(distinct b.batchName ORDER BY b.batchName),
+                ABS(ABS(o.total) - ABS(ROUND(((l.salePrice - (l.salePrice * 0.10)) * o.quantity) * o.ItemQtty, 2))) AS diff
+            FROM is4c_trans.PendingSpecialOrder AS o
+                INNER JOIN is4c_op.products p on p.upc=o.upc
+                INNER JOIN is4c_op.vendorItems v on v.upc=p.upc and v.vendorID=p.default_vendor_id
+                INNER JOIN is4c_op.MasterSuperDepts ma ON ma.dept_ID=p.department
+
+                INNER JOIN is4c_op.batchList AS l ON l.upc=o.upc
+                INNER JOIN is4c_op.batches AS b ON b.batchID=l.batchID
+
+                LEFT JOIN is4c_op.custdata AS c ON c.CardNo=o.card_no
+                LEFT JOIN is4c_op.meminfo AS mi ON c.CardNo=mi.card_no
+                LEFT JOIN is4c_op.suspensions AS s ON c.CardNo=s.cardno
+            WHERE l.salePrice <> 0
+                #AND ABS(ABS(o.total) - ABS(ROUND(((l.salePrice - (l.salePrice * 0.10)) * o.quantity) * o.ItemQtty, 2))) > 0.01
+                AND ma.super_name != \"WELLNESS\"
+                AND o.deleted = 0
+                #AND o.voided = 0
+                AND b.startDate <= DATE(NOW()) AND b.endDate >= DATE(NOW())
+                AND b.startDate <= datetime AND b.endDate >= datetime
+                #AND b.batchName LIKE \"%Co-op Deals%\"
+                #AND b.batchName NOT LIKE \"%TPR%\"
+                AND b.batchName LIKE \"%BOGO%\"
+                AND CASE WHEN s.memtype2 IS NOT NULL THEN s.memtype2 ELSE c.Type END IS NOT NULL
+                AND CASE WHEN s.memtype2 IS NOT NULL THEN s.memtype2 ELSE c.Type END != \"REG\"
+            GROUP BY o.upc, total
+        ");
+        $res = $dbc->execute($pre);
+        $count = $dbc->numRows($res);
+        $cols = array('order_id', 'CardNo', 'datetime', 'description', 'upc', 'total', 'BogoPrice', 'normal_price');
+        while ($row = $dbc->fetchRow($res)) {
+            if ($row['BogoPrice'] != $row['total']) {
+                foreach ($cols as $col) {
+                    $data[$row['upc']][$col] = $row[$col];
+                }
+            }
+        }
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+    }
+
     public function getOffSrps($dbc)
     {
         $desc = "SRPs that do not match normal prices";
@@ -1735,6 +1827,9 @@ HTML;
                 INNER JOIN vendors e ON e.vendorID=v.vendorID
             WHERE v.srp <> p.normal_price
                 AND m.super_name != \"PRODUCE\"
+                AND p.upc NOT IN (\"0000000001010\",\"0000000001011\",\"0000000001012\",\"0000000001009\") ## tmp, state line eggs intentional discrep
+                AND p.department NOT IN (226)
+                and p.default_vendor_id != 70
             ORDER BY e.vendorName
             ");
         $res = $dbc->execute($pre);
@@ -1778,6 +1873,48 @@ HTML;
             'desc'=>$desc);
     }
 
+    public function getSmsZeroPriceItems($dbc)
+    {
+        $desc = "Products With Zero Price in SMS";
+        $data = array();
+        $count = 0;
+        $cols = array('Details');
+        $output = array();
+        exec("php ../../../git/IS4C/fannie/modules/plugins2.0/SMS/noauto/GetZeroPriceSmsItems.php", $output);
+        foreach ($output as $line) {
+            if ($line != "Count: 0") {
+                $data[]['Details'] = "$line";
+            }
+        }
+        $count = count($a) - 2;
+        if ($er = $dbc->error()) echo "<div class='alert alert-danger'>$er</div>";
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+
+    }
+
+    public function getSmsRedundantPriceTabItems($dbc)
+    {
+        $desc = "Products With Redundant PRICE_TAB rows in SMS";
+        $data = array();
+        $count = 0;
+        $cols = array('Details');
+        $output = array();
+        exec("php ../../../git/IS4C/fannie/modules/plugins2.0/SMS/noauto/GetRedundantPriceTabRows.php", $output);
+        foreach ($output as $line) {
+            if ($line != "Count: 0") {
+                $data[]['Details'] = "$line";
+            }
+        }
+        $count = count($a) - 2;
+        if ($er = $dbc->error()) echo "<div class='alert alert-danger'>$er</div>";
+
+        return array('cols'=>$cols, 'data'=>$data, 'count'=>$count, 
+            'desc'=>$desc);
+
+    }
+
     public function getProdMissingCost($dbc)
     {
         $desc = "Products missing cost";
@@ -1790,7 +1927,7 @@ HTML;
                 AND cost = 0 
                 AND default_vendor_id > 0
                 AND p.inUse = 1
-                AND p.department NOT IN (240, 241, 242, 243, 244)
+                AND p.department NOT IN (240, 241, 242, 243, 244, 235)
                 AND p.upc NOT IN (
                     SELECT upc FROM {$this->ALTDB}.doNotTrack 
                     WHERE method = 'getProdMissingCost'   
@@ -1824,6 +1961,7 @@ HTML;
                 AND default_vendor_id = 0
                 AND p.inUse = 1
                 AND p.numflag & (1 << 19) = 0
+                AND p.department NOT IN (235)
                 AND p.description NOT LIKE '%BOGO%'
                 AND upc NOT IN (
                     SELECT upc FROM {$this->ALTDB}.doNotTrack 
