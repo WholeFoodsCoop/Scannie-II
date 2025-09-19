@@ -54,7 +54,8 @@ class DefaultVendorChangesReport extends PageLayoutA
     {
         $dbc = scanLib::getConObj();
         $td = "";
-        $thead = "<th>UPC</th><th>From Vendor</th><th>To Vendor</th><th>Updated On</th><th>Details</th>";
+        $thead = "<th>UPC</th><th>Brand</th><th>Description</th><th>From Vendor</th>
+            <th>To Vendor</th><th>Updated On</th><th>Details</th>";
         $args = array();
 
         $searchupc = FormLib::get("upc", false);
@@ -83,19 +84,21 @@ class DefaultVendorChangesReport extends PageLayoutA
         }
 
         $query = "
-            SELECT 
+                SELECT 
                 *,
                 va.vendorName AS oldName,
-                vb.vendorName AS newName
+                vb.vendorName AS newName,
+                h.id AS id
             FROM DefaultVendorHistory h
                 LEFT JOIN vendors va ON va.vendorID=h.oldID
                 LEFT JOIN vendors vb ON vb.vendorID=h.newID
+                LEFT JOIN products p ON p.upc=h.upc
             WHERE 1=1
                 $whereA
                 $whereB
                 $whereC
                 $whereD
-            GROUP BY upc, updated
+            GROUP BY h.upc, updated
             ORDER BY updated DESC
         ";
 
@@ -110,9 +113,13 @@ class DefaultVendorChangesReport extends PageLayoutA
             $newID = $row['newID'];
             $updated = substr($row['updated'],0,-3);
             $details = $row['details'];
+            $brand = $row['brand'];
+            $description = $row['description'];
 
             $td .= "<tr>";
-            $td .= "<td>$upc</td><td>$oldID $oldName</td><td>$newID $newName</td><td>$updated</td><td class=\"edit-details\" data-tid=\"$id\">$details</td>";
+            $td .= "<td>$upc</td><td>$brand</td><td>$description</td>
+                <td>$oldID $oldName</td><td>$newID $newName</td>
+                <td>$updated</td><td class=\"edit-details\" data-tid=\"$id\">$details</td>";
             $td .= "</tr>";
         }
 
@@ -122,9 +129,7 @@ class DefaultVendorChangesReport extends PageLayoutA
         return <<<HTML
 <div style="padding: 25px">
     <div class="row">
-        <div class="col-lg-1" id="col-1">
-        </div>
-        <div class="col-lg-10" id="col-2">
+        <div class="col-lg-12" id="col-2">
             <h3>Default Vendor Change Log</h3>
             <label>Search by Start / End Date(s)</label>
             <form class="form-inline">
@@ -154,7 +159,6 @@ class DefaultVendorChangesReport extends PageLayoutA
             </form>
             <table class="table table-striped table-bordered table-sm"><thead>$thead</thead><tbody>$td</tbody></table>
         </div>
-        <div class="col-lg-1"></div>
     </div>
 </div>
 HTML;
