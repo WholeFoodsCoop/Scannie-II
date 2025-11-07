@@ -98,6 +98,7 @@ class DefaultVendorChangesReport extends PageLayoutA
                 $whereB
                 $whereC
                 $whereD
+                AND h.oldID <> 0
             GROUP BY h.upc, updated
             ORDER BY updated DESC
         ";
@@ -169,6 +170,9 @@ HTML;
         return <<<HTML
 .list-active { 
     background: lightblue;
+}
+.table-striped > tbody > tr:hover {
+    background-color: rgba(215, 146, 50, 0.2);
 }
 HTML;
     }
