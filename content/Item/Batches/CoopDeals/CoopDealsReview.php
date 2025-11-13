@@ -57,6 +57,10 @@ class CoopDealsReview extends WebDispatch
         $start = $_GET['startDate'];
         $dealSet = $_GET['dealset'];
         $upcs = $this->getProdsInBatches($dbc);
+
+        $ferndaleCheck = $this->getSpecialDirectVendorSales($dbc, $dealSet);
+        $ferndaleHTML = ($ferndaleCheck > 0) ? "<div class=\"alert alert-warning\">There are Ferndale items in the Coop Deals file.</div>" : "";
+
         if (isset($start)) {
             $ret .= "
                 <div class='row'>
@@ -81,6 +85,12 @@ class CoopDealsReview extends WebDispatch
                     <div class='col-lg-1'>
                     </div>
                     <div class='col-lg-5'>
+                        <div>$ferndaleHTML</div>
+                        <div>
+                            <p>This query can be helpful around the holidays. Use it to delete the listIDs that show up in the results (items with sale prices that
+                                are at least 4x the price of the normal price)</p> 
+                            <input value='select l.listID, p.upc, p.brand, p.description, p.normal_price, l.salePrice from batchList l inner join products p on p.upc=l.upc where l.batchID >= 29580 AND l.batchID <= 29601 AND (p.normal_price * 4) < l.salePrice;' />
+                        </div>
                         <div class='table-responsive'>
                             {$this->getBadPrices($dbc,$upcs)}
                         </div>
@@ -107,6 +117,20 @@ class CoopDealsReview extends WebDispatch
 $ret
 </div>
 HTML;
+    }
+
+    private function getSpecialDirectVendorSales($dbc, $dealSet)
+    {
+        /*
+            Rarely, NCG will promote items that come from direct vendors
+            Currently, the only one of these that we know of, and is being
+            queried for below is Ferndale turkey products.
+        */
+        $prep = $dbc->prepare('SELECT * FROM CoopDealsItems WHERE upc IN ("0002363830468","0002693830475","0002693830476","0002693830480","0002693830483","0002693830484","0002693830485","0002363830468","0002693830475","0002693830476","0002693830480","0002693830483","0002693830484","0002693830485") AND dealSet = ?');
+        $res = $dbc->execute($prep, array($dealSet));
+        $numRows = $dbc->numRows($res);
+
+        return $numRows;
     }
 
     private function getProdsInBatches($dbc) {
