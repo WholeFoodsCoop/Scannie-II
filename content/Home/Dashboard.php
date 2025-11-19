@@ -38,7 +38,7 @@ class Dashboard extends PageLayoutA
     {
         $this->displayFunction = $this->pageContent();
 
-        return false;
+        return parent::preprocess();
     }
 
     public function pageContent()
@@ -780,7 +780,7 @@ HTML;
             ) AND
             (
               normal_price = 0
-              OR normal_price > 134.99
+              OR normal_price > 200.99
               OR normal_price < cost
             )
             GROUP BY p.upc
@@ -1230,13 +1230,14 @@ HTML;
                     )
                     AND c.upc > 9999
                     AND p.normal_price > c.price
+                    AND p.description NOT LIK '%DSP%'
                 GROUP BY c.upc
                 ORDER BY m.super_name
             ");
             $res = $dbc->execute($prep, $args);
             while ($row = $dbc->fetchRow($res)) {
                 // temp(1) - don't show previous month cycle once A starts
-                if ($row['dealSet'] != 'July2025' && $row['ABT'] != 'A') {
+                if ($row['dealSet'] != 'September2025' && $row['ABT'] != 'A') {
                     foreach ($cols as $col) $data[$row['upc']][$col] = $row[$col];
                     $count++;
                 }
@@ -2032,9 +2033,17 @@ HTML;
 
     private function getFutureVendorItems()
     {
+        $file = file_get_contents("noauto/stagedFutureVendors.json");
+        $data = json_decode($file);
+
+        $vendors = array();
+        foreach ($data->{0} as $name => $item) {
+            $vendors[] = $name;
+        }
+
         $ret = '<table class="table table-bordered table-sm">
             <thead>
-                <th>Vendor Name</th><th>VendorID</th><th>Number of Items</th><th>Start Date</th>
+                <th>Vendor Name</th><th>VendorID</th><th>Number of Items</th><th>Start Date</th><th>Complete</th>
             </thead>
             <tbody>';
         $dbc = scanLib::getConObj();
@@ -2046,11 +2055,27 @@ HTML;
             ORDER BY f.startDate, f.vendorID ");
         $res = $dbc->execute($prep);
         while ($row = $dbc->fetchRow($res)) {
+            $name = $row['vendorName'];
+            if (!in_array($name, $vendors)) {
+                $newObj = new stdClass();
+                $newObj->VendorID = $row['vendorID'];
+                $newObj->Items = $row['count'];
+                $newObj->StartDate = $row['startDate'];
+
+                $data->{0}->{$name} = $newObj;
+            }
+        }
+
+        foreach ($data->{0} as $name => $item) {
             $ret .= "<tr>";
-            $ret .= "<td>{$row['vendorName']}</td><td>{$row['vendorID']}</td><td>{$row['count']}</td><td>{$row['startDate']}</td>";
+            $ret .= "<td>$name</td><td>{$item->VendorID}</td><td>{$item->Items}</td><td>{$item->StartDate}</td>";
+            $ret .= "<td><input type=\"checkbox\" class=\"checkbox FviComplete\" /></td>";
             $ret .= "</tr>";
         }
         $ret .= '</tbody></table>';
+
+        $newJson = json_encode($data);
+        file_put_contents("noauto/stagedFutureVendors.json", $newJson);
 
         return $ret;
     }
@@ -2122,6 +2147,24 @@ $('#curEdlp').change(function(){
             $('#curEdlpLabel').html('<i>-page must be reloaded to apply changes-</i>');
         }
     });
+});
+
+$(".FviComplete").on('click', function() {
+    let elm = $(this);
+    let c = confirm("Remove from list?");
+    if (c == true) {
+        let vendorName = $(this).parent().parent().find("td:eq(0)").text();
+
+        $.ajax({
+            type: 'post',
+            data: 'sfcRemoveId='+vendorName,
+            url: 'jsonajax.php',
+            success: function(resp) {
+                console.log('resp: ' + resp);
+                elm.parent().parent().hide();
+            }
+        });
+    }
 });
 JAVASCRIPT;
     }
