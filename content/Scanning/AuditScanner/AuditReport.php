@@ -16,7 +16,7 @@ class AuditReport extends PageLayoutA
 
     public $columns = array('check', 'upc', 'sku', 'alias', 'likeCode', 'brand', 'sign-brand', 'description', 
         'sign-description', 'size', 'uom', 'units', 'netcost', 'cost', 'vcost', 'recentPurchase',
-        'price', 'sale', 'autoPar', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'prt', 'tax', 'dept', 'subdept',
+        'price', 'sale', 'autoPar', 'movement', 'margin_target_diff', 'rsrp', 'srp', 'prid', 'prt', 'tax', 'dept', 'subdept',
         'superdept', 
         'local', 'flags', 'vendor', 'last_sold', 'scaleItem', 'scalePLU', 'tare', 'mnote', 'notes', 'reviewed', 
         'costChange', 'floorSections', 'comment', 'PRN', 'caseCost'); 
@@ -70,6 +70,8 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<setPriceRuleDetails>';
         $this->__routes[] = 'post<setProductCosts>';
         $this->__routes[] = 'post<setVendorID>';
+        $this->__routes[] = 'post<setStartDate>';
+        $this->__routes[] = 'post<setEndDate>';
         $this->__routes[] = 'post<getFamilyItems>';
         $this->__routes[] = 'post<lpad>';
         $this->__routes[] = 'post<sessionNotepad>';
@@ -299,6 +301,26 @@ class AuditReport extends PageLayoutA
     {
         $vendorID = FormLib::get('vendorID');
         $_SESSION['currentVendor'] = $vendorID;
+
+        $json = array();
+        $json['test'] = 1;
+        echo json_encode($json);
+
+        return false;
+    }
+
+    public function postSetStartDateHandler()
+    {
+        $startDate = FormLib::get('startDate');
+        $_SESSION['arStartDate'] = $startDate;
+
+        return false;
+    }
+
+    public function postSetEndDateHandler()
+    {
+        $endDate = FormLib::get('endDate');
+        $_SESSION['arEndDate'] = $endDate;
 
         return false;
     }
@@ -1878,6 +1900,7 @@ class AuditReport extends PageLayoutA
             <td title=\"price\" data-column=\"price\"class=\"price column-filter\"></td>
             <td title=\"sale\" data-column=\"sale\"class=\"sale column-filter\"></td>
             <td title=\"autoPar\" data-column=\"autoPar\"class=\"autoPar column-filter\"></td>
+            <td title=\"movement\" data-column=\"movement\"class=\"movement column-filter\"></td>
             <td title=\"margin_target_diff\" data-column=\"margin_target_diff\"class=\"margin_target_diff column-filter\"></td>
             <td title=\"srp\" data-column=\"srp\"class=\"srp column-filter\"></td>
             <td title=\"rsrp\" data-column=\"rsrp\"class=\"rsrp column-filter\"></td>
@@ -1929,6 +1952,7 @@ class AuditReport extends PageLayoutA
             <th class=\"price\">price</th>
             <th class=\"sale\">sale</th>
             <th class=\"autoPar\">autoPar(*7)</th>
+            <th class=\"movement\">Movement</th>
             <th class=\"margin_target_diff\">margin, target, diff</th>
             <th class=\"rsrp\">raw srp</th>
             <th class=\"srp\">srp</th>
@@ -1959,7 +1983,15 @@ class AuditReport extends PageLayoutA
         ";
         $result = $dbc->execute($prep, $args);
 
+        while ($row = $dbc->fetch_row($result)) {
+            $upc = $row['upc'];
+            $upcs[] = $upc;
+        }
+        if (isset($_SESSION['arStartDate']) && isset($_SESSION['arEndDate']) ) {
+            $itemMt = $this->getItemMovement($upcs, $storeID);
+        }
 
+        $result = $dbc->execute($prep, $args);
         while ($row = $dbc->fetch_row($result)) {
             $upc = $row['upc'];
             //$upcs[$upc] = $upc;
@@ -2089,6 +2121,10 @@ class AuditReport extends PageLayoutA
             $tare = $row['tare'];
             $caseCost = $row['caseCost'];
             $ubid = uniqid();
+            $movement = 0;
+            if (isset($itemMt[$upc])) {
+                $movement = $itemMt[$upc];
+            } 
             $td .= "<tr class=\"prod-row\" id=\"$rowID\">";
             $td .= "<td class=\"upc\" data-upc=\"$upc\">$uLink</td>";
             $td .= "<td class=\"sku\">$sku</td>";
@@ -2111,6 +2147,7 @@ class AuditReport extends PageLayoutA
             $td .= "<td class=\"price\" $badPrice>$price</td>";
             $td .= "<td class=\"sale\"><span style=\"color: darkgreen; font-weight: bold;\">$sale</span></td>";
             $td .= "<td class=\"autoPar\">$autoPar</td>";
+            $td .= "<td class=\"movement\">$movement</td>";
             $diff = round($curMargin - $margin, 1);
             $curMargin = round($curMargin, 1);
             $td .= "<td class=\"margin_target_diff\">
@@ -2254,6 +2291,63 @@ HTML;
         return $select;
     }
 
+    private function getItemMovement($upcs, $storeID)
+    {
+        $dbc = scanLib::getConObj();
+        $storeID;
+        list($inStr, $args) = $dbc->safeInClause($upcs);
+        $args[] = $_SESSION['arStartDate'];
+        $args[] = $_SESSION['arEndDate'];
+        $args[] = $storeID;
+        $items = array();
+        $start = new DateTime($_SESSION['arStartDate']);
+        $end = new DateTime();
+        $interval = $start->diff($end);
+        $begin = $interval->days;
+
+        $tabs = array("is4c_trans.dlog_15", "is4c_trans.dlog_90_view", "trans_archive.dlogBig");
+        if ($begin < 15) {
+            $table = $tabs[0];
+        } else if ($begin < 90) {
+            $table = $tabs[1];
+        } else {
+            $table = $tabs[2];
+        }
+
+        // not quite done yet, we need to choose the trans log based on date range
+
+        $query = "
+SELECT t.upc, COALESCE(p.brand, '') AS brand, CASE WHEN p.description IS NULL THEN t.description ELSE p.description END as description, SUM(CASE WHEN trans_status IN('','0') THEN 1 WHEN trans_status='V' THEN -1 ELSE 0 END) as rings, SUM(CASE WHEN t.trans_status = 'M' THEN 0 WHEN t.trans_subtype = 'OG' THEN 0 WHEN t.unitPrice = 0.01 THEN 1 ELSE t.quantity END) as qty, SUM(t.total) AS total, t.department, d.dept_name, m.super_name, v.vendorName AS distributor, i.sku
+FROM $table AS t
+LEFT JOIN departments AS d ON t.department=d.dept_no
+LEFT JOIN is4c_op.products AS p ON p.upc = t.upc AND p.store_id=1
+LEFT JOIN MasterSuperDepts AS m ON t.department=m.dept_ID
+LEFT JOIN subdepts AS b ON p.subdept=b.subdept_no
+LEFT JOIN vendors AS v ON p.default_vendor_id=v.vendorID
+LEFT JOIN vendorItems AS i ON p.upc=i.upc AND p.default_vendor_id=i.vendorID
+WHERE  t.upc IN ($inStr)
+AND t.tdate BETWEEN ? AND ?
+AND t.memType NOT IN (4)
+AND (t.store_id = ?)
+GROUP BY t.upc, COALESCE(p.brand, ''), CASE WHEN p.description IS NULL THEN t.description ELSE p.description END, CASE WHEN t.trans_status='R' THEN 'Refund' ELSE 'Sale' END, t.department, d.dept_name, m.super_name, v.vendorName, i.sku ORDER BY SUM(t.total) DESC
+";
+        $prep = $dbc->prepare($query);
+        $res = $dbc->execute($prep, $args);
+        echo $dbc->error();
+        while ($row = $dbc->fetchRow($res)) {
+            $rings = $row['rings'];
+            $qty = $row['qty'];
+            $upc = $row['upc'];
+            $items[$upc] = round($qty, 2);
+        }
+
+        //echo "anything!";
+
+        //return (array( "0001356200045" => 123));
+        return $items;
+
+    }
+
     public function postView($demo=false)
     {
         $dbc = scanLib::getConObj();
@@ -2301,10 +2395,10 @@ HTML;
             $x |= 1 << 16;//price
             $x |= 1 << 17;//saleprice
             $x |= 1 << 18;//autopar
-            $x |= 1 << 24;//tax
-            $x |= 1 << 25;//dept
-            $x |= 1 << 36;//notes
-            $x |= 1 << 37;//reviewed
+            $x |= 1 << 25;//tax
+            $x |= 1 << 26;//dept
+            $x |= 1 << 37;//notes
+            $x |= 1 << 38;//reviewed
             $_SESSION['columnBitSet'] = $x;
         }
 
@@ -2498,7 +2592,17 @@ HTML;
         </select>
     </form>
 </div>
-| Current Vendor: <input type="text" style="border: 0px solid transparent;" id="currentVendor" value="'.$_SESSION['currentVendor'].'" />';
+| Current Vendor: <input type="text" style="border: 0px solid transparent; border-bottom: 1px solid lightgrey;  width: 100px;" id="currentVendor" value="'.$_SESSION['currentVendor'].'" />
+| Movement: <input type="text" style="border: 0px solid transparent; border-bottom: 1px solid lightgrey;  width: 100px;" placeholder="startDate" autocomplete="off" id="startDate" 
+    value="'.$_SESSION['arStartDate'].'" />
+ &nbsp;&nbsp <input type="text" style="border: 0px solid transparent; border-bottom: 1px solid lightgrey; width: 100px;" placeholder="endDate" autocomplete="off" id="endDate" 
+    value="'.$_SESSION['arEndDate'].'" />
+ &nbsp;&nbsp; <button class="btn btn-default btn-sm hidden" id="btn-reload-page" onclick="location.reload();">reload</button>
+ &nbsp;&nbsp; <button class="btn btn-default btn-sm " onclick="$(\'#endDate\').val(null).trigger(\'change\'); $(\'#startDate\').val(null).trigger(\'change\');">clear</button>
+';
+
+        $this->addOnloadCommand("$('#startDate').datepicker({dateFormat: 'yy-mm-dd'});");
+        $this->addOnloadCommand("$('#endDate').datepicker({dateFormat: 'yy-mm-dd'});");
 
         $options = $this->getNotesOpts($dbc,$username);
         $noteStr = "";
@@ -2614,29 +2718,29 @@ HTML;
 
         $adminFxOptsNew = ($admin) ? "
             <div class=\"fxExtOption\" data-value=\"hideNOF\">Hide Rows With 'NOF' entered as notes</div>
-            <div class=\"fxExtOption\" data-value=\"pullReviewListToPrn\">$itBug Review List () => PRN</div>
+            <div class=\"fxExtOption\" data-value=\"pullReviewListToPrn\">$itBug Show Review List (load to PRN)</div>
             <div class=\"fxExtOption\" data-value=\"exportJSONbatch\">$itBug JSON Export Batch </div>
-            <div class=\"fxExtOption\" data-value=\"updateViSrps\">$itBug SRP () => Notes</div>
-            <div class=\"fxExtOption\" data-value=\"updateViSrps2\">$itBug SRP () => Notes II (include PR items)</div>
+            <div class=\"fxExtOption\" data-value=\"updateViSrps\">$itBug SRP () > Notes</div>
+            <div class=\"fxExtOption\" data-value=\"updateViSrps2\">$itBug SRP () > Notes (include PR items)</div>
             <div class=\"fxExtOption\" data-value=\"ViClearNotes\">$itBug Clear Notes</div>
-            <div class=\"fxExtOption\" data-value=\"jsUnitsDivision\">$itBug Divide Notes / Units (shown)</div>
+            <div class=\"fxExtOption\" data-value=\"jsUnitsDivision\">$itBug Divide Notes / Units (as shown)</div>
             <div class=\"fxExtOption\" data-value=\"jsPrnDivision\">$itBug Divide Notes / PRN</div>
-            <div class=\"fxExtOption\" data-value=\"roundPriceNotes\">$itBug Price Round Notes</div>
-            <div class=\"fxExtOption\" data-value=\"genericUploadCostsPr\">$itBug Generic UpL cost => Notes (on upcs)</div>
-            <div class=\"fxExtOption\" data-value=\"genericUploadCostsVi\">$itBug Generic UpL cost => Notes (on skus)</div>
-            <div class=\"fxExtOption\" data-value=\"genericUploadCostsAl\">$itBug Generic UpL cost => Notes (on aliases)</div>
-            <div class=\"fxExtOption\" data-value=\"genericUploadNewSRPVi\">$itBug Generic UpL NewSRP => Notes</div>
-            <div class=\"fxExtOption\" data-value=\"futureCostFromNotes\">$itBug Notes => Future Costs</div>
+            <div class=\"fxExtOption\" data-value=\"roundPriceNotes\">$itBug Notes < 'PriceRounder->round();'</div>
+            <div class=\"fxExtOption\" data-value=\"genericUploadCostsPr\">$itBug Generic cost > Notes (on upcs)</div>
+            <div class=\"fxExtOption\" data-value=\"genericUploadCostsVi\">$itBug Generic cost > Notes (on skus)</div>
+            <div class=\"fxExtOption\" data-value=\"genericUploadCostsAl\">$itBug Generic cost > Notes (on aliases)</div>
+            <div class=\"fxExtOption\" data-value=\"genericUploadNewSRPVi\">$itBug Generic NewSRP > Notes</div>
+            <div class=\"fxExtOption\" data-value=\"futureCostFromNotes\">$itBug Notes > Future Costs</div>
             <div class=\"fxExtOption\" data-value=\"vendorItemSrpReset\">$itBug Reset Vendor Item SRPs (to normal_price)</div>
             <div class=\"fxExtOption\" data-value=\"addColumnVcase\">$itBug Add Column VCASE </div>
-            <div class=\"fxExtOption\" data-value=\"setPriceRuleDetails\">$itBug Set PriceRules.details = notes</div>
-            <div class=\"fxExtOption\" data-value=\"setProductCosts\">$itBug Set products.cost = notes</div>
+            <div class=\"fxExtOption\" data-value=\"setPriceRuleDetails\">$itBug PriceRules.details < notes</div>
+            <div class=\"fxExtOption\" data-value=\"setProductCosts\">$itBug products.cost < notes</div>
             <div class=\"fxExtOption\" data-value=\"lpadGeneric\">$itBug LPAD GenericUpload upc column</div>
             <div class=\"fxExtOption\" data-value=\"uncheckall\">$itBug Uncheck All</div>
-            <div class=\"fxExtOption\" data-value=\"notes2notes\">$itBug Reset Notes to Current Values</div>
-            <div class=\"fxExtOption\" data-value=\"getLastPrice\">$itBug Reset Notes to Last Known Price</div>
-            <div class=\"fxExtOption\" data-value=\"setPrnDiff\">$itBug Set PRN < DIFF: Notes (NewSRP) - Price</div>
-            <div class=\"fxExtOption\" data-value=\"setPrnNar\">$itBug Set PRN = Narrow</div>
+            <div class=\"fxExtOption\" data-value=\"notes2notes\">$itBug Notes < Notes (save current values)</div>
+            <div class=\"fxExtOption\" data-value=\"getLastPrice\">$itBug Notes < 'Last Known Price'</div>
+            <div class=\"fxExtOption\" data-value=\"setPrnDiff\">$itBug PRN < DIFF (Notes - Price)</div>
+            <!--<div class=\"fxExtOption\" data-value=\"setPrnNar\">$itBug PRN < 'Narrow'</div>-->
         " : "";
             //<div class=\"fxExtOption\" data-value=\"clearTableData\">$itBug WIPE DB INFO FOR ITEMS IN LIST</div>
 
@@ -5036,9 +5140,9 @@ $(".fxExtOption").on("click", function() {
     $("#extHideFx").val(chosen).trigger('change');
 });
 
-
 $('#currentVendor').on('change', function() {
     let vendorID = $('#currentVendor').val();
+    var element = $(this);
 
     $.ajax({
         type: 'post',
@@ -5047,8 +5151,56 @@ $('#currentVendor').on('change', function() {
         url: 'AuditReport.php',
         success: function(response) {
             //location.reload();
+            // last, add condition to test that the value was actually set
+            console.log('success');
+            ajaxRespPopOnElm(element, 0);
         },
         error: function(response) {
+            console.log('error');
+            console.log(response);
+            ajaxRespPopOnElm(element, 1);
+        },
+    });
+});
+
+$('#startDate').on('change', function() {
+    let startDate = $('#startDate').val();
+    var element = $(this);
+    $.ajax({
+        type: 'post',
+        data: 'setStartDate=1&startDate='+startDate,
+        url: 'AuditReport.php',
+        success: function(response) {
+            //location.reload();
+            $('#btn-reload-page').show();
+            console.log('success');
+            ajaxRespPopOnElm(element, 0);
+        },
+        error: function(response) {
+            console.log('error');
+            console.log(response);
+            ajaxRespPopOnElm(element, 1);
+        },
+    });
+});
+
+$('#endDate').on('change', function() {
+    let endDate = $('#endDate').val();
+    var element = $(this);
+    $.ajax({
+        type: 'post',
+        data: 'setEndDate=1&endDate='+endDate,
+        url: 'AuditReport.php',
+        success: function(response) {
+            //location.reload();
+            $('#btn-reload-page').show();
+            console.log('success');
+            ajaxRespPopOnElm(element, 0);
+        },
+        error: function(response) {
+            console.log('error');
+            console.log(response);
+            ajaxRespPopOnElm(element, 1);
         },
     });
 });
