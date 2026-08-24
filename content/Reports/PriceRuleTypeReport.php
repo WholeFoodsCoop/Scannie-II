@@ -69,7 +69,7 @@ class PriceRuleTypeReport extends PageLayoutA
 <div class="container-fluid" style="margin-top: 15px">
     <div class="row">
         <div class="col-lg-8">
-            <table class="table table-condensed table-bordered table-striped table-sm small" id="main-table">
+            <table class="table table-condensed table-bordered table-sm small" id="main-table">
                 <thead><th>upc</th><th>brand</th><th>description</th><th>price rule type</th><th>price rule details</th></thead>
                 <tbody>$table</tbody>
             </table>
@@ -115,6 +115,27 @@ HTML;
     public function javascriptContent()
     {
         return <<<JAVASCRIPT
+stripeTable = function() {
+    let last = '';
+    let highlight = 0;
+    $('tr').each(function() {
+        if ($(this).is(':visible')) {
+            let detail = $(this).find('td:eq(4)').text();
+            console.log(detail);
+            if (last != detail) {
+                if (highlight == 0)  {
+                    highlight = 1;
+                } else {
+                    highlight = 0;
+                }
+            }
+            last = detail;
+            if (highlight == 1) {
+                $(this).addClass('highlight');
+            }
+        }
+    });
+}
 $('select[name=superDept]').change(function(){
     document.forms['superForm'].submit();
 });
@@ -139,8 +160,18 @@ $('select[name=priceRuleType]').change(function(){
             $(this).closest('tr').hide();
         }
     });
+    stripeTable();
 });
 JAVASCRIPT;
+    }
+
+    public function cssContent()
+    {
+        return <<<HTML
+.highlight {
+    background: rgba(0,255, 175, 0.2);
+}
+HTML;
     }
 
     public function helpContent()
