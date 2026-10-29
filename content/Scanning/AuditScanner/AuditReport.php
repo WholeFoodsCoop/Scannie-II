@@ -82,8 +82,55 @@ class AuditReport extends PageLayoutA
         $this->__routes[] = 'post<lastKnownPrice>';
         $this->__routes[] = 'post<setprndiff>';
         $this->__routes[] = 'post<setprnnar>';
+        $this->__routes[] = 'post<priceByMargin>';
 
         return parent::preprocess();
+    }
+
+    public function postPriceByMarginHandler()
+    {
+        
+        $dbc = ScanLib::getConObj();
+        $rounder = new PriceRounder();
+        $items = array();
+        $username = FormLib::get('username');
+        $storeID = FormLib::get('storeID');
+        $margin = FormLib::get('priceByMargin');
+        $margin *= 0.01;
+        $shipping = FormLib::get('shipping', 0);
+        $shipping *= 0.01;
+
+        $args = array($username);
+        $prep = $dbc->prepare("SELECT p.upc, cost FROM woodshed_no_replicate.AuditScan a
+            INNER JOIN products p ON p.upc=a.upc
+            WHERE a.username=? AND a.savedAs='default'");
+        $res = $dbc->execute($prep, $args);
+        while ($row = $dbc->fetchRow($res)) {
+            $upc = $row['upc'];
+            $cost = $row['cost'];
+            if ($shipping > 0) {
+                $cost *= (1 + $shipping);
+            }
+            $srp = $cost / (1 - $margin);
+            $items[$upc] = $rounder->round($srp);
+            //$items[$upc] = $srp;
+        }
+
+        $updateP = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan 
+            SET notes = ? WHERE upc = ? AND username = ? AND savedAs = 'default'");
+
+        $dbc->startTransaction();
+        foreach ($items as $upc => $srp) {
+            $updateA = array($srp, $upc, $username);
+            $dbc->execute($updateP, $updateA);
+        }
+        $dbc->commitTransaction();
+
+        $er = ($dbc->error()) ? $dbc->error() : '';
+        echo $er;
+
+        return false;
+
     }
 
     public function postSetprnnarHandler()
@@ -573,6 +620,7 @@ class AuditReport extends PageLayoutA
     {
         $dbc = ScanLib::getConObj();
         $username = FormLib::get('username');
+        $vendorID = FormLib::get('vendorID');
 
         $args = array($username);
         $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a INNER JOIN GenericUpload g ON g.upc=a.upc SET a.notes=REPLACE(g.NewSRP, '$', '') WHERE a.username=? AND a.savedAs='default';");
@@ -581,6 +629,11 @@ class AuditReport extends PageLayoutA
         // catch items if not padded 
         $args = array($username);
         $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a INNER JOIN GenericUpload g ON LPAD(SUBSTR(g.upc,1,12),13,'0')=a.upc SET a.notes=REPLACE(g.NewSRP, '$', '') WHERE a.username=? AND a.savedAs='default';");
+        $res = $dbc->execute($prep, $args);
+
+        // update PRN to futureCost for further verification of new prices
+        $args = array($username, $vendorID);
+        $prep = $dbc->prepare("UPDATE woodshed_no_replicate.AuditScan a INNER JOIN FutureVendorItems g ON g.upc=a.upc SET a.PRN = g.futureCost  WHERE a.username=? AND a.savedAs='default' AND g.startDate = DATE_ADD(LAST_DAY(CURDATE()), INTERVAL 1 DAY) AND g.vendorID=?;");
         $res = $dbc->execute($prep, $args);
 
         return false;
@@ -1128,17 +1181,16 @@ class AuditReport extends PageLayoutA
         $dbc = ScanLib::getConObj('SCANALTDB');
         $load = FormLib::get('loadList');
         $username = FormLib::get('username');
-        $storeID = FormLib::get('storeID');
 
         $args = array($username);
         $prep = $dbc->prepare("DELETE FROM AuditScan WHERE username = ?
             AND savedAs = 'default'");
         $res = $dbc->execute($prep, $args);
 
-        $args = array($username, $storeID, $load);
+        $args = array($username, $load);
         $prep = $dbc->prepare("INSERT INTO AuditScan (date, upc, username, storeID, savedAs, notes)
             SELECT NOW(), upc, username, storeID, 'default', notes FROM AuditScan WHERE username = ?
-            AND storeID = ? AND savedAs = ?");
+            AND savedAs = ?");
         $res = $dbc->execute($prep, $args);
 
         return header("location: AuditReport.php?loaded=$load");
@@ -1700,6 +1752,7 @@ class AuditReport extends PageLayoutA
         $username = ($un = scanLib::getUser()) ? $un : "Generic User";
         $storeID = (isset($_SESSION['AuditReportStoreID'])) ? $_SESSION['AuditReportStoreID'] : scanLib::getStoreID();
         $rounder = new PriceRounder();
+        $searchInputHTML = "<form method='post' id='actionForm' target='__advs_act' action='../../../../git/fannie/admin/labels/SignFromSearch.php' style='display: none;'>";
 
         $costMode = 0; 
         if (isset($_SESSION['costMode'])) {
@@ -1986,7 +2039,10 @@ class AuditReport extends PageLayoutA
         while ($row = $dbc->fetch_row($result)) {
             $upc = $row['upc'];
             $upcs[] = $upc;
+            $searchInputHTML .= "<input type=\"hidden\" name=\"u[]\" value=\"$upc\">";
         }
+        $searchInputHTML .= "</form>";
+
         if (isset($_SESSION['arStartDate']) && isset($_SESSION['arEndDate']) ) {
             $itemMt = $this->getItemMovement($upcs, $storeID);
         }
@@ -2222,6 +2278,7 @@ class AuditReport extends PageLayoutA
         <tr><td class="noauto">$textarea</td></tr>
     </tbody>
     </table>
+    $searchInputHTML
 </div>
 HTML;
 
@@ -2713,6 +2770,7 @@ GROUP BY t.upc, COALESCE(p.brand, ''), CASE WHEN p.description IS NULL THEN t.de
             <option value=\"getLastPrice\" data-value=\"getLastPrice\">$itBug get last price</option>
             <option value=\"setPrnDiff\" data-value=\"setPrnDiff\">$itBug Set PRN < DIFF: Notes (NewSRP) - Price</option>
             <option value=\"setPrnNar\" data-value=\"setPrnNar\">$itBug Set PRN = Narrow</option>
+            <option value=\"priceByMargin\" data-value=\"priceByMargin\">$itBug Notes < Price By Margin</option>
         " : "";
             //<option value=\"clearTableData\">$itBug Clear Table Data</option>
 
@@ -2725,7 +2783,7 @@ GROUP BY t.upc, COALESCE(p.brand, ''), CASE WHEN p.description IS NULL THEN t.de
             <div class=\"fxExtOption\" data-value=\"ViClearNotes\">$itBug Clear Notes</div>
             <div class=\"fxExtOption\" data-value=\"jsUnitsDivision\">$itBug Divide Notes / Units (as shown)</div>
             <div class=\"fxExtOption\" data-value=\"jsPrnDivision\">$itBug Divide Notes / PRN</div>
-            <div class=\"fxExtOption\" data-value=\"roundPriceNotes\">$itBug Notes < 'PriceRounder->round();'</div>
+            <div class=\"fxExtOption\" data-value=\"roundPriceNotes\">$itBug Notes < PriceRounder->round();</div>
             <div class=\"fxExtOption\" data-value=\"genericUploadCostsPr\">$itBug Generic cost > Notes (on upcs)</div>
             <div class=\"fxExtOption\" data-value=\"genericUploadCostsVi\">$itBug Generic cost > Notes (on skus)</div>
             <div class=\"fxExtOption\" data-value=\"genericUploadCostsAl\">$itBug Generic cost > Notes (on aliases)</div>
@@ -2740,6 +2798,7 @@ GROUP BY t.upc, COALESCE(p.brand, ''), CASE WHEN p.description IS NULL THEN t.de
             <div class=\"fxExtOption\" data-value=\"notes2notes\">$itBug Notes < Notes (save current values)</div>
             <div class=\"fxExtOption\" data-value=\"getLastPrice\">$itBug Notes < 'Last Known Price'</div>
             <div class=\"fxExtOption\" data-value=\"setPrnDiff\">$itBug PRN < DIFF (Notes - Price)</div>
+            <div class=\"fxExtOption\" data-value=\"priceByMargin\">$itBug Notes < Price By Margin</div>
             <!--<div class=\"fxExtOption\" data-value=\"setPrnNar\">$itBug PRN < 'Narrow'</div>-->
         " : "";
             //<div class=\"fxExtOption\" data-value=\"clearTableData\">$itBug WIPE DB INFO FOR ITEMS IN LIST</div>
@@ -2886,6 +2945,7 @@ $costModeSwitch
             <li><a href="#" id="ExportCsvAnchor">Generate File (csv)</a></li>
             <li><a href="../../../../git/fannie/batches/newbatch/BatchImportExportPage.php" target="_blank">Batch Import</a> 
                 | <span style="cursor: pointer; color: purple" id="openSessionNotepad">Open Session Notepad</span> </li>
+            <li><button class="btn-not-btn" type="submit" href="#" onclick="goToPage('../../../../git/fannie/admin/labels/SignFromSearch.php');">Print Signs/Tags</button></li>
         </div>
     </div>
     <div class="col-lg-2">
@@ -2928,10 +2988,10 @@ $columnCheckboxes
                 <button class="btn btn-default btn-sm small" id="view-all">View * All</button>
             </div>
             <div class="form-group dummy-form">
-                <button class="btn btn-default btn-sm small" id="view-sel-unchecked"><span style="background: white;">View SelUn</span></button>
+                <button class="btn btn-default btn-sm small" id="view-sel-unchecked"><span style="background: white;">Of-Current Unchecked</span></button>
             </div>
             <div class="form-group dummy-form">
-                <button class="btn btn-default btn-sm small" id="view-sel-checked"><span style="background: lightgrey;">View SelCh</span></button>
+                <button class="btn btn-default btn-sm small" id="view-sel-checked"><span style="background: lightgrey;">Of-Current Checked</span></button>
             </div>
             <div class="form-group dummy-form">
                 <button class="btn btn-dark btn-sm small" id="invert-show">Invert View</button>
@@ -4695,6 +4755,25 @@ $('#extHideFx').change(function(){
                 });
             });
             break;
+        case 'priceByMargin':
+            let priceByMargin = prompt('Enter margin to use');
+            let shippingMarkup = prompt('Enter shipping markup');
+            ScanConfirm("<br/><br/>Set notes = new SRP<br/>based on margin/ship%?", 'update_price_by_margin', function() {
+                $.ajax({
+                    type: 'post',
+                    data: 'username='+username+'&storeID='+storeID+'&priceByMargin='+priceByMargin+'&shipping='+shippingMarkup,
+                    url: 'AuditReport.php',
+                    success: function(response) {
+                        console.log('success');
+                        console.log(response);
+                        window.location.reload();
+                    },
+                    error: function(response) {
+                        console.log('error: '+response);
+                    },
+                });
+            });
+            break;
         case 'ViClearNotes':
             ScanConfirm("<br/><br/>Clear all notes?", 'clear_vi_notes', function() {
                 $.ajax({
@@ -5395,6 +5474,11 @@ $('#new-saved-list-filter').on('keyup', function(e) {
         }
     });
 });
+
+function goToPage(url) {
+        $('#actionForm').attr('action', url);
+        $('#actionForm').submit();
+}
 JAVASCRIPT;
     }
 
@@ -5678,6 +5762,14 @@ tr.prod-row:hover {
     border: 1px solid lightgrey;
     padding: 4px;
 }
+.btn-not-btn {
+    background: rgba(0,0,0,0);
+    border: 1px solid transparent;
+    text-align: left;
+    padding: 0px;
+    margin: 0px;
+    color: #007BFF;
+}
 HTML;
     }
 
@@ -5806,6 +5898,7 @@ HTML;
         <li>ALT + Right Click (on a UPC) - will open a separate table of all related items (by family code, brand, and size)</li>
         <li> ~ - Will return the focus to the last table header filter that was used</li>
     </ul>
+    <div>Hello</div>
 </ul>
 HTML;
     }
