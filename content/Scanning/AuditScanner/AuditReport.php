@@ -5804,6 +5804,15 @@ HTML;
     <li>Current Vendor</li>
     <p>By default the Current Vendor is left blank. To set the current vendor, load that vendor's list (more items may be loaded after if needed).</p>
 
+    <li>Generate File (csv)</li>
+    <p>Will create a CSV text file of every item in table</li>
+
+    <li>Batch Import</li>
+    <p>Link to the Batch Import page (IT only: use in conjunction with JSON Import batch method)</li>
+
+    <li>Print Signs/Tags</li>
+    <p>Will take you to the Signs From Search page and will include every item in the list.</li>
+
     <li>Definition of Columns</li>
     <p>Each checkbox in the <strong>Show/Hide Columns</strong> correlates with a column to show or hide in the Audit Report table.</p>
     <ul>
@@ -5898,7 +5907,6 @@ HTML;
         <li>ALT + Right Click (on a UPC) - will open a separate table of all related items (by family code, brand, and size)</li>
         <li> ~ - Will return the focus to the last table header filter that was used</li>
     </ul>
-    <div>Hello</div>
 </ul>
 HTML;
     }
