@@ -21,6 +21,7 @@ class MarginSharingTask extends PageLayoutA
     {
         $this->displayFunction = $this->pageContent();
         $this->__routes[] = "post<recalculate>";
+        $this->__routes[] = "get<shareID>";
 
         return parent::preprocess();
     }
@@ -163,6 +164,60 @@ WHERE t.tdate > NOW() - INTERVAL 30 DAY
         return $upcs;
     }
 
+    public function getShareIDView()
+    {
+        $dbc = scanLib::getConObj();
+        $items = array();
+        $shares = array();
+        $shareID = FormLib::get("shareID", 0);
+        $ret = "";
+        $td = "";
+
+        // New Chunk Start
+        $itemsP = $dbc->prepare("SELECT *
+            FROM MarginShareView AS m
+                INNER JOIN products AS p ON p.upc=m.upc
+            WHERE msID=?
+            GROUP BY p.upc");
+        $itemsR = $dbc->execute($itemsP, array($shareID));
+        while ($row = $dbc->fetchRow($itemsR)) {
+            $msID = $row['msID'];
+            $upc = $row['upc'];
+            $cost = $row['cost'];
+            $vendorID = $row['default_vendor_id'];
+            $upc = $row['upc'];
+            $upc = $row['upc'];
+            $majorityID = $row['majorityID'];
+            $margin = $row['margin'];
+            $weightedCost = $row['weightedCost'];
+            $name = $row['name'];
+            $modified = $row['modified'];
+            $brand = $row['brand'];
+            $description = $row['description'];
+            $td .= "<tr>";
+            $td .= sprintf("<td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>",
+                $msID, $upc, $vendorID, $majorityID, $margin, $cost, $weightedCost, $name, $modified, $brand, $description
+            );
+            $td .= "</tr>";
+        }
+
+        return <<<HTML
+<div style="margin-top: 15px"></div>
+<ul>
+    <li><a href="MarginSharingTask.php">Back</a></li>
+</ul>
+<div style="padding: 25px;">
+    <table class="table table-bordered table-striped table-sm small">
+        <thead><th>msID</th><th>upc</th><th>vendorID</th><th>majorityID</th><th>margin</th>
+            <th>Item Cost</th><th>weightedCost</th><th>name</th><th>modified</th><th>brand</th>
+            <th>description</th>
+        </thead>
+        <tbody>$td</tbody>
+    </table>
+</div>
+HTML;
+    }
+
     public function postRecalculateView()
     {
         $dbc = scanLib::getConObj();
@@ -265,7 +320,7 @@ HTML;
             $modified = $row['modified'];
             $targetSrp = $row['targetSrp'];
             $td .= "<tr>";
-            $td .= "<td>$msID</td>";
+            $td .= "<td><a href=\"MarginSharingTask.php?shareID=$msID\">$msID</a></td>";
             $td .= "<td>$name</td>";
             $td .= "<td>$majorityID</td>";
             $td .= "<td>$weightedCost</td>";
