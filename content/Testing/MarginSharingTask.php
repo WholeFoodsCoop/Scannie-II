@@ -22,8 +22,27 @@ class MarginSharingTask extends PageLayoutA
         $this->displayFunction = $this->pageContent();
         $this->__routes[] = "post<recalculate>";
         $this->__routes[] = "get<shareID>";
+        $this->__routes[] = "post<create>";
+        $this->__routes[] = "post<newitems>";
+        $this->__routes[] = "post<newshare>";
 
         return parent::preprocess();
+    }
+
+    private function getMarginShareHTML()
+    {
+        $dbc = scanLib::getConObj();
+        $html = "<option value=\"null\">Select a Margin Share</option>";
+
+        $prep = $dbc->prepare("SELECT msID, name FROM MarginShares");
+        $res = $dbc->execute($prep);
+        while ($row = $dbc->fetchRow($res)) {
+            $msID = $row['msID'];
+            $name = $row['name'];
+            $html .= "<option value=\"$msID\">$name</option>";
+        }
+
+        return $html;
     }
 
     private function getWeightedInfo($upcs, $msID)
@@ -162,6 +181,81 @@ WHERE t.tdate > NOW() - INTERVAL 30 DAY
         }
 
         return $upcs;
+    }
+
+    public function postNewitemsView()
+    {
+        $dbc = scanLib::getConObj();
+        $msID = FormLib::get("msID");
+
+        $upcsText = FormLib::get('upcs');
+        $upcs = explode("\r\n", $upcsText);
+
+        $insP = $dbc->prepare("INSERT INTO MarginShareItems (msID, upc) VALUES (?, ?)");
+
+        foreach ($upcs as $upc) {
+            $insR = $dbc->execute($insP, array($msID, $upc));
+        }
+
+        return $this->pageContent();
+    }
+
+    public function postNewshareView()
+    {
+        $dbc = scanLib::getConObj();
+        $name = FormLib::get('name');
+
+        $insP = $dbc->prepare("INSERT INTO MarginShares (name) VALUES (?)");
+        $insR = $dbc->execute($insP, array($name));
+
+        return $this->pageContent();
+    }
+
+    public function postCreateView()
+    {
+        $dbc = scanLib::getConObj();
+
+        $options = $this->getMarginShareHTML();
+
+        return <<<HTML
+<div class="container" style="padding-top: 25px;">
+    <div class="row">
+        <div class="col-lg-1">
+            <div><a href="MarginSharingTask.php">Back</a></div>
+        </div>
+        <div class="col-lg-4" style="border-left: 1px solid lightgrey;">
+            <label>Create New Margin Share</label>
+            <form action="MarginSharingTask.php" method="post">
+                <input type="hidden" name="newshare" value="1" />
+                <div class="form-group">
+                    <input type="text" class="form-control" name="name" placeholder="New Margin Share Name" />
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-default">Submit</button>
+                </div>
+            </form>
+        </div>
+        <div class="col-lg-7" style="border-left: 1px solid lightgrey;">
+            <label>Add Items To Existing Margin Share</label>
+            <form action="MarginSharingTask.php" method="post">
+                <input type="hidden" name="newitems" value="1" />
+                <div class="form-group">
+                    <select class="form-control" name="msID">
+                        $options
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Paste UPCs below</label>
+                    <textarea class="form-control" name="upcs" rows=10></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+HTML;
     }
 
     public function getShareIDView()
@@ -348,6 +442,12 @@ HTML;
                         <form action="MarginSharingTask.php" method="post" name="recalc-form">
                             <input type="hidden" name="recalculate" value=1 />
                             <a href='#'onclick="document.forms['recalc-form'].submit();">Re-calculate</a> Weighted Data by Movement
+                        </form>
+                    </li>
+                    <li>
+                        <form action="MarginSharingTask.php" method="post" name="create-form">
+                            <input type="hidden" name="create" value=1 />
+                            <a href='#'onclick="document.forms['create-form'].submit();">Add Items</a>
                         </form>
                     </li>
                 </ul>
