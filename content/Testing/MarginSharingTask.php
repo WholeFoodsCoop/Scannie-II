@@ -16,6 +16,7 @@ class MarginSharingTask extends PageLayoutA
 {
 
     protected $must_authenticate = true;
+    protected $auth_types = array(2);
 
     public function preprocess()
     {
