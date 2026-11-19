@@ -187,13 +187,19 @@ WHERE t.tdate > NOW() - INTERVAL 30 DAY
     {
         $dbc = scanLib::getConObj();
         $msID = FormLib::get("msID");
+        $reverse = FormLib::get("reverse");
 
         $upcsText = FormLib::get('upcs');
         $upcs = explode("\r\n", $upcsText);
 
-        $insP = $dbc->prepare("INSERT INTO MarginShareItems (msID, upc) VALUES (?, ?)");
+        if ($reverse == 1) {
+            $insP = $dbc->prepare("DELETE FROM MarginShareItems WHERE msID = ? AND upc = ?");
+        } else {
+            $insP = $dbc->prepare("INSERT INTO MarginShareItems (msID, upc) VALUES (?, ?)");
+        }
 
         foreach ($upcs as $upc) {
+            $upc = scanLib::padUPC($upc);
             $insR = $dbc->execute($insP, array($msID, $upc));
         }
 
@@ -236,13 +242,17 @@ WHERE t.tdate > NOW() - INTERVAL 30 DAY
             </form>
         </div>
         <div class="col-lg-7" style="border-left: 1px solid lightgrey;">
-            <label>Add Items To Existing Margin Share</label>
+            <label id="add-items-label">Add Items To Existing Margin Share</label>
             <form action="MarginSharingTask.php" method="post">
                 <input type="hidden" name="newitems" value="1" />
                 <div class="form-group">
                     <select class="form-control" name="msID">
                         $options
                     </select>
+                </div>
+                <div class="form-group">
+                    <label><span style="color: darkred; font-weight: bold;">Remove</span> items instead&nbsp;</label>
+                    <input type="checkbox" name="reverse" id="reverse" value="1" />
                 </div>
                 <div class="form-group">
                     <label>Paste UPCs below</label>
@@ -447,7 +457,7 @@ HTML;
                     <li>
                         <form action="MarginSharingTask.php" method="post" name="create-form">
                             <input type="hidden" name="create" value=1 />
-                            <a href='#'onclick="document.forms['create-form'].submit();">Add Items</a>
+                            <a href='#'onclick="document.forms['create-form'].submit();">Add/Remove</a> Items
                         </form>
                     </li>
                 </ul>
@@ -520,6 +530,15 @@ const PrepCSV = function() {
 }
 $('#ExportCsvAnchor').on('click', function(){
     PrepCSV();
+});
+
+$('#reverse').on('change', function() {
+    let checked = $(this).is(':checked');
+    if (checked == true) {
+        $('#add-items-label').text('Remove Items From Existing Margin Share');
+    } else {
+        $('#add-items-label').text('Add Items To Existing Margin Share');
+    }
 });
 JAVASCRIPT;
     }
